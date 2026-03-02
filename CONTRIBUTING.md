@@ -7,6 +7,12 @@ Thanks for helping! This project is early-stage and optimizes for:
 
 ## Development setup
 
+Recommended:
+```bash
+make setup-run
+```
+This runs `./tools/setup-and-run.sh`, which can prompt to install missing prerequisites.
+
 ### Web
 ```bash
 cd apps/web

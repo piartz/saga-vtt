@@ -31,21 +31,38 @@ It is intentionally **generic**:
 
 ### Prereqs
 - Node.js 20+ (or 18+)
-- pnpm 9+
 - Python 3.11+
-- Poetry 1.6+ (or 1.7+)
+- Homebrew (recommended on macOS for automatic tool install prompts)
+
+`pnpm` and `Poetry` are installed by `tools/setup-and-run.sh` when missing
+(with interactive confirmation).
 
 ### One-command setup + run
 From the repo root:
 ```bash
 make setup-run
 ```
+or:
+```bash
+./tools/setup-and-run.sh
+```
 
 This command checks tool versions, installs dependencies, and starts:
 - API: http://127.0.0.1:8000
 - Web: http://127.0.0.1:5173
 
+When a required tool is missing or too old, the script:
+- detects platform (`linux` or `macos`)
+- asks for confirmation before install/upgrade
+- tries platform-specific installers/fallbacks (for `pnpm`: Homebrew first on macOS)
+
 Press `Ctrl+C` to stop both services.
+
+### Setup troubleshooting
+- If tool install fails due to permissions, rerun and accept the targeted `sudo` prompt when offered.
+- On macOS, install Homebrew first to improve installer reliability:
+  - https://brew.sh/
+- If an install path fails, run the script again; it will retry with fallbacks.
 
 ### 1) Backend
 ```bash
@@ -102,6 +119,7 @@ See:
 - `docs/architecture.md`
 - `docs/roadmap.md`
 - `docs/protocol.md`
+- `docs/agent-context.md` (fast context for agentic AI sessions)
 
 ## License
 

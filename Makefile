@@ -1,4 +1,4 @@
-.PHONY: help dev api web setup-run
+.PHONY: help dev api web setup-run context-refresh
 
 help:
 	@echo "Targets:"
@@ -6,6 +6,7 @@ help:
 	@echo "  make web   - run web dev server (port 5173)"
 	@echo "  make dev   - run both (requires two terminals unless you use a process manager)"
 	@echo "  make setup-run - check prereqs, install deps, run both services"
+	@echo "  make context-refresh - run context handoff checklist for agent sessions"
 
 api:
 	cd services/api && poetry install && poetry run uvicorn app.main:app --reload --port 8000
@@ -18,3 +19,6 @@ dev:
 
 setup-run:
 	./tools/setup-and-run.sh
+
+context-refresh:
+	./tools/context-refresh.sh
