@@ -38,6 +38,7 @@ def test_move_token_is_authoritative_and_broadcast_to_all_clients() -> None:
     ):
         hello_1: Dict[str, Any] = ws1.receive_json()
         hello_2: Dict[str, Any] = ws2.receive_json()
+        actor_player_id = hello_1["payload"]["players"][0]["id"]
 
         assert hello_1["type"] == "HELLO"
         assert hello_2["type"] == "HELLO"
@@ -63,6 +64,8 @@ def test_move_token_is_authoritative_and_broadcast_to_all_clients() -> None:
         assert event_1["payload"]["token"]["y_mm"] == 111
         assert event_2["payload"]["token"]["x_mm"] == 222
         assert event_2["payload"]["token"]["y_mm"] == 111
+        assert event_1["actor_player_id"] == actor_player_id
+        assert event_2["actor_player_id"] == actor_player_id
         assert ROOMS[game_id].tokens["A"]["x_mm"] == 222
         assert ROOMS[game_id].tokens["A"]["y_mm"] == 111
 
@@ -76,8 +79,9 @@ def test_roll_dice_is_authoritative_and_broadcast_to_all_clients() -> None:
         client.websocket_connect(f"/games/{game_id}/ws") as ws1,
         client.websocket_connect(f"/games/{game_id}/ws") as ws2,
     ):
-        ws1.receive_json()
+        hello_1: Dict[str, Any] = ws1.receive_json()
         ws2.receive_json()
+        actor_player_id = hello_1["payload"]["players"][0]["id"]
         joined: Dict[str, Any] = ws1.receive_json()
         assert joined["type"] == "PLAYER_JOINED"
 
@@ -104,6 +108,8 @@ def test_roll_dice_is_authoritative_and_broadcast_to_all_clients() -> None:
         assert all(1 <= die <= 6 for die in event_1["payload"]["rolls"])
         assert event_1["payload"]["total"] == sum(event_1["payload"]["rolls"]) + 1
         assert event_2["payload"] == event_1["payload"]
+        assert event_1["actor_player_id"] == actor_player_id
+        assert event_2["actor_player_id"] == actor_player_id
 
 
 def test_player_presence_join_and_leave_events() -> None:
@@ -128,10 +134,12 @@ def test_player_presence_join_and_leave_events() -> None:
             joined_player = joined["payload"]["player"]
             assert joined_player["id"] != first_player["id"]
             assert joined_player in hello_2["payload"]["players"]
+            assert joined["actor_player_id"] == joined_player["id"]
 
         left: Dict[str, Any] = ws1.receive_json()
         assert left["type"] == "PLAYER_LEFT"
         assert left["payload"]["player_id"] == joined_player["id"]
+        assert left["actor_player_id"] == joined_player["id"]
 
 
 def test_roll_dice_rejects_invalid_payload() -> None:

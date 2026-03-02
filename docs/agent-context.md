@@ -45,6 +45,7 @@ Primary references:
   - emits `PLAYER_JOINED` to existing clients when a new player connects
   - emits `PLAYER_LEFT` to remaining clients when a player disconnects
   - handles `PING` -> broadcasts `PONG`
+  - includes `actor_player_id` on player-attributed events (presence, movement, dice, and command errors)
   - handles `MOVE_TOKEN`:
     - validates payload shape/types
     - validates integer mm coordinates
@@ -62,6 +63,8 @@ Primary references:
 ### Frontend (`apps/web/src/ui`)
 - Opens WS connection for current room.
 - Displays connection status, connected players, and event log.
+- Event log shows actor attribution using `actor_player_id` plus presence labels.
+- Event log defaults to human-readable summaries with an "Advanced (JSON)" tab for raw payload inspection.
 - Supports:
   - create room (`POST /games`)
   - set room id manually
@@ -112,7 +115,7 @@ Primary references:
 - Add typed command/event schemas on server and client (single source of truth).
 - Extract a per-room connection manager abstraction (presence now works but is still inline in `main.py`).
 - Add WS reconnect/backoff client wrapper with resync behavior.
-- Expand dice UX (custom notation input + structured action log rendering for `DICE_ROLLED`).
+- Expand dice UX (custom notation input + richer readable log details/filters for `DICE_ROLLED`).
 - Start ADRs for major protocol/state decisions in `docs/adrs/`.
 
 ## Open Decisions / Risks

@@ -21,9 +21,12 @@ This is the current MVP protocol implemented by the API/web app.
   "type": "PONG",
   "seq": 12,
   "server_time": "2026-02-26T12:34:56Z",
+  "actor_player_id": "a1b2c3",
   "payload": {}
 }
 ```
+
+`actor_player_id` is optional and present when an event is attributable to a specific connected player.
 
 ## MVP command/event types
 
@@ -38,12 +41,15 @@ This is the current MVP protocol implemented by the API/web app.
 - `PLAYER_JOINED`:
   - emitted to existing room clients when a new client connects
   - payload: `player`
+  - includes `actor_player_id` of the joining player
 - `PLAYER_LEFT`:
   - emitted to remaining room clients when a client disconnects
   - payload: `player_id`
+  - includes `actor_player_id` of the leaving player
 
 ### Connectivity
 - `PING` → `PONG`
+  - `PONG` includes `actor_player_id` of the player who sent the `PING`
 
 ### Board interactions
 - `MOVE_TOKEN` → `TOKEN_MOVED`
@@ -54,6 +60,7 @@ This is the current MVP protocol implemented by the API/web app.
 - `TOKEN_MOVED.payload`:
   - `token`
   - `client_msg_id`
+- `TOKEN_MOVED` includes `actor_player_id` of the player who sent `MOVE_TOKEN`
 
 ### Dice
 - `ROLL_DICE` → `DICE_ROLLED`
@@ -70,6 +77,7 @@ This is the current MVP protocol implemented by the API/web app.
     - `total` (`sum(rolls) + modifier`)
     - `notation` (for example `3d6+1`)
     - `client_msg_id`
+  - `DICE_ROLLED` includes `actor_player_id` of the player who sent `ROLL_DICE`
 
 ### Room lifecycle (later)
 - explicit lobby commands (`JOIN_GAME`, `LEAVE_GAME`, `START_GAME`) once auth/identity is added
