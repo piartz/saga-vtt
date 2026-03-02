@@ -1,6 +1,6 @@
 # Protocol (Commands & Events)
 
-This is a *starter protocol* for the bootstrap. Expand it as you build rules.
+This is the current MVP protocol implemented by the API/web app.
 
 ## Envelope (WebSocket)
 
@@ -30,18 +30,36 @@ This is a *starter protocol* for the bootstrap. Expand it as you build rules.
 ### Connectivity
 - `PING` → `PONG`
 
+### Board interactions
+- `MOVE_TOKEN` → `TOKEN_MOVED`
+- Server validates:
+  - payload shape and token id
+  - integer mm coordinates
+  - board bounds (respecting token radius)
+- `TOKEN_MOVED.payload`:
+  - `token`
+  - `client_msg_id`
+
+### Dice
+- `ROLL_DICE` → `DICE_ROLLED`
+  - server-side RNG using `secrets`
+  - validated payload fields:
+    - `count` integer in `[1, 20]`
+    - `sides` integer in `[2, 1000]`
+    - optional `modifier` integer in `[-1000, 1000]` (default `0`)
+  - `DICE_ROLLED.payload`:
+    - `count`
+    - `sides`
+    - `modifier`
+    - `rolls` (array of individual die values)
+    - `total` (`sum(rolls) + modifier`)
+    - `notation` (for example `3d6+1`)
+    - `client_msg_id`
+
 ### Room lifecycle (later)
 - `JOIN_GAME` → `PLAYER_JOINED`
 - `LEAVE_GAME` → `PLAYER_LEFT`
 - `START_GAME` → `GAME_STARTED`
-
-### Board interactions (later)
-- `MOVE_TOKEN` → `TOKEN_MOVED`
-- `ROTATE_TOKEN` → `TOKEN_ROTATED`
-
-### Dice (later)
-- `ROLL_DICE` → `DICE_ROLLED`
-  - performed on the server
 
 ## Versioning
 When you introduce breaking changes:

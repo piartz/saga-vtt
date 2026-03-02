@@ -48,6 +48,11 @@ Primary references:
     - validates board bounds using token radius
     - mutates room token state
     - broadcasts `TOKEN_MOVED` with updated token + `client_msg_id`
+  - handles `ROLL_DICE`:
+    - validates payload shape/types (`count`, `sides`, optional `modifier`)
+    - enforces bounds (`count: 1..20`, `sides: 2..1000`, `modifier: -1000..1000`)
+    - rolls server-side via `secrets`
+    - broadcasts `DICE_ROLLED` with `rolls`, `total`, `notation`, and `client_msg_id`
   - emits `ERROR` events for bad input/unknown commands
   - cleans up room when last connection leaves
 
@@ -58,6 +63,7 @@ Primary references:
   - create room (`POST /games`)
   - set room id manually
   - send `PING`
+  - send sample `ROLL_DICE` (`3d6+1`)
   - board token drag and release -> sends `MOVE_TOKEN`
 - Applies authoritative updates from events:
   - `HELLO` token snapshot
@@ -72,6 +78,8 @@ Primary references:
 - `services/api/tests/test_rooms_and_moves.py`
   - verifies room creation
   - verifies authoritative token move broadcast to two WS clients
+  - verifies authoritative dice roll broadcast to two WS clients
+  - verifies dice payload validation errors
 
 ## Docs vs Code Notes
 - Docs often describe "starter/placeholder" behavior.
@@ -99,12 +107,12 @@ Primary references:
 - Add typed command/event schemas on server and client (single source of truth).
 - Introduce per-room connection manager abstraction (easier JOIN/LEAVE/presence).
 - Add WS reconnect/backoff client wrapper with resync behavior.
-- Add server-side dice command (`ROLL_DICE`) with audit fields.
+- Expand dice UX (custom notation input + structured action log rendering for `DICE_ROLLED`).
 - Start ADRs for major protocol/state decisions in `docs/adrs/`.
 
 ## Open Decisions / Risks
 - Event ordering and replay consistency under reconnect are not yet specified.
-- No auth/identity: all clients can currently issue movement commands.
+- No auth/identity: all clients can currently issue movement and dice commands.
 - In-memory room state means process restart loses all games.
 - Protocol evolution strategy is documented but not yet exercised in code.
 
