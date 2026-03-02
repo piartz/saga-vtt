@@ -6,14 +6,14 @@ type EventEnvelope = {
   type: string;
   seq: number;
   server_time: string;
-  payload: any;
+  payload: unknown;
 };
 
 type CommandEnvelope = {
   kind: "COMMAND";
   type: string;
   client_msg_id: string;
-  payload: any;
+  payload: unknown;
 };
 
 type WsStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
@@ -24,6 +24,17 @@ function randomRoomId(): string {
 }
 
 export function App() {
+  const theme = {
+    bg: "#0f1115",
+    surface: "#171b24",
+    surfaceAlt: "#1d2330",
+    border: "#2c3446",
+    text: "#e7ebf3",
+    muted: "#aab4c8",
+    inputBg: "#111722",
+    accent: "#7ea2ff",
+  } as const;
+
   const [status, setStatus] = useState<WsStatus>("DISCONNECTED");
   const [events, setEvents] = useState<EventEnvelope[]>([]);
   const [gameId, setGameId] = useState<string>(() => randomRoomId());
@@ -78,22 +89,51 @@ export function App() {
   }
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", padding: 16, display: "grid", gap: 16 }}>
+    <div
+      style={{
+        fontFamily: "system-ui, sans-serif",
+        padding: 16,
+        display: "grid",
+        gap: 16,
+        minHeight: "100dvh",
+        boxSizing: "border-box",
+        background: theme.bg,
+        color: theme.text,
+      }}
+    >
       <header style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
         <h1 style={{ margin: 0 }}>Skirmish VTT</h1>
-        <div style={{ opacity: 0.8 }}>WS: {status}</div>
+        <div style={{ color: theme.muted }}>WS: {status}</div>
         <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
           Room:
           <input
             value={gameId}
             onChange={(e) => setGameId(e.target.value)}
-            style={{ padding: 6, minWidth: 140 }}
+            style={{
+              padding: 6,
+              minWidth: 140,
+              border: `1px solid ${theme.border}`,
+              borderRadius: 6,
+              background: theme.inputBg,
+              color: theme.text,
+            }}
           />
         </label>
-        <button onClick={sendPing} disabled={status !== "CONNECTED"}>
+        <button
+          onClick={sendPing}
+          disabled={status !== "CONNECTED"}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 6,
+            border: `1px solid ${theme.border}`,
+            background: theme.surfaceAlt,
+            color: theme.text,
+            cursor: status === "CONNECTED" ? "pointer" : "not-allowed",
+          }}
+        >
           Send PING
         </button>
-        <small style={{ opacity: 0.7 }}>
+        <small style={{ color: theme.muted }}>
           Tip: open this page in two browser windows with the same Room ID.
         </small>
       </header>
@@ -103,20 +143,42 @@ export function App() {
           <Board />
         </section>
 
-        <aside style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12 }}>
+        <aside
+          style={{
+            border: `1px solid ${theme.border}`,
+            borderRadius: 8,
+            padding: 12,
+            background: theme.surface,
+          }}
+        >
           <h2 style={{ marginTop: 0 }}>Event Log</h2>
           <div style={{ display: "grid", gap: 8, maxHeight: 520, overflow: "auto" }}>
             {events
               .slice()
               .reverse()
               .map((e) => (
-                <div key={e.seq} style={{ border: "1px solid #eee", borderRadius: 6, padding: 8 }}>
+                <div
+                  key={e.seq}
+                  style={{
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 6,
+                    padding: 8,
+                    background: theme.surfaceAlt,
+                  }}
+                >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                     <strong>{e.type}</strong>
-                    <span style={{ opacity: 0.7 }}>#{e.seq}</span>
+                    <span style={{ color: theme.muted }}>#{e.seq}</span>
                   </div>
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>{e.server_time}</div>
-                  <pre style={{ margin: 0, fontSize: 12, whiteSpace: "pre-wrap" }}>
+                  <div style={{ fontSize: 12, color: theme.muted }}>{e.server_time}</div>
+                  <pre
+                    style={{
+                      margin: 0,
+                      fontSize: 12,
+                      whiteSpace: "pre-wrap",
+                      color: theme.accent,
+                    }}
+                  >
                     {JSON.stringify(e.payload, null, 2)}
                   </pre>
                 </div>

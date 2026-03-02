@@ -21,7 +21,11 @@ class GameRoom:
 
     async def broadcast(self, event: Dict[str, Any]) -> None:
         for ws in list(self.connections):
-            await ws.send_text(json.dumps(event))
+            try:
+                await ws.send_text(json.dumps(event))
+            except WebSocketDisconnect:
+                if ws in self.connections:
+                    self.connections.remove(ws)
 
 
 # In-memory room registry (MVP only)
@@ -56,21 +60,21 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
 
     room.connections.append(ws)
 
-    # Initial hello event
-    room.seq += 1
-    await ws.send_text(
-        json.dumps(
-            {
-                "kind": "EVENT",
-                "type": "HELLO",
-                "seq": room.seq,
-                "server_time": utc_now_iso(),
-                "payload": {"game_id": game_id, "protocol_version": 1},
-            }
-        )
-    )
-
     try:
+        # Initial hello event
+        room.seq += 1
+        await ws.send_text(
+            json.dumps(
+                {
+                    "kind": "EVENT",
+                    "type": "HELLO",
+                    "seq": room.seq,
+                    "server_time": utc_now_iso(),
+                    "payload": {"game_id": game_id, "protocol_version": 1},
+                }
+            )
+        )
+
         while True:
             msg = await ws.receive_text()
             try:
@@ -117,6 +121,8 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 )
 
     except WebSocketDisconnect:
+        pass
+    finally:
         # Remove connection
         if ws in room.connections:
             room.connections.remove(ws)
