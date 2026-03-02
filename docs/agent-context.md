@@ -46,6 +46,10 @@ Primary references:
   - emits `PLAYER_LEFT` to remaining clients when a player disconnects
   - handles `PING` -> broadcasts `PONG`
   - includes `actor_player_id` on player-attributed events (presence, movement, dice, and command errors)
+  - includes turn snapshot in `HELLO.payload.turn` (`phase`, `round`, `active_player_id`)
+  - handles `START_GAME` -> `GAME_STARTED` turn initialization
+  - handles `END_TURN` -> `TURN_CHANGED` turn progression
+  - while game is running, enforces active-player-only `MOVE_TOKEN` and `ROLL_DICE`
   - handles `MOVE_TOKEN`:
     - validates payload shape/types
     - validates integer mm coordinates
@@ -70,9 +74,11 @@ Primary references:
   - set room id manually
   - send `PING`
   - send sample `ROLL_DICE` (`3d6+1`)
+  - start game and end turn commands
   - board token drag and release -> sends `MOVE_TOKEN`
 - Applies authoritative updates from events:
   - `HELLO` token + player snapshot
+  - `HELLO` / `GAME_STARTED` / `TURN_CHANGED` turn snapshot
   - `PLAYER_JOINED` / `PLAYER_LEFT` player presence updates
   - `TOKEN_MOVED` token updates
 - Board UI:
@@ -90,6 +96,7 @@ Primary references:
   - verifies authoritative token move broadcast to two WS clients
   - verifies authoritative dice roll broadcast to two WS clients
   - verifies dice payload validation errors
+  - verifies game start, turn progression, and active-player command restrictions
 - Web UI currently has no automated test suite; board interaction changes are validated via `pnpm build:web` plus manual verification.
 
 ## Docs vs Code Notes
@@ -103,9 +110,7 @@ Primary references:
    - better token placement/selection ergonomics
    - move preview + explicit confirm UX refinement
 2. Basic scenario loop:
-   - turn structure and active player
    - activation markers
-   - server-side dice roller
    - richer action log UI
 3. Rules-module interface:
    - explicit `RulesModule` boundary
@@ -118,6 +123,7 @@ Primary references:
 - Add typed command/event schemas on server and client (single source of truth).
 - Extract a per-room connection manager abstraction (presence now works but is still inline in `main.py`).
 - Add WS reconnect/backoff client wrapper with resync behavior.
+- Decide and implement disconnect behavior for turn ownership (pause, auto-pass, or forfeit).
 - Expand dice UX (custom notation input + richer readable log details/filters for `DICE_ROLLED`).
 - Start ADRs for major protocol/state decisions in `docs/adrs/`.
 

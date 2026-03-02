@@ -44,8 +44,13 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 
 ### Presence payloads
 - `HELLO.payload.players`: `Player[]`
+- `HELLO.payload.turn`: `{ phase, round, active_player_id }`
 - `PLAYER_JOINED.payload.player`: `Player`
 - `PLAYER_LEFT.payload.player_id`: `string`
+
+### Turn payloads
+- `GAME_STARTED.payload.turn`: `{ phase, round, active_player_id }`
+- `TURN_CHANGED.payload.turn`: `{ phase, round, active_player_id }`
 
 ### Dice roll payload (`DICE_ROLLED`)
 - count

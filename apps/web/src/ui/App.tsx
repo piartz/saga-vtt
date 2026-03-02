@@ -25,6 +25,12 @@ type PresencePlayer = {
   label: string;
 };
 
+type TurnState = {
+  phase: "lobby" | "running";
+  round: number;
+  active_player_id: string | null;
+};
+
 function randomRoomId(): string {
   // Friendly enough for MVP; switch to UUIDs later.
   return Math.random().toString(16).slice(2, 10);
@@ -95,6 +101,29 @@ function extractJoinedPlayer(payload: unknown): PresencePlayer | null {
 function extractLeftPlayerId(payload: unknown): string | null {
   if (!isRecord(payload)) return null;
   return typeof payload.player_id === "string" ? payload.player_id : null;
+}
+
+function toTurnState(value: unknown): TurnState | null {
+  if (!isRecord(value)) return null;
+  if (value.phase !== "lobby" && value.phase !== "running") return null;
+  const round = value.round;
+  if (typeof round !== "number" || !Number.isInteger(round) || round < 0) return null;
+  if (!(value.active_player_id === null || typeof value.active_player_id === "string")) return null;
+  return {
+    phase: value.phase,
+    round,
+    active_player_id: value.active_player_id,
+  };
+}
+
+function extractHelloTurn(payload: unknown): TurnState | null {
+  if (!isRecord(payload)) return null;
+  return toTurnState(payload.turn);
+}
+
+function extractTurnFromEvent(payload: unknown): TurnState | null {
+  if (!isRecord(payload)) return null;
+  return toTurnState(payload.turn);
 }
 
 function upsertToken(prev: BoardToken[], next: BoardToken): BoardToken[] {
@@ -189,6 +218,20 @@ function formatEventSummary(
     return `${actorName} rolled ${notation}: total ${total}.`;
   }
 
+  if (event.type === "GAME_STARTED") {
+    const turn = extractTurnFromEvent(payload);
+    if (!turn) return `${actorName} started the game.`;
+    const activeName = playerNameForEvent(turn.active_player_id ?? undefined, knownPlayersById);
+    return `${actorName} started the game. Round ${turn.round}, active player: ${activeName}.`;
+  }
+
+  if (event.type === "TURN_CHANGED") {
+    const turn = extractTurnFromEvent(payload);
+    if (!turn) return `${actorName} ended the turn.`;
+    const activeName = playerNameForEvent(turn.active_player_id ?? undefined, knownPlayersById);
+    return `${actorName} ended the turn. Round ${turn.round}, active player: ${activeName}.`;
+  }
+
   if (event.type === "ERROR") {
     const message = typeof payload.message === "string" ? payload.message : "Unknown error.";
     return `${actorName} received an error: ${message}`;
@@ -214,6 +257,7 @@ export function App() {
   const [tokens, setTokens] = useState<BoardToken[]>([]);
   const [players, setPlayers] = useState<PresencePlayer[]>([]);
   const [knownPlayersById, setKnownPlayersById] = useState<Record<string, PresencePlayer>>({});
+  const [turn, setTurn] = useState<TurnState | null>(null);
   const [eventLogMode, setEventLogMode] = useState<EventLogMode>("READABLE");
   const [gameId, setGameId] = useState<string>(() => randomRoomId());
   const [createRoomPending, setCreateRoomPending] = useState(false);
@@ -233,6 +277,7 @@ export function App() {
     setTokens([]);
     setPlayers([]);
     setKnownPlayersById({});
+    setTurn(null);
     setStatus("CONNECTING");
 
     const ws = new WebSocket(wsUrl);
@@ -255,6 +300,8 @@ export function App() {
             setPlayers(helloPlayers);
             setKnownPlayersById((prev) => upsertKnownPlayerMap(prev, helloPlayers));
           }
+          const helloTurn = extractHelloTurn(parsed.payload);
+          if (helloTurn) setTurn(helloTurn);
           return;
         }
 
@@ -280,6 +327,12 @@ export function App() {
           if (leftPlayerId) {
             setPlayers((prev) => prev.filter((player) => player.id !== leftPlayerId));
           }
+          return;
+        }
+
+        if (parsed.type === "GAME_STARTED" || parsed.type === "TURN_CHANGED") {
+          const nextTurn = extractTurnFromEvent(parsed.payload);
+          if (nextTurn) setTurn(nextTurn);
         }
       } catch {
         // ignore
@@ -331,6 +384,24 @@ export function App() {
     });
   }
 
+  function sendStartGame() {
+    send({
+      kind: "COMMAND",
+      type: "START_GAME",
+      client_msg_id: crypto.randomUUID(),
+      payload: {},
+    });
+  }
+
+  function sendEndTurn() {
+    send({
+      kind: "COMMAND",
+      type: "END_TURN",
+      client_msg_id: crypto.randomUUID(),
+      payload: {},
+    });
+  }
+
   async function createRoom() {
     setCreateRoomPending(true);
     setErrorMessage(null);
@@ -358,6 +429,11 @@ export function App() {
     }
   }
 
+  const activePlayerName =
+    turn?.active_player_id !== null && turn?.active_player_id !== undefined
+      ? knownPlayersById[turn.active_player_id]?.label ?? `Player ${turn.active_player_id}`
+      : "none";
+
   return (
     <div
       style={{
@@ -374,6 +450,12 @@ export function App() {
       <header style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
         <h1 style={{ margin: 0 }}>Skirmish VTT</h1>
         <div style={{ color: theme.muted }}>WS: {status}</div>
+        <div style={{ color: theme.muted }}>
+          Turn:{" "}
+          {turn
+            ? `${turn.phase === "running" ? `Round ${turn.round}` : "Lobby"} | Active: ${activePlayerName}`
+            : "unknown"}
+        </div>
         <button
           onClick={createRoom}
           disabled={createRoomPending}
@@ -431,6 +513,34 @@ export function App() {
         >
           Roll 3d6+1
         </button>
+        <button
+          onClick={sendStartGame}
+          disabled={status !== "CONNECTED"}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 6,
+            border: `1px solid ${theme.border}`,
+            background: theme.surfaceAlt,
+            color: theme.text,
+            cursor: status === "CONNECTED" ? "pointer" : "not-allowed",
+          }}
+        >
+          Start Game
+        </button>
+        <button
+          onClick={sendEndTurn}
+          disabled={status !== "CONNECTED" || turn?.phase !== "running"}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 6,
+            border: `1px solid ${theme.border}`,
+            background: theme.surfaceAlt,
+            color: theme.text,
+            cursor: status === "CONNECTED" && turn?.phase === "running" ? "pointer" : "not-allowed",
+          }}
+        >
+          End Turn
+        </button>
         <small style={{ color: theme.muted }}>
           Tip: open this page in two browser windows with the same Room ID.
         </small>
@@ -480,9 +590,14 @@ export function App() {
                     borderRadius: 6,
                     padding: "8px 10px",
                     background: theme.surfaceAlt,
+                    outline:
+                      turn?.active_player_id === player.id ? `1px solid ${theme.accent}` : "1px solid transparent",
                   }}
                 >
-                  <div>{player.label}</div>
+                  <div>
+                    {player.label}
+                    {turn?.active_player_id === player.id ? " (active)" : ""}
+                  </div>
                   <div style={{ fontSize: 12, color: theme.muted }}>{player.id}</div>
                 </div>
               ))}
