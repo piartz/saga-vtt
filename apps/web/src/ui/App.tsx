@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Board } from "./Board";
+import { Board, type BoardToken } from "./Board";
 
 type EventEnvelope = {
   kind: "EVENT";
@@ -23,6 +23,57 @@ function randomRoomId(): string {
   return Math.random().toString(16).slice(2, 10);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toBoardToken(value: unknown): BoardToken | null {
+  if (!isRecord(value)) return null;
+
+  const { id, label, x_mm, y_mm, r_mm } = value;
+  if (typeof id !== "string" || typeof label !== "string") return null;
+  if (typeof x_mm !== "number" || !Number.isInteger(x_mm)) return null;
+  if (typeof y_mm !== "number" || !Number.isInteger(y_mm)) return null;
+  if (typeof r_mm !== "number" || !Number.isInteger(r_mm)) return null;
+
+  return { id, label, x_mm, y_mm, r_mm };
+}
+
+function isEventEnvelope(value: unknown): value is EventEnvelope {
+  if (!isRecord(value)) return false;
+  if (value.kind !== "EVENT") return false;
+  if (typeof value.type !== "string") return false;
+  if (!Number.isInteger(value.seq)) return false;
+  if (typeof value.server_time !== "string") return false;
+  return "payload" in value;
+}
+
+function extractHelloTokens(payload: unknown): BoardToken[] | null {
+  if (!isRecord(payload)) return null;
+  if (!Array.isArray(payload.tokens)) return null;
+
+  const tokens = payload.tokens.map(toBoardToken);
+  if (tokens.some((token) => token === null)) return null;
+  return tokens as BoardToken[];
+}
+
+function extractMovedToken(payload: unknown): BoardToken | null {
+  if (!isRecord(payload)) return null;
+  return toBoardToken(payload.token);
+}
+
+function upsertToken(prev: BoardToken[], next: BoardToken): BoardToken[] {
+  let found = false;
+  const updated = prev.map((token) => {
+    if (token.id !== next.id) return token;
+    found = true;
+    return next;
+  });
+
+  if (!found) updated.push(next);
+  return updated;
+}
+
 export function App() {
   const theme = {
     bg: "#0f1115",
@@ -37,14 +88,23 @@ export function App() {
 
   const [status, setStatus] = useState<WsStatus>("DISCONNECTED");
   const [events, setEvents] = useState<EventEnvelope[]>([]);
+  const [tokens, setTokens] = useState<BoardToken[]>([]);
   const [gameId, setGameId] = useState<string>(() => randomRoomId());
+  const [createRoomPending, setCreateRoomPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
 
-  const wsUrl = useMemo(() => `ws://localhost:8000/games/${gameId}/ws`, [gameId]);
+  const browserProtocol = window.location.protocol === "https:" ? "https" : "http";
+  const wsProtocol = browserProtocol === "https" ? "wss" : "ws";
+  const apiHost = window.location.hostname || "localhost";
+
+  const apiBaseUrl = useMemo(() => `${browserProtocol}://${apiHost}:8000`, [apiHost, browserProtocol]);
+  const wsUrl = useMemo(() => `${wsProtocol}://${apiHost}:8000/games/${gameId}/ws`, [apiHost, gameId, wsProtocol]);
 
   useEffect(() => {
     setEvents([]);
+    setTokens([]);
     setStatus("CONNECTING");
 
     const ws = new WebSocket(wsUrl);
@@ -54,8 +114,23 @@ export function App() {
 
     ws.onmessage = (ev) => {
       try {
-        const data = JSON.parse(ev.data) as EventEnvelope;
-        setEvents((prev) => [...prev, data]);
+        const parsed = JSON.parse(ev.data) as unknown;
+        if (!isEventEnvelope(parsed)) return;
+
+        setEvents((prev) => [...prev, parsed]);
+
+        if (parsed.type === "HELLO") {
+          const helloTokens = extractHelloTokens(parsed.payload);
+          if (helloTokens) setTokens(helloTokens);
+          return;
+        }
+
+        if (parsed.type === "TOKEN_MOVED") {
+          const movedToken = extractMovedToken(parsed.payload);
+          if (movedToken) {
+            setTokens((prev) => upsertToken(prev, movedToken));
+          }
+        }
       } catch {
         // ignore
       }
@@ -88,6 +163,42 @@ export function App() {
     });
   }
 
+  function sendMoveToken(tokenId: string, xMm: number, yMm: number) {
+    send({
+      kind: "COMMAND",
+      type: "MOVE_TOKEN",
+      client_msg_id: crypto.randomUUID(),
+      payload: { token_id: tokenId, x_mm: xMm, y_mm: yMm },
+    });
+  }
+
+  async function createRoom() {
+    setCreateRoomPending(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/games`, { method: "POST" });
+      if (!response.ok) {
+        throw new Error(`Could not create room (${response.status}).`);
+      }
+
+      const body = (await response.json()) as unknown;
+      if (!isRecord(body) || typeof body.game_id !== "string") {
+        throw new Error("Server returned an invalid room response.");
+      }
+
+      setGameId(body.game_id);
+    } catch (err) {
+      if (err instanceof Error) {
+        setErrorMessage(err.message);
+      } else {
+        setErrorMessage("Could not create room.");
+      }
+    } finally {
+      setCreateRoomPending(false);
+    }
+  }
+
   return (
     <div
       style={{
@@ -104,6 +215,20 @@ export function App() {
       <header style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
         <h1 style={{ margin: 0 }}>Skirmish VTT</h1>
         <div style={{ color: theme.muted }}>WS: {status}</div>
+        <button
+          onClick={createRoom}
+          disabled={createRoomPending}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 6,
+            border: `1px solid ${theme.border}`,
+            background: theme.surfaceAlt,
+            color: theme.text,
+            cursor: createRoomPending ? "not-allowed" : "pointer",
+          }}
+        >
+          {createRoomPending ? "Creating..." : "Create Room"}
+        </button>
         <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
           Room:
           <input
@@ -138,9 +263,27 @@ export function App() {
         </small>
       </header>
 
+      {errorMessage && (
+        <div
+          style={{
+            border: `1px solid ${theme.border}`,
+            borderRadius: 8,
+            padding: "8px 12px",
+            background: theme.surfaceAlt,
+            color: "#ffb3b3",
+          }}
+        >
+          {errorMessage}
+        </div>
+      )}
+
       <main style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 16 }}>
         <section>
-          <Board />
+          <Board
+            tokens={tokens}
+            canMoveTokens={status === "CONNECTED"}
+            onMoveToken={sendMoveToken}
+          />
         </section>
 
         <aside
