@@ -408,38 +408,38 @@ export function App() {
 
           <section>
             <h2 style={{ marginTop: 0 }}>Event Log</h2>
-          <div style={{ display: "grid", gap: 8, maxHeight: 520, overflow: "auto" }}>
-            {events
-              .slice()
-              .reverse()
-              .map((e) => (
-                <div
-                  key={e.seq}
-                  style={{
-                    border: `1px solid ${theme.border}`,
-                    borderRadius: 6,
-                    padding: 8,
-                    background: theme.surfaceAlt,
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <strong>{e.type}</strong>
-                    <span style={{ color: theme.muted }}>#{e.seq}</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: theme.muted }}>{e.server_time}</div>
-                  <pre
+            <div style={{ display: "grid", gap: 8, maxHeight: 520, overflow: "auto" }}>
+              {events
+                .slice()
+                .reverse()
+                .map((e) => (
+                  <div
+                    key={e.seq}
                     style={{
-                      margin: 0,
-                      fontSize: 12,
-                      whiteSpace: "pre-wrap",
-                      color: theme.accent,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: 6,
+                      padding: 8,
+                      background: theme.surfaceAlt,
                     }}
                   >
-                    {JSON.stringify(e.payload, null, 2)}
-                  </pre>
-                </div>
-              ))}
-          </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <strong>{e.type}</strong>
+                      <span style={{ color: theme.muted }}>#{e.seq}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: theme.muted }}>{e.server_time}</div>
+                    <pre
+                      style={{
+                        margin: 0,
+                        fontSize: 12,
+                        whiteSpace: "pre-wrap",
+                        color: theme.accent,
+                      }}
+                    >
+                      {JSON.stringify(e.payload, null, 2)}
+                    </pre>
+                  </div>
+                ))}
+            </div>
           </section>
         </aside>
       </main>
