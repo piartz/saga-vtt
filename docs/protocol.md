@@ -27,6 +27,21 @@ This is the current MVP protocol implemented by the API/web app.
 
 ## MVP command/event types
 
+### Connection lifecycle / presence
+- Server assigns an ephemeral player identity per websocket connection.
+- `HELLO.payload` includes:
+  - `game_id`
+  - `protocol_version`
+  - `board`
+  - `tokens`
+  - `players` (connected players snapshot)
+- `PLAYER_JOINED`:
+  - emitted to existing room clients when a new client connects
+  - payload: `player`
+- `PLAYER_LEFT`:
+  - emitted to remaining room clients when a client disconnects
+  - payload: `player_id`
+
 ### Connectivity
 - `PING` → `PONG`
 
@@ -57,9 +72,7 @@ This is the current MVP protocol implemented by the API/web app.
     - `client_msg_id`
 
 ### Room lifecycle (later)
-- `JOIN_GAME` → `PLAYER_JOINED`
-- `LEAVE_GAME` → `PLAYER_LEFT`
-- `START_GAME` → `GAME_STARTED`
+- explicit lobby commands (`JOIN_GAME`, `LEAVE_GAME`, `START_GAME`) once auth/identity is added
 
 ## Versioning
 When you introduce breaking changes:

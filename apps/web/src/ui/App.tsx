@@ -18,6 +18,11 @@ type CommandEnvelope = {
 
 type WsStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
 
+type PresencePlayer = {
+  id: string;
+  label: string;
+};
+
 function randomRoomId(): string {
   // Friendly enough for MVP; switch to UUIDs later.
   return Math.random().toString(16).slice(2, 10);
@@ -57,9 +62,36 @@ function extractHelloTokens(payload: unknown): BoardToken[] | null {
   return tokens as BoardToken[];
 }
 
+function toPresencePlayer(value: unknown): PresencePlayer | null {
+  if (!isRecord(value)) return null;
+
+  const { id, label } = value;
+  if (typeof id !== "string" || typeof label !== "string") return null;
+  return { id, label };
+}
+
+function extractHelloPlayers(payload: unknown): PresencePlayer[] | null {
+  if (!isRecord(payload)) return null;
+  if (!Array.isArray(payload.players)) return null;
+
+  const players = payload.players.map(toPresencePlayer);
+  if (players.some((player) => player === null)) return null;
+  return players as PresencePlayer[];
+}
+
 function extractMovedToken(payload: unknown): BoardToken | null {
   if (!isRecord(payload)) return null;
   return toBoardToken(payload.token);
+}
+
+function extractJoinedPlayer(payload: unknown): PresencePlayer | null {
+  if (!isRecord(payload)) return null;
+  return toPresencePlayer(payload.player);
+}
+
+function extractLeftPlayerId(payload: unknown): string | null {
+  if (!isRecord(payload)) return null;
+  return typeof payload.player_id === "string" ? payload.player_id : null;
 }
 
 function upsertToken(prev: BoardToken[], next: BoardToken): BoardToken[] {
@@ -72,6 +104,18 @@ function upsertToken(prev: BoardToken[], next: BoardToken): BoardToken[] {
 
   if (!found) updated.push(next);
   return updated;
+}
+
+function upsertPlayer(prev: PresencePlayer[], next: PresencePlayer): PresencePlayer[] {
+  let found = false;
+  const updated = prev.map((player) => {
+    if (player.id !== next.id) return player;
+    found = true;
+    return next;
+  });
+
+  if (!found) updated.push(next);
+  return updated.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 export function App() {
@@ -89,6 +133,7 @@ export function App() {
   const [status, setStatus] = useState<WsStatus>("DISCONNECTED");
   const [events, setEvents] = useState<EventEnvelope[]>([]);
   const [tokens, setTokens] = useState<BoardToken[]>([]);
+  const [players, setPlayers] = useState<PresencePlayer[]>([]);
   const [gameId, setGameId] = useState<string>(() => randomRoomId());
   const [createRoomPending, setCreateRoomPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -105,6 +150,7 @@ export function App() {
   useEffect(() => {
     setEvents([]);
     setTokens([]);
+    setPlayers([]);
     setStatus("CONNECTING");
 
     const ws = new WebSocket(wsUrl);
@@ -122,6 +168,8 @@ export function App() {
         if (parsed.type === "HELLO") {
           const helloTokens = extractHelloTokens(parsed.payload);
           if (helloTokens) setTokens(helloTokens);
+          const helloPlayers = extractHelloPlayers(parsed.payload);
+          if (helloPlayers) setPlayers(helloPlayers);
           return;
         }
 
@@ -129,6 +177,22 @@ export function App() {
           const movedToken = extractMovedToken(parsed.payload);
           if (movedToken) {
             setTokens((prev) => upsertToken(prev, movedToken));
+          }
+          return;
+        }
+
+        if (parsed.type === "PLAYER_JOINED") {
+          const joinedPlayer = extractJoinedPlayer(parsed.payload);
+          if (joinedPlayer) {
+            setPlayers((prev) => upsertPlayer(prev, joinedPlayer));
+          }
+          return;
+        }
+
+        if (parsed.type === "PLAYER_LEFT") {
+          const leftPlayerId = extractLeftPlayerId(parsed.payload);
+          if (leftPlayerId) {
+            setPlayers((prev) => prev.filter((player) => player.id !== leftPlayerId));
           }
         }
       } catch {
@@ -315,9 +379,35 @@ export function App() {
             borderRadius: 8,
             padding: 12,
             background: theme.surface,
+            display: "grid",
+            gap: 12,
           }}
         >
-          <h2 style={{ marginTop: 0 }}>Event Log</h2>
+          <section>
+            <h2 style={{ marginTop: 0 }}>Players</h2>
+            <div style={{ display: "grid", gap: 8 }}>
+              {players.map((player) => (
+                <div
+                  key={player.id}
+                  style={{
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 6,
+                    padding: "8px 10px",
+                    background: theme.surfaceAlt,
+                  }}
+                >
+                  <div>{player.label}</div>
+                  <div style={{ fontSize: 12, color: theme.muted }}>{player.id}</div>
+                </div>
+              ))}
+              {players.length === 0 && (
+                <div style={{ fontSize: 12, color: theme.muted }}>No players connected.</div>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h2 style={{ marginTop: 0 }}>Event Log</h2>
           <div style={{ display: "grid", gap: 8, maxHeight: 520, overflow: "auto" }}>
             {events
               .slice()
@@ -350,6 +440,7 @@ export function App() {
                 </div>
               ))}
           </div>
+          </section>
         </aside>
       </main>
     </div>

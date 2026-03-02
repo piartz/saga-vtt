@@ -29,6 +29,11 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - facing_deg
 - tags/status (activated, fatigued, etc. — rules-specific)
 
+### Player (ephemeral MVP presence)
+- id
+- label
+- connected_via (websocket session, in-memory only)
+
 ### Event
 - seq (monotonic)
 - type
@@ -36,6 +41,11 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - server_time
 - actor_player_id (optional)
 - client_msg_id (optional echo when tied to a client command)
+
+### Presence payloads
+- `HELLO.payload.players`: `Player[]`
+- `PLAYER_JOINED.payload.player`: `Player`
+- `PLAYER_LEFT.payload.player_id`: `string`
 
 ### Dice roll payload (`DICE_ROLLED`)
 - count

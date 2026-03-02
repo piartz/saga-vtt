@@ -40,7 +40,10 @@ Primary references:
   - default tokens A/B
 - `WS /games/{game_id}/ws`:
   - accepts connection
-  - emits `HELLO` event with protocol version, board, token snapshot
+  - assigns ephemeral player identity per connection
+  - emits `HELLO` event with protocol version, board, token snapshot, and player list
+  - emits `PLAYER_JOINED` to existing clients when a new player connects
+  - emits `PLAYER_LEFT` to remaining clients when a player disconnects
   - handles `PING` -> broadcasts `PONG`
   - handles `MOVE_TOKEN`:
     - validates payload shape/types
@@ -58,7 +61,7 @@ Primary references:
 
 ### Frontend (`apps/web/src/ui`)
 - Opens WS connection for current room.
-- Displays connection status and event log.
+- Displays connection status, connected players, and event log.
 - Supports:
   - create room (`POST /games`)
   - set room id manually
@@ -66,7 +69,8 @@ Primary references:
   - send sample `ROLL_DICE` (`3d6+1`)
   - board token drag and release -> sends `MOVE_TOKEN`
 - Applies authoritative updates from events:
-  - `HELLO` token snapshot
+  - `HELLO` token + player snapshot
+  - `PLAYER_JOINED` / `PLAYER_LEFT` player presence updates
   - `TOKEN_MOVED` token updates
 - Board UI:
   - SVG board with mm coordinate system
@@ -77,6 +81,7 @@ Primary references:
 - `services/api/tests/test_health.py`
 - `services/api/tests/test_rooms_and_moves.py`
   - verifies room creation
+  - verifies presence join/leave events and `HELLO` player snapshot
   - verifies authoritative token move broadcast to two WS clients
   - verifies authoritative dice roll broadcast to two WS clients
   - verifies dice payload validation errors
@@ -105,7 +110,7 @@ Primary references:
 
 ## Recommended Next Tasks
 - Add typed command/event schemas on server and client (single source of truth).
-- Introduce per-room connection manager abstraction (easier JOIN/LEAVE/presence).
+- Extract a per-room connection manager abstraction (presence now works but is still inline in `main.py`).
 - Add WS reconnect/backoff client wrapper with resync behavior.
 - Expand dice UX (custom notation input + structured action log rendering for `DICE_ROLLED`).
 - Start ADRs for major protocol/state decisions in `docs/adrs/`.
@@ -113,6 +118,7 @@ Primary references:
 ## Open Decisions / Risks
 - Event ordering and replay consistency under reconnect are not yet specified.
 - No auth/identity: all clients can currently issue movement and dice commands.
+- Presence identities are ephemeral per websocket and not stable across reconnect.
 - In-memory room state means process restart loses all games.
 - Protocol evolution strategy is documented but not yet exercised in code.
 
