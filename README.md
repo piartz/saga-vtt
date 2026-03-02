@@ -35,6 +35,18 @@ It is intentionally **generic**:
 - Python 3.11+
 - Poetry 1.6+ (or 1.7+)
 
+### One-command setup + run
+From the repo root:
+```bash
+make setup-run
+```
+
+This command checks tool versions, installs dependencies, and starts:
+- API: http://127.0.0.1:8000
+- Web: http://127.0.0.1:5173
+
+Press `Ctrl+C` to stop both services.
+
 ### 1) Backend
 ```bash
 cd services/api
