@@ -1,0 +1,42 @@
+# Data Model (Draft)
+
+The MVP uses in-memory state. Later, persist snapshots + event logs.
+
+## Coordinate system
+Use **continuous coordinates** in millimeters (mm) to avoid floating conversion errors.
+
+- Table origin: top-left (0,0)
+- +x to the right, +y downward
+- Facing angle in degrees (0 = right, 90 = down) or radians (pick one and stick to it)
+
+## Entities
+
+### Game
+- id
+- created_at
+- players[]
+- phase (lobby / running / finished)
+- active_player_id
+- round
+- state_version
+
+### Token
+- id
+- name
+- owner_player_id
+- base_diameter_mm
+- position_mm: {x, y}
+- facing_deg
+- tags/status (activated, fatigued, etc. — rules-specific)
+
+### Event
+- seq (monotonic)
+- type
+- payload
+- server_time
+- actor_player_id (optional)
+
+## Geometry checks (server-side)
+- token collision rules (depends on game system; start permissive)
+- movement distance constraints
+- line-of-sight helpers (later)

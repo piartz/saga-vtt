@@ -1,0 +1,10 @@
+{
+  "name": "skirmish-vtt-bootstrap",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev:web": "pnpm --dir apps/web dev",
+    "lint:web": "pnpm --dir apps/web lint",
+    "build:web": "pnpm --dir apps/web build"
+  }
+}
