@@ -8,7 +8,7 @@
 
 ## Milestone 1 — “Shared tabletop”
 - Token placement (spawn a few tokens)
-- Pan/zoom board
+- Pan/zoom board (implemented: wheel zoom, +/- controls, reset, background pan)
 - Select token
 - Move token with measurement preview (client)
 - Confirm move (server validates & broadcasts)
