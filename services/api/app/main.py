@@ -100,6 +100,48 @@ def apply_move_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, s
     return token, None
 
 
+class DiceRollResult(TypedDict):
+    count: int
+    sides: int
+    modifier: int
+    rolls: List[int]
+    total: int
+    notation: str
+
+
+def apply_roll_dice(payload: Any) -> tuple[DiceRollResult | None, str | None]:
+    if not isinstance(payload, dict):
+        return None, "ROLL_DICE payload must be an object."
+
+    count = payload.get("count")
+    sides = payload.get("sides")
+    modifier = payload.get("modifier", 0)
+
+    if not is_int(count) or count < 1 or count > 20:
+        return None, "ROLL_DICE count must be an integer between 1 and 20."
+    if not is_int(sides) or sides < 2 or sides > 1000:
+        return None, "ROLL_DICE sides must be an integer between 2 and 1000."
+    if not is_int(modifier) or modifier < -1000 or modifier > 1000:
+        return None, "ROLL_DICE modifier must be an integer between -1000 and 1000."
+
+    rolls = [secrets.randbelow(sides) + 1 for _ in range(count)]
+    total = sum(rolls) + modifier
+    notation = f"{count}d{sides}"
+    if modifier > 0:
+        notation += f"+{modifier}"
+    elif modifier < 0:
+        notation += str(modifier)
+
+    return {
+        "count": count,
+        "sides": sides,
+        "modifier": modifier,
+        "rolls": rolls,
+        "total": total,
+        "notation": notation,
+    }, None
+
+
 app = FastAPI(title="Skirmish VTT API", version="0.1.0")
 
 # Dev-friendly CORS for local frontend
@@ -200,6 +242,23 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         "TOKEN_MOVED",
                         {
                             "token": moved_token,
+                            "client_msg_id": data.get("client_msg_id"),
+                        },
+                    )
+                )
+                continue
+
+            if command_type == "ROLL_DICE":
+                roll_result, error = apply_roll_dice(data.get("payload"))
+                if error is not None:
+                    await ws.send_text(json.dumps(make_event(room, "ERROR", {"message": error})))
+                    continue
+                await room.broadcast(
+                    make_event(
+                        room,
+                        "DICE_ROLLED",
+                        {
+                            **roll_result,
                             "client_msg_id": data.get("client_msg_id"),
                         },
                     )

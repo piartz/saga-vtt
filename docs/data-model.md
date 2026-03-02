@@ -35,6 +35,15 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - payload
 - server_time
 - actor_player_id (optional)
+- client_msg_id (optional echo when tied to a client command)
+
+### Dice roll payload (`DICE_ROLLED`)
+- count
+- sides
+- modifier
+- rolls[]
+- total
+- notation
 
 ## Geometry checks (server-side)
 - token collision rules (depends on game system; start permissive)

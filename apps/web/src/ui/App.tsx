@@ -172,6 +172,15 @@ export function App() {
     });
   }
 
+  function sendRollDice() {
+    send({
+      kind: "COMMAND",
+      type: "ROLL_DICE",
+      client_msg_id: crypto.randomUUID(),
+      payload: { count: 3, sides: 6, modifier: 1 },
+    });
+  }
+
   async function createRoom() {
     setCreateRoomPending(true);
     setErrorMessage(null);
@@ -257,6 +266,20 @@ export function App() {
           }}
         >
           Send PING
+        </button>
+        <button
+          onClick={sendRollDice}
+          disabled={status !== "CONNECTED"}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 6,
+            border: `1px solid ${theme.border}`,
+            background: theme.surfaceAlt,
+            color: theme.text,
+            cursor: status === "CONNECTED" ? "pointer" : "not-allowed",
+          }}
+        >
+          Roll 3d6+1
         </button>
         <small style={{ color: theme.muted }}>
           Tip: open this page in two browser windows with the same Room ID.
