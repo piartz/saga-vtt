@@ -79,6 +79,8 @@ Primary references:
   - SVG board with mm coordinate system
   - local drag preview
   - sends command on release (server confirms via event)
+  - mouse-wheel zoom (`50%` to `250%`) with +/- controls and reset
+  - drag-background panning when zoomed in
 
 ### Tests
 - `services/api/tests/test_health.py`
@@ -88,6 +90,7 @@ Primary references:
   - verifies authoritative token move broadcast to two WS clients
   - verifies authoritative dice roll broadcast to two WS clients
   - verifies dice payload validation errors
+- Web UI currently has no automated test suite; board interaction changes are validated via `pnpm build:web` plus manual verification.
 
 ## Docs vs Code Notes
 - Docs often describe "starter/placeholder" behavior.
@@ -96,7 +99,7 @@ Primary references:
 
 ## Future Goals (From Roadmap)
 1. Shared tabletop polish:
-   - pan/zoom
+   - pan/zoom polish (basic controls implemented)
    - better token placement/selection ergonomics
    - move preview + explicit confirm UX refinement
 2. Basic scenario loop:
