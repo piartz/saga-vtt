@@ -6,6 +6,7 @@ type EventEnvelope = {
   type: string;
   seq: number;
   server_time: string;
+  actor_player_id?: string;
   payload: unknown;
 };
 
@@ -17,6 +18,7 @@ type CommandEnvelope = {
 };
 
 type WsStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
+type EventLogMode = "READABLE" | "ADVANCED";
 
 type PresencePlayer = {
   id: string;
@@ -50,6 +52,7 @@ function isEventEnvelope(value: unknown): value is EventEnvelope {
   if (typeof value.type !== "string") return false;
   if (!Number.isInteger(value.seq)) return false;
   if (typeof value.server_time !== "string") return false;
+  if ("actor_player_id" in value && typeof value.actor_player_id !== "string") return false;
   return "payload" in value;
 }
 
@@ -118,6 +121,82 @@ function upsertPlayer(prev: PresencePlayer[], next: PresencePlayer): PresencePla
   return updated.sort((a, b) => a.id.localeCompare(b.id));
 }
 
+function upsertKnownPlayerMap(
+  prev: Record<string, PresencePlayer>,
+  next: PresencePlayer | PresencePlayer[]
+): Record<string, PresencePlayer> {
+  const updated = { ...prev };
+  const players = Array.isArray(next) ? next : [next];
+  for (const player of players) {
+    updated[player.id] = player;
+  }
+  return updated;
+}
+
+function playerNameForEvent(
+  playerId: string | undefined,
+  knownPlayersById: Record<string, PresencePlayer>
+): string {
+  if (!playerId) return "System";
+  return knownPlayersById[playerId]?.label ?? `Player ${playerId}`;
+}
+
+function formatEventSummary(
+  event: EventEnvelope,
+  knownPlayersById: Record<string, PresencePlayer>
+): string {
+  const actorName = playerNameForEvent(event.actor_player_id, knownPlayersById);
+  const payload = isRecord(event.payload) ? event.payload : {};
+
+  if (event.type === "HELLO") {
+    const gameId = typeof payload.game_id === "string" ? payload.game_id : "unknown";
+    const tokenCount = Array.isArray(payload.tokens) ? payload.tokens.length : 0;
+    const playerCount = Array.isArray(payload.players) ? payload.players.length : 0;
+    return `Connected to room ${gameId}. ${playerCount} player(s) online, ${tokenCount} token(s) loaded.`;
+  }
+
+  if (event.type === "PLAYER_JOINED") {
+    const joinedPlayer = toPresencePlayer(payload.player);
+    const joinedName = joinedPlayer?.label ?? actorName;
+    return `${joinedName} joined the room.`;
+  }
+
+  if (event.type === "PLAYER_LEFT") {
+    const leftPlayerId = typeof payload.player_id === "string" ? payload.player_id : undefined;
+    const leftName = playerNameForEvent(leftPlayerId, knownPlayersById);
+    return `${leftName} left the room.`;
+  }
+
+  if (event.type === "PONG") {
+    return `${actorName} sent a ping and received PONG.`;
+  }
+
+  if (event.type === "TOKEN_MOVED") {
+    const movedToken = toBoardToken(payload.token);
+    if (!movedToken) return `${actorName} moved a token.`;
+    return `${actorName} moved token ${movedToken.label} to (${movedToken.x_mm}, ${movedToken.y_mm}) mm.`;
+  }
+
+  if (event.type === "DICE_ROLLED") {
+    const notation = typeof payload.notation === "string" ? payload.notation : "dice";
+    const total = typeof payload.total === "number" ? payload.total : "?";
+    const rolls = Array.isArray(payload.rolls)
+      ? payload.rolls.filter((roll) => typeof roll === "number").join(", ")
+      : "";
+    if (rolls) {
+      return `${actorName} rolled ${notation}: [${rolls}] = ${total}.`;
+    }
+    return `${actorName} rolled ${notation}: total ${total}.`;
+  }
+
+  if (event.type === "ERROR") {
+    const message = typeof payload.message === "string" ? payload.message : "Unknown error.";
+    return `${actorName} received an error: ${message}`;
+  }
+
+  return `${actorName} triggered ${event.type}.`;
+}
+
 export function App() {
   const theme = {
     bg: "#0f1115",
@@ -134,6 +213,8 @@ export function App() {
   const [events, setEvents] = useState<EventEnvelope[]>([]);
   const [tokens, setTokens] = useState<BoardToken[]>([]);
   const [players, setPlayers] = useState<PresencePlayer[]>([]);
+  const [knownPlayersById, setKnownPlayersById] = useState<Record<string, PresencePlayer>>({});
+  const [eventLogMode, setEventLogMode] = useState<EventLogMode>("READABLE");
   const [gameId, setGameId] = useState<string>(() => randomRoomId());
   const [createRoomPending, setCreateRoomPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -151,6 +232,7 @@ export function App() {
     setEvents([]);
     setTokens([]);
     setPlayers([]);
+    setKnownPlayersById({});
     setStatus("CONNECTING");
 
     const ws = new WebSocket(wsUrl);
@@ -169,7 +251,10 @@ export function App() {
           const helloTokens = extractHelloTokens(parsed.payload);
           if (helloTokens) setTokens(helloTokens);
           const helloPlayers = extractHelloPlayers(parsed.payload);
-          if (helloPlayers) setPlayers(helloPlayers);
+          if (helloPlayers) {
+            setPlayers(helloPlayers);
+            setKnownPlayersById((prev) => upsertKnownPlayerMap(prev, helloPlayers));
+          }
           return;
         }
 
@@ -185,6 +270,7 @@ export function App() {
           const joinedPlayer = extractJoinedPlayer(parsed.payload);
           if (joinedPlayer) {
             setPlayers((prev) => upsertPlayer(prev, joinedPlayer));
+            setKnownPlayersById((prev) => upsertKnownPlayerMap(prev, joinedPlayer));
           }
           return;
         }
@@ -408,6 +494,36 @@ export function App() {
 
           <section>
             <h2 style={{ marginTop: 0 }}>Event Log</h2>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <button
+                onClick={() => setEventLogMode("READABLE")}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  border: `1px solid ${theme.border}`,
+                  background: eventLogMode === "READABLE" ? theme.accent : theme.surfaceAlt,
+                  color: eventLogMode === "READABLE" ? "#0f1115" : theme.text,
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Readable
+              </button>
+              <button
+                onClick={() => setEventLogMode("ADVANCED")}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  border: `1px solid ${theme.border}`,
+                  background: eventLogMode === "ADVANCED" ? theme.accent : theme.surfaceAlt,
+                  color: eventLogMode === "ADVANCED" ? "#0f1115" : theme.text,
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Advanced (JSON)
+              </button>
+            </div>
             <div style={{ display: "grid", gap: 8, maxHeight: 520, overflow: "auto" }}>
               {events
                 .slice()
@@ -427,16 +543,28 @@ export function App() {
                       <span style={{ color: theme.muted }}>#{e.seq}</span>
                     </div>
                     <div style={{ fontSize: 12, color: theme.muted }}>{e.server_time}</div>
-                    <pre
-                      style={{
-                        margin: 0,
-                        fontSize: 12,
-                        whiteSpace: "pre-wrap",
-                        color: theme.accent,
-                      }}
-                    >
-                      {JSON.stringify(e.payload, null, 2)}
-                    </pre>
+                    {e.actor_player_id && (
+                      <div style={{ fontSize: 12, color: theme.muted }}>
+                        By: {knownPlayersById[e.actor_player_id]?.label ?? `Player ${e.actor_player_id}`} (
+                        {e.actor_player_id})
+                      </div>
+                    )}
+                    {eventLogMode === "READABLE" ? (
+                      <div style={{ marginTop: 6, fontSize: 13, color: theme.text }}>
+                        {formatEventSummary(e, knownPlayersById)}
+                      </div>
+                    ) : (
+                      <pre
+                        style={{
+                          margin: 0,
+                          fontSize: 12,
+                          whiteSpace: "pre-wrap",
+                          color: theme.accent,
+                        }}
+                      >
+                        {JSON.stringify(e.payload, null, 2)}
+                      </pre>
+                    )}
                   </div>
                 ))}
             </div>

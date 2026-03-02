@@ -63,15 +63,23 @@ class GameRoom:
 ROOMS: Dict[str, GameRoom] = {}
 
 
-def make_event(room: GameRoom, event_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def make_event(
+    room: GameRoom,
+    event_type: str,
+    payload: Dict[str, Any],
+    actor_player_id: str | None = None,
+) -> Dict[str, Any]:
     room.seq += 1
-    return {
+    event = {
         "kind": "EVENT",
         "type": event_type,
         "seq": room.seq,
         "server_time": utc_now_iso(),
         "payload": payload,
     }
+    if actor_player_id is not None:
+        event["actor_player_id"] = actor_player_id
+    return event
 
 
 def create_room(game_id: str) -> GameRoom:
@@ -228,7 +236,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
             )
         )
         await room.broadcast(
-            make_event(room, "PLAYER_JOINED", {"player": player}),
+            make_event(room, "PLAYER_JOINED", {"player": player}, actor_player_id=player["id"]),
             exclude_ws=ws,
         )
 
@@ -238,7 +246,14 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 data = json.loads(msg)
             except json.JSONDecodeError:
                 await ws.send_text(
-                    json.dumps(make_event(room, "ERROR", {"message": "Invalid JSON"}))
+                    json.dumps(
+                        make_event(
+                            room,
+                            "ERROR",
+                            {"message": "Invalid JSON"},
+                            actor_player_id=player["id"],
+                        )
+                    )
                 )
                 continue
 
@@ -249,6 +264,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                             room,
                             "ERROR",
                             {"message": "Envelope kind must be COMMAND.", "received": data},
+                            actor_player_id=player["id"],
                         )
                     )
                 )
@@ -257,14 +273,28 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
             command_type = data.get("type")
             if command_type == "PING":
                 await room.broadcast(
-                    make_event(room, "PONG", {"echo": data.get("payload", {})})
+                    make_event(
+                        room,
+                        "PONG",
+                        {"echo": data.get("payload", {})},
+                        actor_player_id=player["id"],
+                    )
                 )
                 continue
 
             if command_type == "MOVE_TOKEN":
                 moved_token, error = apply_move_token(room, data.get("payload"))
                 if error is not None:
-                    await ws.send_text(json.dumps(make_event(room, "ERROR", {"message": error})))
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": error},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
                     continue
                 await room.broadcast(
                     make_event(
@@ -274,6 +304,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                             "token": moved_token,
                             "client_msg_id": data.get("client_msg_id"),
                         },
+                        actor_player_id=player["id"],
                     )
                 )
                 continue
@@ -281,7 +312,16 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
             if command_type == "ROLL_DICE":
                 roll_result, error = apply_roll_dice(data.get("payload"))
                 if error is not None:
-                    await ws.send_text(json.dumps(make_event(room, "ERROR", {"message": error})))
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": error},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
                     continue
                 await room.broadcast(
                     make_event(
@@ -291,6 +331,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                             **roll_result,
                             "client_msg_id": data.get("client_msg_id"),
                         },
+                        actor_player_id=player["id"],
                     )
                 )
                 continue
@@ -301,6 +342,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         room,
                         "ERROR",
                         {"message": "Unknown command", "received": data},
+                        actor_player_id=player["id"],
                     )
                 )
             )
@@ -318,6 +360,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                     room,
                     "PLAYER_LEFT",
                     {"player_id": disconnected_player["id"]},
+                    actor_player_id=disconnected_player["id"],
                 )
             )
         # Cleanup empty room
