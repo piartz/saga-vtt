@@ -154,7 +154,7 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
               x={t.x_mm}
               y={t.y_mm + 5}
               textAnchor="middle"
-              style={{ userSelect: "none", fontSize: 14, fill: theme.text }}
+              style={{ userSelect: "none", pointerEvents: "none", fontSize: 14, fill: theme.text }}
             >
               {t.label}
             </text>

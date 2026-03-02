@@ -26,6 +26,11 @@ class TokenState(TypedDict):
     r_mm: int
 
 
+class PlayerState(TypedDict):
+    id: str
+    label: str
+
+
 def default_tokens() -> Dict[str, TokenState]:
     return {
         "A": {"id": "A", "label": "A", "x_mm": 160, "y_mm": 140, "r_mm": 22},
@@ -38,15 +43,20 @@ class GameRoom:
     game_id: str
     seq: int = 0
     connections: List[WebSocket] = field(default_factory=list)
+    players_by_ws_id: Dict[int, PlayerState] = field(default_factory=dict)
     tokens: Dict[str, TokenState] = field(default_factory=default_tokens)
 
-    async def broadcast(self, event: Dict[str, Any]) -> None:
+    async def broadcast(self, event: Dict[str, Any], exclude_ws: WebSocket | None = None) -> None:
         for ws in list(self.connections):
+            if exclude_ws is not None and ws == exclude_ws:
+                continue
             try:
                 await ws.send_text(json.dumps(event))
             except WebSocketDisconnect:
+                ws_id = id(ws)
                 if ws in self.connections:
                     self.connections.remove(ws)
+                self.players_by_ws_id.pop(ws_id, None)
 
 
 # In-memory room registry (MVP only)
@@ -72,6 +82,19 @@ def create_room(game_id: str) -> GameRoom:
 
 def is_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
+
+
+def create_player(room: GameRoom) -> PlayerState:
+    while True:
+        player_id = secrets.token_hex(3)
+        already_used = any(player["id"] == player_id for player in room.players_by_ws_id.values())
+        if not already_used:
+            break
+    return {"id": player_id, "label": f"Player {player_id}"}
+
+
+def room_players_snapshot(room: GameRoom) -> List[PlayerState]:
+    return sorted(room.players_by_ws_id.values(), key=lambda player: player["id"])
 
 
 def apply_move_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, str | None]:
@@ -184,6 +207,8 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
         room = create_room(game_id)
 
     room.connections.append(ws)
+    player = create_player(room)
+    room.players_by_ws_id[id(ws)] = player
 
     try:
         # Initial hello event
@@ -197,9 +222,14 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         "protocol_version": PROTOCOL_VERSION,
                         "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
                         "tokens": list(room.tokens.values()),
+                        "players": room_players_snapshot(room),
                     },
                 )
             )
+        )
+        await room.broadcast(
+            make_event(room, "PLAYER_JOINED", {"player": player}),
+            exclude_ws=ws,
         )
 
         while True:
@@ -279,8 +309,17 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
         pass
     finally:
         # Remove connection
+        disconnected_player = room.players_by_ws_id.pop(id(ws), None)
         if ws in room.connections:
             room.connections.remove(ws)
+        if disconnected_player is not None and room.connections:
+            await room.broadcast(
+                make_event(
+                    room,
+                    "PLAYER_LEFT",
+                    {"player_id": disconnected_player["id"]},
+                )
+            )
         # Cleanup empty room
         if not room.connections:
             ROOMS.pop(game_id, None)
