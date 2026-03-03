@@ -4,7 +4,7 @@ import json
 import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, TypedDict
+from typing import Any, Dict, List, TypeGuard, TypedDict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -97,7 +97,7 @@ def create_room(game_id: str) -> GameRoom:
     return room
 
 
-def is_int(value: Any) -> bool:
+def is_int(value: Any) -> TypeGuard[int]:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
@@ -181,19 +181,28 @@ def apply_move_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, s
 
     if not isinstance(token_id, str):
         return None, "MOVE_TOKEN token_id must be a string."
-    if not is_int(x_mm) or not is_int(y_mm):
+    if not is_int(x_mm):
         return None, "MOVE_TOKEN coordinates must be integer mm values."
+    if not is_int(y_mm):
+        return None, "MOVE_TOKEN coordinates must be integer mm values."
+    x_mm_int = x_mm
+    y_mm_int = y_mm
 
     token = room.tokens.get(token_id)
     if token is None:
         return None, f"Unknown token '{token_id}'."
 
     radius = token["r_mm"]
-    if x_mm < radius or x_mm > BOARD_WIDTH_MM - radius or y_mm < radius or y_mm > BOARD_HEIGHT_MM - radius:
+    if (
+        x_mm_int < radius
+        or x_mm_int > BOARD_WIDTH_MM - radius
+        or y_mm_int < radius
+        or y_mm_int > BOARD_HEIGHT_MM - radius
+    ):
         return None, "MOVE_TOKEN target is out of board bounds."
 
-    token["x_mm"] = x_mm
-    token["y_mm"] = y_mm
+    token["x_mm"] = x_mm_int
+    token["y_mm"] = y_mm_int
     return token, None
 
 
@@ -214,25 +223,36 @@ def apply_roll_dice(payload: Any) -> tuple[DiceRollResult | None, str | None]:
     sides = payload.get("sides")
     modifier = payload.get("modifier", 0)
 
-    if not is_int(count) or count < 1 or count > 20:
+    if not is_int(count):
         return None, "ROLL_DICE count must be an integer between 1 and 20."
-    if not is_int(sides) or sides < 2 or sides > 1000:
-        return None, "ROLL_DICE sides must be an integer between 2 and 1000."
-    if not is_int(modifier) or modifier < -1000 or modifier > 1000:
-        return None, "ROLL_DICE modifier must be an integer between -1000 and 1000."
+    if count < 1 or count > 20:
+        return None, "ROLL_DICE count must be an integer between 1 and 20."
 
-    rolls = [secrets.randbelow(sides) + 1 for _ in range(count)]
-    total = sum(rolls) + modifier
-    notation = f"{count}d{sides}"
-    if modifier > 0:
-        notation += f"+{modifier}"
-    elif modifier < 0:
-        notation += str(modifier)
+    if not is_int(sides):
+        return None, "ROLL_DICE sides must be an integer between 2 and 1000."
+    if sides < 2 or sides > 1000:
+        return None, "ROLL_DICE sides must be an integer between 2 and 1000."
+
+    if not is_int(modifier):
+        return None, "ROLL_DICE modifier must be an integer between -1000 and 1000."
+    if modifier < -1000 or modifier > 1000:
+        return None, "ROLL_DICE modifier must be an integer between -1000 and 1000."
+    count_int = count
+    sides_int = sides
+    modifier_int = modifier
+
+    rolls = [secrets.randbelow(sides_int) + 1 for _ in range(count_int)]
+    total = sum(rolls) + modifier_int
+    notation = f"{count_int}d{sides_int}"
+    if modifier_int > 0:
+        notation += f"+{modifier_int}"
+    elif modifier_int < 0:
+        notation += str(modifier_int)
 
     return {
-        "count": count,
-        "sides": sides,
-        "modifier": modifier,
+        "count": count_int,
+        "sides": sides_int,
+        "modifier": modifier_int,
         "rolls": rolls,
         "total": total,
         "notation": notation,
@@ -459,6 +479,18 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                                 room,
                                 "ERROR",
                                 {"message": error},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                if roll_result is None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": "ROLL_DICE failed unexpectedly."},
                                 actor_player_id=player["id"],
                             )
                         )
