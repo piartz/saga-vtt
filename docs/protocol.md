@@ -2,6 +2,27 @@
 
 This is the current MVP protocol implemented by the API/web app.
 
+## HTTP endpoints
+
+### `POST /games`
+- Creates a room and returns:
+  - `game_id`
+  - `protocol_version`
+  - `board`
+  - `tokens`
+  - `created` (`true` when a new room was created, `false` when an existing room was returned)
+- Optional header: `X-Client-Id`
+  - If provided, the server enforces one created room per client id.
+  - Repeated `POST /games` calls with the same `X-Client-Id` return the same room.
+
+### `GET /rooms`
+- Returns active rooms (rooms with at least one connected websocket player):
+  - `rooms[]` with:
+    - `game_id`
+    - `player_count`
+    - `phase`
+    - `round`
+
 ## Envelope (WebSocket)
 
 ### Command

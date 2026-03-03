@@ -97,6 +97,11 @@ Open:
 - Web: http://localhost:5173
 - API: http://localhost:8000/docs (OpenAPI)
 
+Lobby UX:
+- `/` shows the lobby home page with active rooms.
+- `?room=<room_id>` opens a specific room.
+- “Create & Join Room” auto-joins; repeated creates from the same browser profile reuse the same room.
+
 ## Repo map
 
 ```

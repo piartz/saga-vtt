@@ -27,6 +27,94 @@ def test_create_game_room() -> None:
     assert len(body["tokens"]) >= 2
     assert body["tokens"][0]["activation_count_this_turn"] == 0
     assert body["tokens"][0]["last_activation_type"] is None
+    assert body["created"] is True
+
+
+def test_create_game_returns_existing_room_for_same_client() -> None:
+    client = TestClient(app)
+
+    first_response = client.post("/games", headers={"X-Client-Id": "user-1"})
+    second_response = client.post("/games", headers={"X-Client-Id": "user-1"})
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+
+    first_body = first_response.json()
+    second_body = second_response.json()
+    assert first_body["game_id"] == second_body["game_id"]
+    assert first_body["created"] is True
+    assert second_body["created"] is False
+    assert len(ROOMS) == 1
+
+
+def test_create_game_creates_new_room_for_different_client() -> None:
+    client = TestClient(app)
+
+    first_response = client.post("/games", headers={"X-Client-Id": "user-1"})
+    second_response = client.post("/games", headers={"X-Client-Id": "user-2"})
+
+    first_body = first_response.json()
+    second_body = second_response.json()
+    assert first_body["game_id"] != second_body["game_id"]
+    assert first_body["created"] is True
+    assert second_body["created"] is True
+    assert len(ROOMS) == 2
+
+
+def test_list_rooms_excludes_rooms_without_players() -> None:
+    client = TestClient(app)
+    created = client.post("/games")
+    created_game_id = created.json()["game_id"]
+
+    response = client.get("/rooms")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["rooms"] == []
+    assert created_game_id in ROOMS
+
+
+def test_list_rooms_includes_connected_room_and_updates_player_count() -> None:
+    client = TestClient(app)
+    created = client.post("/games")
+    game_id = created.json()["game_id"]
+
+    with client.websocket_connect(f"/games/{game_id}/ws") as ws1:
+        ws1.receive_json()
+        list_one = client.get("/rooms").json()["rooms"]
+        assert list_one == [
+            {
+                "game_id": game_id,
+                "player_count": 1,
+                "phase": "lobby",
+                "round": 0,
+            }
+        ]
+
+        with client.websocket_connect(f"/games/{game_id}/ws") as ws2:
+            ws2.receive_json()
+            ws1.receive_json()
+            list_two = client.get("/rooms").json()["rooms"]
+            assert list_two == [
+                {
+                    "game_id": game_id,
+                    "player_count": 2,
+                    "phase": "lobby",
+                    "round": 0,
+                }
+            ]
+
+        ws1.receive_json()
+        list_back_to_one = client.get("/rooms").json()["rooms"]
+        assert list_back_to_one == [
+            {
+                "game_id": game_id,
+                "player_count": 1,
+                "phase": "lobby",
+                "round": 0,
+            }
+        ]
+
+    assert client.get("/rooms").json()["rooms"] == []
 
 
 def test_move_token_is_authoritative_and_broadcast_to_all_clients() -> None:
