@@ -56,6 +56,29 @@ class InitiativeState(TypedDict):
     second_player_id: str | None
 
 
+UndoActionType = Literal["MOVE_TOKEN", "ACTIVATE_TOKEN"]
+
+
+class UndoEntry(TypedDict):
+    action_type: UndoActionType
+    actor_player_id: str
+    token_id: str
+    before: TokenState
+    after: TokenState
+
+
+class PendingUndoRequest(TypedDict):
+    requester_player_id: str
+    responder_player_id: str
+    action_type: UndoActionType
+    token_id: str
+
+
+class UndoState(TypedDict):
+    pending_request: PendingUndoRequest | None
+    undo_used_this_turn_player_ids: List[str]
+
+
 def default_tokens() -> Dict[str, TokenState]:
     return {
         "A": {
@@ -90,6 +113,9 @@ class GameRoom:
     round: int = 0
     active_player_id: str | None = None
     initiative: InitiativeState | None = None
+    undo_history_this_turn: List[UndoEntry] = field(default_factory=list)
+    pending_undo_request: PendingUndoRequest | None = None
+    undo_used_this_turn_player_ids: set[str] = field(default_factory=set)
 
     async def broadcast(self, event: Dict[str, Any], exclude_ws: WebSocket | None = None) -> None:
         for ws in list(self.connections):
@@ -176,8 +202,155 @@ def room_initiative_snapshot(room: GameRoom) -> InitiativeState | None:
     }
 
 
+def copy_token_state(token: TokenState) -> TokenState:
+    return {
+        "id": token["id"],
+        "label": token["label"],
+        "x_mm": token["x_mm"],
+        "y_mm": token["y_mm"],
+        "r_mm": token["r_mm"],
+        "activation_count_this_turn": token["activation_count_this_turn"],
+        "last_activation_type": token["last_activation_type"],
+    }
+
+
+def room_undo_snapshot(room: GameRoom) -> UndoState:
+    pending_request = room.pending_undo_request
+    pending_snapshot: PendingUndoRequest | None
+    if pending_request is None:
+        pending_snapshot = None
+    else:
+        pending_snapshot = {
+            "requester_player_id": pending_request["requester_player_id"],
+            "responder_player_id": pending_request["responder_player_id"],
+            "action_type": pending_request["action_type"],
+            "token_id": pending_request["token_id"],
+        }
+    return {
+        "pending_request": pending_snapshot,
+        "undo_used_this_turn_player_ids": sorted(room.undo_used_this_turn_player_ids),
+    }
+
+
+def reset_undo_turn_state(room: GameRoom) -> None:
+    room.undo_history_this_turn = []
+    room.pending_undo_request = None
+    room.undo_used_this_turn_player_ids = set()
+
+
 def connected_player_ids(room: GameRoom) -> List[str]:
     return [player["id"] for player in room_players_snapshot(room)]
+
+
+def find_single_opponent(room: GameRoom, requester_player_id: str) -> str | None:
+    others = [player_id for player_id in connected_player_ids(room) if player_id != requester_player_id]
+    if len(others) != 1:
+        return None
+    return others[0]
+
+
+def record_undoable_action(
+    room: GameRoom,
+    actor_player_id: str,
+    action_type: UndoActionType,
+    before: TokenState,
+    after: TokenState,
+) -> None:
+    room.undo_history_this_turn.append(
+        {
+            "action_type": action_type,
+            "actor_player_id": actor_player_id,
+            "token_id": after["id"],
+            "before": copy_token_state(before),
+            "after": copy_token_state(after),
+        }
+    )
+
+
+def latest_undoable_action_for_player(room: GameRoom, actor_player_id: str) -> UndoEntry | None:
+    for entry in reversed(room.undo_history_this_turn):
+        if entry["actor_player_id"] == actor_player_id:
+            return entry
+    return None
+
+
+def apply_request_undo(
+    room: GameRoom, actor_player_id: str
+) -> tuple[PendingUndoRequest | None, UndoState | None, str | None]:
+    if room.phase != "running":
+        return None, None, "UNDO is only available while game is running."
+    if actor_player_id != room.active_player_id:
+        return None, None, f"REQUEST_UNDO is only allowed for active player '{room.active_player_id}'."
+    if room.pending_undo_request is not None:
+        return None, None, "An undo request is already pending."
+    if actor_player_id in room.undo_used_this_turn_player_ids:
+        return None, None, "You already used your undo request this turn."
+
+    undo_entry = latest_undoable_action_for_player(room, actor_player_id)
+    if undo_entry is None:
+        return None, None, "No board action to undo this turn."
+    responder_player_id = find_single_opponent(room, actor_player_id)
+    if responder_player_id is None:
+        return None, None, "Undo requires exactly one connected opponent."
+
+    room.undo_used_this_turn_player_ids.add(actor_player_id)
+    room.pending_undo_request = {
+        "requester_player_id": actor_player_id,
+        "responder_player_id": responder_player_id,
+        "action_type": undo_entry["action_type"],
+        "token_id": undo_entry["token_id"],
+    }
+    return room.pending_undo_request, room_undo_snapshot(room), None
+
+
+def apply_respond_undo_request(
+    room: GameRoom, actor_player_id: str, payload: Any
+) -> tuple[TokenState | None, PendingUndoRequest | None, UndoState | None, bool | None, str | None]:
+    pending_request = room.pending_undo_request
+    if pending_request is None:
+        return None, None, None, None, "No undo request is pending."
+    if actor_player_id != pending_request["responder_player_id"]:
+        return None, None, None, None, "Only the opponent can accept or reject this undo request."
+    if not isinstance(payload, dict):
+        return None, None, None, None, "RESPOND_UNDO_REQUEST payload must be an object."
+    if not isinstance(payload.get("accept"), bool):
+        return None, None, None, None, "RESPOND_UNDO_REQUEST payload.accept must be boolean."
+
+    accept = payload["accept"]
+    requester_player_id = pending_request["requester_player_id"]
+    undo_entry = latest_undoable_action_for_player(room, requester_player_id)
+    resolved_request: PendingUndoRequest = {
+        "requester_player_id": pending_request["requester_player_id"],
+        "responder_player_id": pending_request["responder_player_id"],
+        "action_type": pending_request["action_type"],
+        "token_id": pending_request["token_id"],
+    }
+    room.pending_undo_request = None
+
+    if undo_entry is None:
+        return None, resolved_request, room_undo_snapshot(room), False, None
+    if not accept:
+        return None, resolved_request, room_undo_snapshot(room), False, None
+
+    token_id = undo_entry["token_id"]
+    token = room.tokens.get(token_id)
+    if token is None:
+        return None, None, None, None, f"Cannot undo action for missing token '{token_id}'."
+
+    before = undo_entry["before"]
+    token["x_mm"] = before["x_mm"]
+    token["y_mm"] = before["y_mm"]
+    token["activation_count_this_turn"] = before["activation_count_this_turn"]
+    token["last_activation_type"] = before["last_activation_type"]
+
+    # Remove only the last matching undoable action for that player.
+    for idx in range(len(room.undo_history_this_turn) - 1, -1, -1):
+        entry = room.undo_history_this_turn[idx]
+        if entry["actor_player_id"] == requester_player_id:
+            room.undo_history_this_turn.pop(idx)
+            break
+
+    return copy_token_state(token), resolved_request, room_undo_snapshot(room), True, None
 
 
 def apply_start_game(room: GameRoom) -> tuple[InitiativeState | None, str | None]:
@@ -189,6 +362,7 @@ def apply_start_game(room: GameRoom) -> tuple[InitiativeState | None, str | None
         return None, "START_GAME currently requires exactly 2 connected players."
     if room.initiative is not None and room.initiative["chooser_choice"] is None:
         return None, "Initiative already rolled. Winner must choose first or second."
+    reset_undo_turn_state(room)
 
     roll_a = 0
     roll_b = 0
@@ -257,6 +431,7 @@ def apply_choose_turn_order(
     room.round = 1
     room.active_player_id = first_player_id
     reset_token_activations(room)
+    reset_undo_turn_state(room)
     return room_turn_snapshot(room), room_initiative_snapshot(room), None
 
 
@@ -291,26 +466,36 @@ def ensure_command_allowed(room: GameRoom, actor_player_id: str, command_type: s
     return None
 
 
-def apply_move_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, str | None]:
+def ensure_undo_not_pending(room: GameRoom, actor_player_id: str) -> str | None:
+    pending_request = room.pending_undo_request
+    if pending_request is None:
+        return None
+    if actor_player_id == pending_request["responder_player_id"]:
+        return "Undo request pending. Accept or reject it first."
+    return "Undo request pending. Wait for opponent response."
+
+
+def apply_move_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, TokenState | None, str | None]:
     if not isinstance(payload, dict):
-        return None, "MOVE_TOKEN payload must be an object."
+        return None, None, "MOVE_TOKEN payload must be an object."
 
     token_id = payload.get("token_id")
     x_mm = payload.get("x_mm")
     y_mm = payload.get("y_mm")
 
     if not isinstance(token_id, str):
-        return None, "MOVE_TOKEN token_id must be a string."
+        return None, None, "MOVE_TOKEN token_id must be a string."
     if not is_int(x_mm):
-        return None, "MOVE_TOKEN coordinates must be integer mm values."
+        return None, None, "MOVE_TOKEN coordinates must be integer mm values."
     if not is_int(y_mm):
-        return None, "MOVE_TOKEN coordinates must be integer mm values."
+        return None, None, "MOVE_TOKEN coordinates must be integer mm values."
     x_mm_int = x_mm
     y_mm_int = y_mm
 
     token = room.tokens.get(token_id)
     if token is None:
-        return None, f"Unknown token '{token_id}'."
+        return None, None, f"Unknown token '{token_id}'."
+    before = copy_token_state(token)
 
     radius = token["r_mm"]
     if (
@@ -319,34 +504,35 @@ def apply_move_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, s
         or y_mm_int < radius
         or y_mm_int > BOARD_HEIGHT_MM - radius
     ):
-        return None, "MOVE_TOKEN target is out of board bounds."
+        return None, None, "MOVE_TOKEN target is out of board bounds."
 
     token["x_mm"] = x_mm_int
     token["y_mm"] = y_mm_int
-    return token, None
+    return token, before, None
 
 
-def apply_activate_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, str | None]:
+def apply_activate_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, TokenState | None, str | None]:
     if not isinstance(payload, dict):
-        return None, "ACTIVATE_TOKEN payload must be an object."
+        return None, None, "ACTIVATE_TOKEN payload must be an object."
 
     token_id = payload.get("token_id")
     activation_type = payload.get("activation_type")
 
     if not isinstance(token_id, str):
-        return None, "ACTIVATE_TOKEN token_id must be a string."
+        return None, None, "ACTIVATE_TOKEN token_id must be a string."
     if not is_activation_type(activation_type):
-        return None, "ACTIVATE_TOKEN activation_type must be one of: move, charge, shoot, rest."
+        return None, None, "ACTIVATE_TOKEN activation_type must be one of: move, charge, shoot, rest."
 
     token = room.tokens.get(token_id)
     if token is None:
-        return None, f"Unknown token '{token_id}'."
+        return None, None, f"Unknown token '{token_id}'."
+    before = copy_token_state(token)
     if activation_type == "rest" and token["activation_count_this_turn"] > 0:
-        return None, f"Token '{token_id}' cannot activate to rest after prior activations this turn."
+        return None, None, f"Token '{token_id}' cannot activate to rest after prior activations this turn."
 
     token["activation_count_this_turn"] += 1
     token["last_activation_type"] = activation_type
-    return token, None
+    return token, before, None
 
 
 def reset_token_activations(room: GameRoom) -> bool:
@@ -472,6 +658,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         "players": room_players_snapshot(room),
                         "turn": room_turn_snapshot(room),
                         "initiative": room_initiative_snapshot(room),
+                        "undo": room_undo_snapshot(room),
                         "self_player_id": player["id"],
                     },
                 )
@@ -580,13 +767,112 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                     make_event(
                         room,
                         "GAME_STARTED",
-                        {"turn": turn},
+                        {"turn": turn, "undo": room_undo_snapshot(room)},
                         actor_player_id=player["id"],
                     )
                 )
                 continue
 
+            if command_type == "REQUEST_UNDO":
+                not_allowed = ensure_command_allowed(room, player["id"], "REQUEST_UNDO")
+                if not_allowed is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": not_allowed},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                blocked_message = ensure_undo_not_pending(room, player["id"])
+                if blocked_message is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": blocked_message},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                request, undo_snapshot, error = apply_request_undo(room, player["id"])
+                if error is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": error},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                await room.broadcast(
+                    make_event(
+                        room,
+                        "UNDO_REQUESTED",
+                        {"request": request, "undo": undo_snapshot},
+                        actor_player_id=player["id"],
+                    )
+                )
+                continue
+
+            if command_type == "RESPOND_UNDO_REQUEST":
+                token, request, undo_snapshot, accepted, error = apply_respond_undo_request(
+                    room, player["id"], data.get("payload")
+                )
+                if error is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": error},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                if accepted:
+                    await room.broadcast(
+                        make_event(
+                            room,
+                            "UNDO_APPLIED",
+                            {"request": request, "token": token, "undo": undo_snapshot},
+                            actor_player_id=player["id"],
+                        )
+                    )
+                else:
+                    await room.broadcast(
+                        make_event(
+                            room,
+                            "UNDO_REJECTED",
+                            {"request": request, "undo": undo_snapshot},
+                            actor_player_id=player["id"],
+                        )
+                    )
+                continue
+
             if command_type == "END_TURN":
+                blocked_message = ensure_undo_not_pending(room, player["id"])
+                if blocked_message is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": blocked_message},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
                 turn, error = apply_end_turn(room, player["id"])
                 if error is not None:
                     await ws.send_text(
@@ -601,17 +887,31 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                     )
                     continue
                 reset_token_activations(room)
+                reset_undo_turn_state(room)
                 await room.broadcast(
                     make_event(
                         room,
                         "TURN_CHANGED",
-                        {"turn": turn, "tokens": list(room.tokens.values())},
+                        {"turn": turn, "tokens": list(room.tokens.values()), "undo": room_undo_snapshot(room)},
                         actor_player_id=player["id"],
                     )
                 )
                 continue
 
             if command_type == "MOVE_TOKEN":
+                blocked_message = ensure_undo_not_pending(room, player["id"])
+                if blocked_message is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": blocked_message},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
                 not_allowed = ensure_command_allowed(room, player["id"], "MOVE_TOKEN")
                 if not_allowed is not None:
                     await ws.send_text(
@@ -625,7 +925,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         )
                     )
                     continue
-                moved_token, error = apply_move_token(room, data.get("payload"))
+                moved_token, before_token, error = apply_move_token(room, data.get("payload"))
                 if error is not None:
                     await ws.send_text(
                         json.dumps(
@@ -638,6 +938,8 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         )
                     )
                     continue
+                if moved_token is not None and before_token is not None:
+                    record_undoable_action(room, player["id"], "MOVE_TOKEN", before_token, moved_token)
                 await room.broadcast(
                     make_event(
                         room,
@@ -664,6 +966,19 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         )
                     )
                     continue
+                blocked_message = ensure_undo_not_pending(room, player["id"])
+                if blocked_message is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": blocked_message},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
                 not_allowed = ensure_command_allowed(room, player["id"], "ACTIVATE_TOKEN")
                 if not_allowed is not None:
                     await ws.send_text(
@@ -677,7 +992,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         )
                     )
                     continue
-                updated_token, error = apply_activate_token(room, data.get("payload"))
+                updated_token, before_token, error = apply_activate_token(room, data.get("payload"))
                 if error is not None:
                     await ws.send_text(
                         json.dumps(
@@ -690,6 +1005,8 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         )
                     )
                     continue
+                if updated_token is not None and before_token is not None:
+                    record_undoable_action(room, player["id"], "ACTIVATE_TOKEN", before_token, updated_token)
                 await room.broadcast(
                     make_event(
                         room,
@@ -704,6 +1021,19 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 continue
 
             if command_type == "ROLL_DICE":
+                blocked_message = ensure_undo_not_pending(room, player["id"])
+                if blocked_message is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": blocked_message},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
                 not_allowed = ensure_command_allowed(room, player["id"], "ROLL_DICE")
                 if not_allowed is not None:
                     await ws.send_text(
@@ -773,6 +1103,22 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
         disconnected_player = room.players_by_ws_id.pop(id(ws), None)
         if ws in room.connections:
             room.connections.remove(ws)
+        if disconnected_player is not None and room.pending_undo_request is not None:
+            pending_request = room.pending_undo_request
+            if disconnected_player["id"] in (
+                pending_request["requester_player_id"],
+                pending_request["responder_player_id"],
+            ):
+                room.pending_undo_request = None
+                if room.connections:
+                    await room.broadcast(
+                        make_event(
+                            room,
+                            "UNDO_CANCELLED",
+                            {"reason": "player_left", "undo": room_undo_snapshot(room)},
+                            actor_player_id=disconnected_player["id"],
+                        )
+                    )
         if disconnected_player is not None and room.phase == "lobby" and room.initiative is not None:
             initiative = room.initiative
             if disconnected_player["id"] in (
@@ -795,11 +1141,16 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 if remaining_player_ids:
                     room.active_player_id = remaining_player_ids[0]
                     reset_token_activations(room)
+                    reset_undo_turn_state(room)
                     await room.broadcast(
                         make_event(
                             room,
                             "TURN_CHANGED",
-                            {"turn": room_turn_snapshot(room), "tokens": list(room.tokens.values())},
+                            {
+                                "turn": room_turn_snapshot(room),
+                                "tokens": list(room.tokens.values()),
+                                "undo": room_undo_snapshot(room),
+                            },
                             actor_player_id=disconnected_player["id"],
                         )
                     )
@@ -807,6 +1158,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                     room.active_player_id = None
                     room.phase = "lobby"
                     room.round = 0
+                    reset_undo_turn_state(room)
         if disconnected_player is not None and room.connections:
             await room.broadcast(
                 make_event(
