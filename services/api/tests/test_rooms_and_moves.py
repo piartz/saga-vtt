@@ -636,3 +636,283 @@ def test_only_initiative_winner_can_choose_turn_order() -> None:
         error: Dict[str, Any] = loser_ws.receive_json()
         assert error["type"] == "ERROR"
         assert "Only initiative winner can choose first or second." == error["payload"]["message"]
+
+
+def test_move_undo_requires_opponent_accept_and_is_limited_to_one_per_turn() -> None:
+    client = TestClient(app)
+    create_response = client.post("/games")
+    game_id = create_response.json()["game_id"]
+
+    with (
+        client.websocket_connect(f"/games/{game_id}/ws") as ws1,
+        client.websocket_connect(f"/games/{game_id}/ws") as ws2,
+    ):
+        hello_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        ws1.receive_json()
+        player_1 = hello_1["payload"]["players"][0]["id"]
+
+        ws1.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "START_GAME",
+                "client_msg_id": "start-undo-move",
+                "payload": {},
+            }
+        )
+        rolled_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        winner_player_id = rolled_1["payload"]["initiative"]["winner_player_id"]
+        winner_ws = ws1 if winner_player_id == player_1 else ws2
+        loser_ws = ws2 if winner_ws is ws1 else ws1
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "CHOOSE_TURN_ORDER",
+                "client_msg_id": "choose-undo-move",
+                "payload": {"choice": "FIRST"},
+            }
+        )
+        ws1.receive_json()  # TURN_ORDER_CHOSEN
+        ws2.receive_json()  # TURN_ORDER_CHOSEN
+        ws1.receive_json()  # GAME_STARTED
+        ws2.receive_json()  # GAME_STARTED
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "MOVE_TOKEN",
+                "client_msg_id": "move-before-undo",
+                "payload": {"token_id": "A", "x_mm": 222, "y_mm": 111},
+            }
+        )
+        ws1.receive_json()  # TOKEN_MOVED
+        ws2.receive_json()  # TOKEN_MOVED
+        assert ROOMS[game_id].tokens["A"]["x_mm"] == 222
+        assert ROOMS[game_id].tokens["A"]["y_mm"] == 111
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "REQUEST_UNDO",
+                "client_msg_id": "undo-request-1",
+                "payload": {},
+            }
+        )
+        requested_1: Dict[str, Any] = ws1.receive_json()
+        requested_2: Dict[str, Any] = ws2.receive_json()
+        assert requested_1["type"] == "UNDO_REQUESTED"
+        assert requested_2["type"] == "UNDO_REQUESTED"
+        assert requested_1["payload"]["request"]["action_type"] == "MOVE_TOKEN"
+        assert requested_1["payload"]["request"]["token_id"] == "A"
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "END_TURN",
+                "client_msg_id": "end-while-undo-pending",
+                "payload": {},
+            }
+        )
+        blocked_error: Dict[str, Any] = winner_ws.receive_json()
+        assert blocked_error["type"] == "ERROR"
+        assert "Undo request pending" in blocked_error["payload"]["message"]
+
+        loser_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "RESPOND_UNDO_REQUEST",
+                "client_msg_id": "undo-accept-1",
+                "payload": {"accept": True},
+            }
+        )
+        applied_1: Dict[str, Any] = ws1.receive_json()
+        applied_2: Dict[str, Any] = ws2.receive_json()
+        assert applied_1["type"] == "UNDO_APPLIED"
+        assert applied_2["type"] == "UNDO_APPLIED"
+        assert applied_1["payload"]["token"]["id"] == "A"
+        assert applied_1["payload"]["token"]["x_mm"] == 160
+        assert applied_1["payload"]["token"]["y_mm"] == 140
+        assert ROOMS[game_id].tokens["A"]["x_mm"] == 160
+        assert ROOMS[game_id].tokens["A"]["y_mm"] == 140
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "MOVE_TOKEN",
+                "client_msg_id": "move-after-undo",
+                "payload": {"token_id": "A", "x_mm": 210, "y_mm": 120},
+            }
+        )
+        ws1.receive_json()  # TOKEN_MOVED
+        ws2.receive_json()  # TOKEN_MOVED
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "REQUEST_UNDO",
+                "client_msg_id": "undo-request-2",
+                "payload": {},
+            }
+        )
+        undo_limit_error: Dict[str, Any] = winner_ws.receive_json()
+        assert undo_limit_error["type"] == "ERROR"
+        assert "already used your undo request this turn" in undo_limit_error["payload"]["message"]
+
+
+def test_activation_undo_can_be_rejected_and_state_stays_unchanged() -> None:
+    client = TestClient(app)
+    create_response = client.post("/games")
+    game_id = create_response.json()["game_id"]
+
+    with (
+        client.websocket_connect(f"/games/{game_id}/ws") as ws1,
+        client.websocket_connect(f"/games/{game_id}/ws") as ws2,
+    ):
+        hello_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        ws1.receive_json()  # PLAYER_JOINED
+        player_1 = hello_1["payload"]["players"][0]["id"]
+
+        ws1.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "START_GAME",
+                "client_msg_id": "start-undo-activation",
+                "payload": {},
+            }
+        )
+        rolled_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        winner_player_id = rolled_1["payload"]["initiative"]["winner_player_id"]
+        winner_ws = ws1 if winner_player_id == player_1 else ws2
+        loser_ws = ws2 if winner_ws is ws1 else ws1
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "CHOOSE_TURN_ORDER",
+                "client_msg_id": "choose-undo-activation",
+                "payload": {"choice": "FIRST"},
+            }
+        )
+        ws1.receive_json()  # TURN_ORDER_CHOSEN
+        ws2.receive_json()  # TURN_ORDER_CHOSEN
+        ws1.receive_json()  # GAME_STARTED
+        ws2.receive_json()  # GAME_STARTED
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "ACTIVATE_TOKEN",
+                "client_msg_id": "activate-before-undo",
+                "payload": {"token_id": "A", "activation_type": "rest"},
+            }
+        )
+        ws1.receive_json()  # TOKEN_ACTIVATED
+        ws2.receive_json()  # TOKEN_ACTIVATED
+        assert ROOMS[game_id].tokens["A"]["activation_count_this_turn"] == 1
+        assert ROOMS[game_id].tokens["A"]["last_activation_type"] == "rest"
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "REQUEST_UNDO",
+                "client_msg_id": "undo-request-activation",
+                "payload": {},
+            }
+        )
+        ws1.receive_json()  # UNDO_REQUESTED
+        ws2.receive_json()  # UNDO_REQUESTED
+
+        loser_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "RESPOND_UNDO_REQUEST",
+                "client_msg_id": "undo-reject-activation",
+                "payload": {"accept": False},
+            }
+        )
+        rejected_1: Dict[str, Any] = ws1.receive_json()
+        rejected_2: Dict[str, Any] = ws2.receive_json()
+        assert rejected_1["type"] == "UNDO_REJECTED"
+        assert rejected_2["type"] == "UNDO_REJECTED"
+        assert ROOMS[game_id].tokens["A"]["activation_count_this_turn"] == 1
+        assert ROOMS[game_id].tokens["A"]["last_activation_type"] == "rest"
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "REQUEST_UNDO",
+                "client_msg_id": "undo-request-activation-2",
+                "payload": {},
+            }
+        )
+        undo_limit_error: Dict[str, Any] = winner_ws.receive_json()
+        assert undo_limit_error["type"] == "ERROR"
+        assert "already used your undo request this turn" in undo_limit_error["payload"]["message"]
+
+
+def test_non_board_actions_cannot_be_undone() -> None:
+    client = TestClient(app)
+    create_response = client.post("/games")
+    game_id = create_response.json()["game_id"]
+
+    with (
+        client.websocket_connect(f"/games/{game_id}/ws") as ws1,
+        client.websocket_connect(f"/games/{game_id}/ws") as ws2,
+    ):
+        hello_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        ws1.receive_json()  # PLAYER_JOINED
+        player_1 = hello_1["payload"]["players"][0]["id"]
+
+        ws1.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "START_GAME",
+                "client_msg_id": "start-undo-non-board",
+                "payload": {},
+            }
+        )
+        rolled_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        winner_player_id = rolled_1["payload"]["initiative"]["winner_player_id"]
+        winner_ws = ws1 if winner_player_id == player_1 else ws2
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "CHOOSE_TURN_ORDER",
+                "client_msg_id": "choose-undo-non-board",
+                "payload": {"choice": "FIRST"},
+            }
+        )
+        ws1.receive_json()  # TURN_ORDER_CHOSEN
+        ws2.receive_json()  # TURN_ORDER_CHOSEN
+        ws1.receive_json()  # GAME_STARTED
+        ws2.receive_json()  # GAME_STARTED
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "ROLL_DICE",
+                "client_msg_id": "roll-before-undo",
+                "payload": {"count": 1, "sides": 6},
+            }
+        )
+        ws1.receive_json()  # DICE_ROLLED
+        ws2.receive_json()  # DICE_ROLLED
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "REQUEST_UNDO",
+                "client_msg_id": "undo-request-non-board",
+                "payload": {},
+            }
+        )
+        undo_error: Dict[str, Any] = winner_ws.receive_json()
+        assert undo_error["type"] == "ERROR"
+        assert "No board action to undo this turn." == undo_error["payload"]["message"]

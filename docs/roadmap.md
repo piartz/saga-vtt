@@ -16,6 +16,7 @@
 ## Milestone 2 — “Play a basic scenario”
 - Turn structure + active player (implemented with initiative roll + winner chooses first/second)
 - Activation markers (implemented: typed activations `move|charge|shoot|rest`, repeatable per turn with count/last-type tracking, no manual deactivation, `rest` only before first activation, reset on end turn)
+- Undo request flow (implemented: board-only undo with opponent accept/reject, one request per player turn)
 - Dice roller (server-side)
 - Action log UI
 

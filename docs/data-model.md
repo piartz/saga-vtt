@@ -49,6 +49,7 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - `HELLO.payload.self_player_id`: `string`
 - `HELLO.payload.turn`: `{ phase, round, active_player_id }`
 - `HELLO.payload.initiative`: `Initiative | null`
+- `HELLO.payload.undo`: `UndoState`
 - `PLAYER_JOINED.payload.player`: `Player`
 - `PLAYER_LEFT.payload.player_id`: `string`
 
@@ -58,6 +59,8 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - `INITIATIVE_RESET.payload.reason`: `string`
 - `GAME_STARTED.payload.turn`: `{ phase, round, active_player_id }`
 - `TURN_CHANGED.payload.turn`: `{ phase, round, active_player_id }`
+- `GAME_STARTED.payload.undo`: `UndoState`
+- `TURN_CHANGED.payload.undo`: `UndoState`
 
 ### Initiative payload (`Initiative`)
 - winner_player_id
@@ -75,6 +78,27 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - rolls[]
 - total
 - notation
+
+### Undo payloads
+- `UNDO_REQUESTED.payload.request`: `UndoRequest`
+- `UNDO_REQUESTED.payload.undo`: `UndoState`
+- `UNDO_APPLIED.payload.request`: `UndoRequest`
+- `UNDO_APPLIED.payload.token`: `Token`
+- `UNDO_APPLIED.payload.undo`: `UndoState`
+- `UNDO_REJECTED.payload.request`: `UndoRequest`
+- `UNDO_REJECTED.payload.undo`: `UndoState`
+- `UNDO_CANCELLED.payload.reason`: `string`
+- `UNDO_CANCELLED.payload.undo`: `UndoState`
+
+### Undo request (`UndoRequest`)
+- requester_player_id
+- responder_player_id
+- action_type (`MOVE_TOKEN` | `ACTIVATE_TOKEN`)
+- token_id
+
+### Undo state (`UndoState`)
+- pending_request (`UndoRequest` | `null`)
+- undo_used_this_turn_player_ids (`string[]`)
 
 ## Geometry checks (server-side)
 - token collision rules (depends on game system; start permissive)

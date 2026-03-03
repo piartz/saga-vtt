@@ -43,6 +43,20 @@ type InitiativeState = {
   second_player_id: string | null;
 };
 
+type UndoActionType = "MOVE_TOKEN" | "ACTIVATE_TOKEN";
+
+type UndoRequest = {
+  requester_player_id: string;
+  responder_player_id: string;
+  action_type: UndoActionType;
+  token_id: string;
+};
+
+type UndoState = {
+  pending_request: UndoRequest | null;
+  undo_used_this_turn_player_ids: string[];
+};
+
 function randomRoomId(): string {
   // Friendly enough for MVP; switch to UUIDs later.
   return Math.random().toString(16).slice(2, 10);
@@ -202,6 +216,43 @@ function extractHelloSelfPlayerId(payload: unknown): string | null {
   return typeof payload.self_player_id === "string" ? payload.self_player_id : null;
 }
 
+function toUndoRequest(value: unknown): UndoRequest | null {
+  if (!isRecord(value)) return null;
+  const { requester_player_id, responder_player_id, action_type, token_id } = value;
+  if (typeof requester_player_id !== "string") return null;
+  if (typeof responder_player_id !== "string") return null;
+  if (action_type !== "MOVE_TOKEN" && action_type !== "ACTIVATE_TOKEN") return null;
+  if (typeof token_id !== "string") return null;
+  return { requester_player_id, responder_player_id, action_type, token_id };
+}
+
+function toUndoState(value: unknown): UndoState | null {
+  if (!isRecord(value)) return null;
+  const pendingRequestRaw = value.pending_request;
+  const usedByRaw = value.undo_used_this_turn_player_ids;
+  if (!(pendingRequestRaw === null || pendingRequestRaw === undefined || isRecord(pendingRequestRaw))) return null;
+  if (!Array.isArray(usedByRaw)) return null;
+  if (!usedByRaw.every((playerId) => typeof playerId === "string")) return null;
+  const pendingRequest =
+    pendingRequestRaw === null || pendingRequestRaw === undefined ? null : toUndoRequest(pendingRequestRaw);
+  if (pendingRequestRaw !== null && pendingRequestRaw !== undefined && pendingRequest === null) return null;
+  return {
+    pending_request: pendingRequest,
+    undo_used_this_turn_player_ids: [...usedByRaw],
+  };
+}
+
+function extractHelloUndo(payload: unknown): UndoState | null {
+  if (!isRecord(payload)) return null;
+  if (payload.undo === null || payload.undo === undefined) return null;
+  return toUndoState(payload.undo);
+}
+
+function extractEventUndo(payload: unknown): UndoState | null {
+  if (!isRecord(payload)) return null;
+  return toUndoState(payload.undo);
+}
+
 function upsertToken(prev: BoardToken[], next: BoardToken): BoardToken[] {
   let found = false;
   const updated = prev.map((token) => {
@@ -293,6 +344,36 @@ function formatEventSummary(
     return `${actorName} activated ${changedToken.label} with ${activationName} (${changedToken.activation_count_this_turn}x this turn).`;
   }
 
+  if (event.type === "UNDO_REQUESTED") {
+    const request = toUndoRequest(payload.request);
+    if (!request) return `${actorName} requested an undo.`;
+    const tokenName = request.token_id;
+    const actionLabel = request.action_type === "MOVE_TOKEN" ? "movement" : "activation";
+    const requesterName = playerNameForEvent(request.requester_player_id, knownPlayersById);
+    return `${requesterName} requested undo for ${actionLabel} on token ${tokenName}.`;
+  }
+
+  if (event.type === "UNDO_APPLIED") {
+    const request = toUndoRequest(payload.request);
+    if (!request) return `${actorName} accepted an undo request.`;
+    const tokenName = request.token_id;
+    const actionLabel = request.action_type === "MOVE_TOKEN" ? "movement" : "activation";
+    return `${actorName} accepted undo. ${actionLabel} on token ${tokenName} was reverted.`;
+  }
+
+  if (event.type === "UNDO_REJECTED") {
+    const request = toUndoRequest(payload.request);
+    if (!request) return `${actorName} rejected an undo request.`;
+    const tokenName = request.token_id;
+    const actionLabel = request.action_type === "MOVE_TOKEN" ? "movement" : "activation";
+    return `${actorName} rejected undo for ${actionLabel} on token ${tokenName}.`;
+  }
+
+  if (event.type === "UNDO_CANCELLED") {
+    const reason = typeof payload.reason === "string" ? payload.reason : "unknown";
+    return `Undo request was cancelled (${reason}).`;
+  }
+
   if (event.type === "DICE_ROLLED") {
     const notation = typeof payload.notation === "string" ? payload.notation : "dice";
     const total = typeof payload.total === "number" ? payload.total : "?";
@@ -366,6 +447,7 @@ export function App() {
   const [knownPlayersById, setKnownPlayersById] = useState<Record<string, PresencePlayer>>({});
   const [turn, setTurn] = useState<TurnState | null>(null);
   const [initiative, setInitiative] = useState<InitiativeState | null>(null);
+  const [undo, setUndo] = useState<UndoState | null>(null);
   const [localPlayerId, setLocalPlayerId] = useState<string | null>(null);
   const [eventLogMode, setEventLogMode] = useState<EventLogMode>("READABLE");
   const [confirmMoves, setConfirmMoves] = useState(true);
@@ -389,6 +471,7 @@ export function App() {
     setKnownPlayersById({});
     setTurn(null);
     setInitiative(null);
+    setUndo(null);
     setLocalPlayerId(null);
     setStatus("CONNECTING");
 
@@ -415,6 +498,7 @@ export function App() {
           const helloTurn = extractHelloTurn(parsed.payload);
           if (helloTurn) setTurn(helloTurn);
           setInitiative(extractHelloInitiative(parsed.payload));
+          setUndo(extractHelloUndo(parsed.payload));
           setLocalPlayerId(extractHelloSelfPlayerId(parsed.payload));
           return;
         }
@@ -457,6 +541,8 @@ export function App() {
           if (nextTurn) setTurn(nextTurn);
           const tokenSnapshot = extractTokensSnapshot(parsed.payload);
           if (tokenSnapshot) setTokens(tokenSnapshot);
+          const nextUndo = extractEventUndo(parsed.payload);
+          if (nextUndo) setUndo(nextUndo);
           return;
         }
 
@@ -468,6 +554,19 @@ export function App() {
 
         if (parsed.type === "INITIATIVE_RESET") {
           setInitiative(null);
+          return;
+        }
+
+        if (
+          parsed.type === "UNDO_REQUESTED" ||
+          parsed.type === "UNDO_APPLIED" ||
+          parsed.type === "UNDO_REJECTED" ||
+          parsed.type === "UNDO_CANCELLED"
+        ) {
+          const nextUndo = extractEventUndo(parsed.payload);
+          if (nextUndo) setUndo(nextUndo);
+          const tokenSnapshot = extractMovedToken(parsed.payload);
+          if (tokenSnapshot) setTokens((prev) => upsertToken(prev, tokenSnapshot));
           return;
         }
       } catch {
@@ -556,6 +655,24 @@ export function App() {
     });
   }
 
+  function sendRequestUndo() {
+    send({
+      kind: "COMMAND",
+      type: "REQUEST_UNDO",
+      client_msg_id: crypto.randomUUID(),
+      payload: {},
+    });
+  }
+
+  function sendRespondUndoRequest(accept: boolean) {
+    send({
+      kind: "COMMAND",
+      type: "RESPOND_UNDO_REQUEST",
+      client_msg_id: crypto.randomUUID(),
+      payload: { accept },
+    });
+  }
+
   async function createRoom() {
     setCreateRoomPending(true);
     setErrorMessage(null);
@@ -606,6 +723,27 @@ export function App() {
     ? "You are the first player."
     : amSecondPlayer
       ? "You are the second player."
+      : null;
+  const pendingUndoRequest = undo?.pending_request ?? null;
+  const undoUsedByMe =
+    localPlayerId !== null ? (undo?.undo_used_this_turn_player_ids ?? []).includes(localPlayerId) : false;
+  const isRunningActivePlayer =
+    turn?.phase === "running" && localPlayerId !== null && turn.active_player_id === localPlayerId;
+  const isUndoRequester =
+    pendingUndoRequest !== null && localPlayerId !== null && pendingUndoRequest.requester_player_id === localPlayerId;
+  const isUndoResponder =
+    pendingUndoRequest !== null && localPlayerId !== null && pendingUndoRequest.responder_player_id === localPlayerId;
+  const canRequestUndo =
+    status === "CONNECTED" && isRunningActivePlayer && pendingUndoRequest === null && !undoUsedByMe;
+  const pendingUndoActionLabel =
+    pendingUndoRequest !== null
+      ? pendingUndoRequest.action_type === "MOVE_TOKEN"
+        ? "movement"
+        : "activation"
+      : null;
+  const pendingUndoTokenLabel =
+    pendingUndoRequest !== null
+      ? tokens.find((token) => token.id === pendingUndoRequest.token_id)?.label ?? pendingUndoRequest.token_id
       : null;
 
   return (
@@ -837,6 +975,80 @@ export function App() {
               <div style={{ fontSize: 14 }}>{turnOrderMessage}</div>
             </section>
           )}
+          <section
+            style={{
+              border: `1px solid ${theme.border}`,
+              borderRadius: 10,
+              padding: 12,
+              background: theme.surfaceAlt,
+              display: "grid",
+              gap: 8,
+            }}
+          >
+            <h2 style={{ marginTop: 0, marginBottom: 2 }}>Undo Action</h2>
+            <div style={{ fontSize: 12, color: theme.muted }}>
+              Undo only applies to board actions (movement or activation). One request per player turn.
+            </div>
+            <button
+              onClick={sendRequestUndo}
+              disabled={!canRequestUndo}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 6,
+                border: `1px solid ${theme.border}`,
+                background: theme.surface,
+                color: theme.text,
+                cursor: canRequestUndo ? "pointer" : "not-allowed",
+              }}
+            >
+              Request Undo
+            </button>
+            {isUndoRequester && pendingUndoActionLabel && pendingUndoTokenLabel && (
+              <div style={{ fontSize: 13 }}>
+                Undo requested for {pendingUndoActionLabel} on token <strong>{pendingUndoTokenLabel}</strong>. Waiting
+                for your opponent...
+              </div>
+            )}
+            {isUndoResponder && pendingUndoActionLabel && pendingUndoTokenLabel && (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ fontSize: 13 }}>
+                  Opponent requested undo for {pendingUndoActionLabel} on token{" "}
+                  <strong>{pendingUndoTokenLabel}</strong>.
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => sendRespondUndoRequest(true)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      border: `1px solid ${theme.border}`,
+                      background: theme.surface,
+                      color: theme.text,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Accept Undo
+                  </button>
+                  <button
+                    onClick={() => sendRespondUndoRequest(false)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      border: `1px solid ${theme.border}`,
+                      background: theme.surface,
+                      color: theme.text,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Reject Undo
+                  </button>
+                </div>
+              </div>
+            )}
+            {!isUndoRequester && !isUndoResponder && undoUsedByMe && isRunningActivePlayer && (
+              <div style={{ fontSize: 13 }}>Undo already used this turn.</div>
+            )}
+          </section>
 
           <section>
             <h2 style={{ marginTop: 0 }}>Players</h2>

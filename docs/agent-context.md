@@ -57,6 +57,7 @@ Primary references:
   - handles `CHOOSE_TURN_ORDER` (winner chooses `FIRST`/`SECOND`) -> `TURN_ORDER_CHOSEN` then `GAME_STARTED`
   - handles `END_TURN` -> `TURN_CHANGED` turn progression
   - emits `INITIATIVE_RESET` in lobby when initiative becomes invalid due to player join/leave
+  - includes undo snapshot in `HELLO.payload.undo` and turn transition events
   - while game is running, enforces active-player-only `MOVE_TOKEN`, `ACTIVATE_TOKEN`, and `ROLL_DICE`
   - handles `MOVE_TOKEN`:
     - validates payload shape/types
@@ -70,6 +71,14 @@ Primary references:
     - token cannot be deactivated manually in-turn; repeated activations are allowed and counted
     - `rest` activation is only valid before any prior activation in the same turn
     - broadcasts `TOKEN_ACTIVATED` with updated token + `client_msg_id`
+  - handles `REQUEST_UNDO` for latest board action this turn (`MOVE_TOKEN`/`ACTIVATE_TOKEN`)
+    - requires active player and exactly one connected opponent
+    - enforces one undo request per player turn
+    - emits `UNDO_REQUESTED`
+  - handles `RESPOND_UNDO_REQUEST` from opponent (`accept: boolean`)
+    - emits `UNDO_APPLIED` with reverted token state when accepted
+    - emits `UNDO_REJECTED` when declined
+    - emits `UNDO_CANCELLED` if pending request is invalidated by disconnect
   - on `END_TURN`, server clears all token activations and includes token snapshot in `TURN_CHANGED.payload.tokens`
   - handles `ROLL_DICE`:
     - validates payload shape/types (`count`, `sides`, optional `modifier`)
@@ -94,6 +103,7 @@ Primary references:
   - final assignment prompt: "You are the first player" / "You are the second player"
   - start game and end turn commands
   - activate token from hover actions (`ACTIVATE_TOKEN`)
+  - request undo for latest board action and respond to opponent undo requests
   - toggle movement confirmation mode
   - board token drag preview with:
     - immediate send on release (confirmation off)
@@ -106,6 +116,7 @@ Primary references:
   - `PLAYER_JOINED` / `PLAYER_LEFT` player presence updates
   - `TOKEN_MOVED` token updates
   - `TOKEN_ACTIVATED` token activation updates
+  - `UNDO_REQUESTED` / `UNDO_APPLIED` / `UNDO_REJECTED` / `UNDO_CANCELLED` undo flow updates
   - `TURN_CHANGED.payload.tokens` token activation resets
 - Board UI:
   - SVG board with mm coordinate system
@@ -129,6 +140,9 @@ Primary references:
   - verifies dice payload validation errors
   - verifies game start, turn progression, and active-player command restrictions
   - verifies only initiative winner can choose turn order
+  - verifies move undo requires opponent acceptance and one-undo-per-turn limit
+  - verifies activation undo rejection leaves board state unchanged
+  - verifies non-board actions cannot be undone
 - Web UI currently has no automated test suite; board interaction changes are validated via `pnpm build:web` plus manual verification.
 
 ## Docs vs Code Notes

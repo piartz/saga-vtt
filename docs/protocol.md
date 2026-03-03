@@ -40,6 +40,7 @@ This is the current MVP protocol implemented by the API/web app.
   - `players` (connected players snapshot)
   - `self_player_id` (the current websocket player's id)
   - `initiative` (nullable; see turn order flow below)
+  - `undo` (current undo state snapshot for the running turn)
 - `PLAYER_JOINED`:
   - emitted to existing room clients when a new client connects
   - payload: `player`
@@ -79,8 +80,11 @@ This is the current MVP protocol implemented by the API/web app.
 ### Board interactions
 - `MOVE_TOKEN` → `TOKEN_MOVED`
 - `ACTIVATE_TOKEN` → `TOKEN_ACTIVATED`
+- `REQUEST_UNDO` → `UNDO_REQUESTED`
+- `RESPOND_UNDO_REQUEST` → (`UNDO_APPLIED` | `UNDO_REJECTED`)
 - while `phase = running`, only active player may issue `MOVE_TOKEN`
 - while `phase = running`, only active player may issue `ACTIVATE_TOKEN`
+- while an undo request is pending, board/turn actions are blocked until opponent responds
 - Server validates:
   - payload shape and token id
   - integer mm coordinates
@@ -98,6 +102,22 @@ This is the current MVP protocol implemented by the API/web app.
   - `token`
   - `client_msg_id`
 - `TOKEN_ACTIVATED` includes `actor_player_id` of the player who sent `ACTIVATE_TOKEN`
+- undo rules:
+  - only board actions (`MOVE_TOKEN`, `ACTIVATE_TOKEN`) are undoable
+  - undo request targets the latest undoable action made by the active player in the current turn
+  - exactly one undo request is allowed per player turn
+  - opponent must accept the request for state rollback to happen
+  - `UNDO_REQUESTED.payload` includes:
+    - `request` (`requester_player_id`, `responder_player_id`, `action_type`, `token_id`)
+    - `undo` (updated undo snapshot)
+  - `UNDO_APPLIED.payload` includes:
+    - `request`
+    - `token` (authoritative reverted token snapshot)
+    - `undo` (updated undo snapshot)
+  - `UNDO_REJECTED.payload` includes:
+    - `request`
+    - `undo` (updated undo snapshot)
+  - `UNDO_CANCELLED` can be emitted if pending undo is invalidated by disconnect (`reason = player_left`)
 
 ### Dice
 - `ROLL_DICE` → `DICE_ROLLED`

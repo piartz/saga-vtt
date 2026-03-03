@@ -26,6 +26,8 @@ It is intentionally **generic**:
   - move tokens on a server-authoritative board
   - start game + advance turns with active-player enforcement
   - activate tokens with typed activations (`move`, `charge`, `shoot`, `rest`)
+  - request undo for board actions (move/activation) with opponent accept/reject gate
+  - enforce one undo request per player turn
   - track per-turn activation count + last activation type per token
   - enforce `rest` only if token has not been activated earlier in the turn
   - reset token activations automatically on `END_TURN`
