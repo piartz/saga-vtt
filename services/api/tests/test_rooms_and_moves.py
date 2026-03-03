@@ -513,8 +513,15 @@ def test_non_active_player_cannot_end_turn_or_take_running_actions() -> None:
         client.websocket_connect(f"/games/{game_id}/ws") as ws2,
     ):
         hello_1: Dict[str, Any] = ws1.receive_json()
-        ws2.receive_json()
-        ws1.receive_json()
+        ws1_prefetched: Dict[str, Any] | None = None
+        if hello_1["type"] != "HELLO":
+            ws1_prefetched = hello_1
+            hello_1 = ws1.receive_json()
+        assert hello_1["type"] == "HELLO"
+        hello_2: Dict[str, Any] = ws2.receive_json()
+        assert hello_2["type"] == "HELLO"
+        joined_event: Dict[str, Any] = ws1_prefetched if ws1_prefetched is not None else ws1.receive_json()
+        assert joined_event["type"] == "PLAYER_JOINED"
 
         player_1 = hello_1["payload"]["players"][0]["id"]
         ws1.send_json(
