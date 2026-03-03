@@ -14,7 +14,7 @@
 - Confirm move (implemented: optional toggle, one-token-at-a-time pending confirm/cancel)
 
 ## Milestone 2 — “Play a basic scenario”
-- Turn structure + active player
+- Turn structure + active player (implemented with initiative roll + winner chooses first/second)
 - Activation markers (implemented: typed activations `move|charge|shoot|rest`, repeatable per turn with count/last-type tracking, no manual deactivation, `rest` only before first activation, reset on end turn)
 - Dice roller (server-side)
 - Action log UI

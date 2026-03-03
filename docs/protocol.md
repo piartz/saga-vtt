@@ -38,6 +38,8 @@ This is the current MVP protocol implemented by the API/web app.
   - `board`
   - `tokens`
   - `players` (connected players snapshot)
+  - `self_player_id` (the current websocket player's id)
+  - `initiative` (nullable; see turn order flow below)
 - `PLAYER_JOINED`:
   - emitted to existing room clients when a new client connects
   - payload: `player`
@@ -52,16 +54,23 @@ This is the current MVP protocol implemented by the API/web app.
   - `phase` (`lobby` or `running`)
   - `round` (integer, starts at `0` in lobby)
   - `active_player_id` (`string` or `null`)
-- `START_GAME` → `GAME_STARTED`
-  - initializes `phase = running`
-  - initializes `round = 1`
-  - selects active player from connected players (stable sorted order by player id)
-  - `GAME_STARTED.payload.turn` contains the new turn snapshot
+- `START_GAME` → `INITIATIVE_ROLLED`
+  - currently requires exactly 2 connected players
+  - rolls each player's initiative (d20, re-roll ties)
+  - stores initiative winner/loser and waits for winner's choice
+- `CHOOSE_TURN_ORDER` → `TURN_ORDER_CHOSEN` then `GAME_STARTED`
+  - payload: `{ "choice": "FIRST" | "SECOND" }`
+  - only initiative winner can choose
+  - `TURN_ORDER_CHOSEN.payload.initiative` includes winner choice and resulting first/second player ids
+  - `GAME_STARTED.payload.turn` contains running turn snapshot after choice
 - `END_TURN` → `TURN_CHANGED`
   - allowed only for the current active player
   - advances active player to the next connected player
   - increments `round` when the active player wraps to the start of the order
   - `TURN_CHANGED.payload.turn` contains the updated turn snapshot
+- `INITIATIVE_RESET`
+  - emitted if initiative is invalidated in lobby (for example player joins/leaves before choice)
+  - payload includes `reason` (`player_joined` or `player_left`)
 
 ### Connectivity
 - `PING` → `PONG`
@@ -109,7 +118,7 @@ This is the current MVP protocol implemented by the API/web app.
   - `DICE_ROLLED` includes `actor_player_id` of the player who sent `ROLL_DICE`
 
 ### Room lifecycle (later)
-- explicit lobby commands (`JOIN_GAME`, `LEAVE_GAME`, `START_GAME`) once auth/identity is added
+- explicit lobby commands (`JOIN_GAME`, `LEAVE_GAME`) once auth/identity is added
 
 ## Versioning
 When you introduce breaking changes:

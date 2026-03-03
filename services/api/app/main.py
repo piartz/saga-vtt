@@ -43,6 +43,19 @@ class TurnState(TypedDict):
     active_player_id: str | None
 
 
+TurnChoice = Literal["FIRST", "SECOND"]
+
+
+class InitiativeState(TypedDict):
+    winner_player_id: str
+    loser_player_id: str
+    winner_roll: int
+    loser_roll: int
+    chooser_choice: TurnChoice | None
+    first_player_id: str | None
+    second_player_id: str | None
+
+
 def default_tokens() -> Dict[str, TokenState]:
     return {
         "A": {
@@ -76,6 +89,7 @@ class GameRoom:
     phase: str = "lobby"
     round: int = 0
     active_player_id: str | None = None
+    initiative: InitiativeState | None = None
 
     async def broadcast(self, event: Dict[str, Any], exclude_ws: WebSocket | None = None) -> None:
         for ws in list(self.connections):
@@ -148,23 +162,102 @@ def room_turn_snapshot(room: GameRoom) -> TurnState:
     }
 
 
+def room_initiative_snapshot(room: GameRoom) -> InitiativeState | None:
+    if room.initiative is None:
+        return None
+    return {
+        "winner_player_id": room.initiative["winner_player_id"],
+        "loser_player_id": room.initiative["loser_player_id"],
+        "winner_roll": room.initiative["winner_roll"],
+        "loser_roll": room.initiative["loser_roll"],
+        "chooser_choice": room.initiative["chooser_choice"],
+        "first_player_id": room.initiative["first_player_id"],
+        "second_player_id": room.initiative["second_player_id"],
+    }
+
+
 def connected_player_ids(room: GameRoom) -> List[str]:
     return [player["id"] for player in room_players_snapshot(room)]
 
 
-def apply_start_game(room: GameRoom) -> tuple[TurnState | None, str | None]:
+def apply_start_game(room: GameRoom) -> tuple[InitiativeState | None, str | None]:
     if room.phase != "lobby":
         return None, "Game is already running."
 
     player_ids = connected_player_ids(room)
-    if not player_ids:
-        return None, "Cannot start game without connected players."
+    if len(player_ids) != 2:
+        return None, "START_GAME currently requires exactly 2 connected players."
+    if room.initiative is not None and room.initiative["chooser_choice"] is None:
+        return None, "Initiative already rolled. Winner must choose first or second."
 
+    roll_a = 0
+    roll_b = 0
+    while roll_a == roll_b:
+        roll_a = secrets.randbelow(20) + 1
+        roll_b = secrets.randbelow(20) + 1
+
+    player_a = player_ids[0]
+    player_b = player_ids[1]
+    if roll_a > roll_b:
+        winner_player_id = player_a
+        loser_player_id = player_b
+        winner_roll = roll_a
+        loser_roll = roll_b
+    else:
+        winner_player_id = player_b
+        loser_player_id = player_a
+        winner_roll = roll_b
+        loser_roll = roll_a
+
+    room.initiative = {
+        "winner_player_id": winner_player_id,
+        "loser_player_id": loser_player_id,
+        "winner_roll": winner_roll,
+        "loser_roll": loser_roll,
+        "chooser_choice": None,
+        "first_player_id": None,
+        "second_player_id": None,
+    }
+    return room_initiative_snapshot(room), None
+
+
+def apply_choose_turn_order(
+    room: GameRoom, actor_player_id: str, payload: Any
+) -> tuple[TurnState | None, InitiativeState | None, str | None]:
+    if room.phase != "lobby":
+        return None, None, "Game is already running."
+    if room.initiative is None:
+        return None, None, "Initiative has not been rolled. Use START_GAME first."
+
+    initiative = room.initiative
+    if initiative["chooser_choice"] is not None:
+        return None, None, "Turn order was already chosen."
+    if actor_player_id != initiative["winner_player_id"]:
+        return None, None, "Only initiative winner can choose first or second."
+    if not isinstance(payload, dict):
+        return None, None, "CHOOSE_TURN_ORDER payload must be an object."
+
+    choice = payload.get("choice")
+    if choice not in ("FIRST", "SECOND"):
+        return None, None, "CHOOSE_TURN_ORDER choice must be FIRST or SECOND."
+
+    winner_player_id = initiative["winner_player_id"]
+    loser_player_id = initiative["loser_player_id"]
+    if choice == "FIRST":
+        first_player_id = winner_player_id
+        second_player_id = loser_player_id
+    else:
+        first_player_id = loser_player_id
+        second_player_id = winner_player_id
+
+    initiative["chooser_choice"] = choice
+    initiative["first_player_id"] = first_player_id
+    initiative["second_player_id"] = second_player_id
     room.phase = "running"
     room.round = 1
-    room.active_player_id = player_ids[0]
+    room.active_player_id = first_player_id
     reset_token_activations(room)
-    return room_turn_snapshot(room), None
+    return room_turn_snapshot(room), room_initiative_snapshot(room), None
 
 
 def apply_end_turn(room: GameRoom, actor_player_id: str) -> tuple[TurnState | None, str | None]:
@@ -378,10 +471,18 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         "tokens": list(room.tokens.values()),
                         "players": room_players_snapshot(room),
                         "turn": room_turn_snapshot(room),
+                        "initiative": room_initiative_snapshot(room),
+                        "self_player_id": player["id"],
                     },
                 )
             )
         )
+        if room.phase == "lobby" and room.initiative is not None:
+            room.initiative = None
+            await room.broadcast(
+                make_event(room, "INITIATIVE_RESET", {"reason": "player_joined"}),
+                exclude_ws=ws,
+            )
         await room.broadcast(
             make_event(room, "PLAYER_JOINED", {"player": player}, actor_player_id=player["id"]),
             exclude_ws=ws,
@@ -430,7 +531,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 continue
 
             if command_type == "START_GAME":
-                turn, error = apply_start_game(room)
+                initiative, error = apply_start_game(room)
                 if error is not None:
                     await ws.send_text(
                         json.dumps(
@@ -443,6 +544,38 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         )
                     )
                     continue
+                await room.broadcast(
+                    make_event(
+                        room,
+                        "INITIATIVE_ROLLED",
+                        {"initiative": initiative},
+                        actor_player_id=player["id"],
+                    )
+                )
+                continue
+
+            if command_type == "CHOOSE_TURN_ORDER":
+                turn, initiative, error = apply_choose_turn_order(room, player["id"], data.get("payload"))
+                if error is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": error},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                await room.broadcast(
+                    make_event(
+                        room,
+                        "TURN_ORDER_CHOSEN",
+                        {"initiative": initiative},
+                        actor_player_id=player["id"],
+                    )
+                )
                 await room.broadcast(
                     make_event(
                         room,
@@ -640,6 +773,22 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
         disconnected_player = room.players_by_ws_id.pop(id(ws), None)
         if ws in room.connections:
             room.connections.remove(ws)
+        if disconnected_player is not None and room.phase == "lobby" and room.initiative is not None:
+            initiative = room.initiative
+            if disconnected_player["id"] in (
+                initiative["winner_player_id"],
+                initiative["loser_player_id"],
+            ):
+                room.initiative = None
+                if room.connections:
+                    await room.broadcast(
+                        make_event(
+                            room,
+                            "INITIATIVE_RESET",
+                            {"reason": "player_left"},
+                            actor_player_id=disconnected_player["id"],
+                        )
+                    )
         if disconnected_player is not None and room.phase == "running":
             if disconnected_player["id"] == room.active_player_id:
                 remaining_player_ids = connected_player_ids(room)
