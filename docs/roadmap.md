@@ -29,3 +29,9 @@
 - Save game state + event logs
 - Spectators
 - Replays
+
+## Engineering / CI-CD hardening
+- [x] CI step 1: deterministic installs (`pnpm --frozen-lockfile`, `poetry install --sync`) + API type-check (`mypy`)
+- [ ] CI step 2: add API/web integration smoke test (WebSocket connect + minimal command flow)
+- [ ] CI step 3: add dependency/security automation (Dependabot + security scan job)
+- [ ] CI step 4: deployment workflow with manual approval gate for production

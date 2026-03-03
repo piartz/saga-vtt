@@ -19,7 +19,7 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build
 
@@ -35,6 +35,7 @@ jobs:
           python-version: "3.11"
       - name: Install Poetry
         run: pipx install poetry
-      - run: poetry install
+      - run: poetry install --sync --no-interaction
       - run: poetry run ruff check .
+      - run: poetry run mypy app
       - run: poetry run pytest -q

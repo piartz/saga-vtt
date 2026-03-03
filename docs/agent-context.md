@@ -26,6 +26,10 @@ Primary references:
   - `apps/web` (React + TypeScript, Vite)
   - `services/api` (FastAPI + WebSocket)
   - `docs` (vision, architecture, protocol, roadmap, playbook)
+- GitHub Actions CI currently runs:
+  - web lint + build
+  - API `ruff`, `mypy`, and `pytest`
+  - deterministic dependency installs (`pnpm --frozen-lockfile`, `poetry install --sync`)
 - Bootstrap script `tools/setup-and-run.sh` is interactive and platform-aware:
   - detects Linux/macOS
   - prompts before tool install/upgrade
@@ -128,6 +132,9 @@ Primary references:
 - Add WS reconnect/backoff client wrapper with resync behavior.
 - Decide and implement disconnect behavior for turn ownership (pause, auto-pass, or forfeit).
 - Expand dice UX (custom notation input + richer readable log details/filters for `DICE_ROLLED`).
+- Add CI integration smoke test that runs API+web minimal real-time flow (connect/start game/move/end turn).
+- Add dependency/security automation (Dependabot plus CI security scan job).
+- Add deployment workflow with explicit manual approval gate for production.
 - Start ADRs for major protocol/state decisions in `docs/adrs/`.
 
 ## Open Decisions / Risks
