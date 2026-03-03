@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const BOARD_WIDTH_MM = 800;
 const BOARD_HEIGHT_MM = 500;
+const GRID_STEP_MM = 50;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.1;
@@ -33,9 +34,16 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function clampViewOrigin(x: number, y: number, width: number, height: number): { x: number; y: number } {
+  const centeredX = (BOARD_WIDTH_MM - width) / 2;
+  const centeredY = (BOARD_HEIGHT_MM - height) / 2;
+  const minX = width >= BOARD_WIDTH_MM ? centeredX : 0;
+  const maxX = width >= BOARD_WIDTH_MM ? centeredX : BOARD_WIDTH_MM - width;
+  const minY = height >= BOARD_HEIGHT_MM ? centeredY : 0;
+  const maxY = height >= BOARD_HEIGHT_MM ? centeredY : BOARD_HEIGHT_MM - height;
+
   return {
-    x: clamp(x, 0, BOARD_WIDTH_MM - width),
-    y: clamp(y, 0, BOARD_HEIGHT_MM - height),
+    x: clamp(x, minX, maxX),
+    y: clamp(y, minY, maxY),
   };
 }
 
@@ -79,6 +87,7 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
   const [zoom, setZoom] = useState(1);
   const [viewOrigin, setViewOrigin] = useState({ x: 0, y: 0 });
   const [panSession, setPanSession] = useState<PanSession | null>(null);
+  const boardSvgRef = useRef<SVGSVGElement | null>(null);
 
   const viewportWidth = BOARD_WIDTH_MM / zoom;
   const viewportHeight = BOARD_HEIGHT_MM / zoom;
@@ -97,6 +106,22 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
     () => renderedTokens.find((token) => token.id === selectedId) ?? null,
     [renderedTokens, selectedId]
   );
+
+  useEffect(() => {
+    const svg = boardSvgRef.current;
+    if (!svg) return;
+
+    const blockPageScroll = (event: WheelEvent) => {
+      event.preventDefault();
+    };
+
+    // React wheel handlers can behave passively on some browsers/input devices.
+    // Use a native non-passive listener so page scrolling never steals board gestures.
+    svg.addEventListener("wheel", blockPageScroll, { passive: false });
+    return () => {
+      svg.removeEventListener("wheel", blockPageScroll);
+    };
+  }, []);
 
   function eventToBoardPoint(
     e: React.PointerEvent<SVGCircleElement>
@@ -137,18 +162,25 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
   }
 
   function onWheelZoom(e: React.WheelEvent<SVGSVGElement>) {
-    e.preventDefault();
     const deltaY = wheelDeltaToPixels(e.deltaY, e.deltaMode);
     const deltaX = wheelDeltaToPixels(e.deltaX, e.deltaMode);
-    const isZoomGesture = e.ctrlKey || e.metaKey || zoom <= 1;
+    const wantsZoom = e.altKey || e.ctrlKey || e.metaKey;
 
-    if (isZoomGesture) {
+    if (wantsZoom) {
+      e.preventDefault();
       const anchor = clientToBoardPoint(e.currentTarget, e.clientX, e.clientY);
       const delta = deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
       setZoomAround(zoom + delta, anchor);
       return;
     }
 
+    if (zoom <= 1) {
+      // At or below 100%, wheel gestures should not trigger board zoom.
+      e.preventDefault();
+      return;
+    }
+
+    e.preventDefault();
     const mmPerPxX = viewportWidth / e.currentTarget.clientWidth;
     const mmPerPxY = viewportHeight / e.currentTarget.clientHeight;
     setViewOrigin((prev) =>
@@ -259,7 +291,7 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
         Drag a token and release to send a MOVE_TOKEN command.
       </p>
       <p style={{ marginTop: 0, color: theme.muted }}>
-        Use mouse wheel (or pinch/Cmd+wheel) to zoom and drag/two-finger scroll to pan when zoomed in.
+        Hold Option/Alt (or pinch/Cmd/Ctrl gesture) to zoom. When zoomed in, use drag or two-finger scroll to pan.
       </p>
       {!canMoveTokens && <p style={{ marginTop: 0, color: theme.muted }}>Connect to move tokens.</p>}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
@@ -309,6 +341,7 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
       </div>
 
       <svg
+        ref={boardSvgRef}
         width="100%"
         viewBox={`${viewOrigin.x} ${viewOrigin.y} ${viewportWidth} ${viewportHeight}`}
         onWheel={onWheelZoom}
@@ -333,24 +366,24 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
         />
 
         {/* Grid for quick placement while gameplay actions are in progress. */}
-        {Array.from({ length: 16 }).map((_, i) => (
+        {Array.from({ length: BOARD_WIDTH_MM / GRID_STEP_MM + 1 }).map((_, i) => (
           <line
             key={"v" + i}
-            x1={i * 50}
+            x1={i * GRID_STEP_MM}
             y1={0}
-            x2={i * 50}
+            x2={i * GRID_STEP_MM}
             y2={BOARD_HEIGHT_MM}
             stroke={theme.grid}
             style={{ pointerEvents: "none" }}
           />
         ))}
-        {Array.from({ length: 10 }).map((_, i) => (
+        {Array.from({ length: BOARD_HEIGHT_MM / GRID_STEP_MM + 1 }).map((_, i) => (
           <line
             key={"h" + i}
             x1={0}
-            y1={i * 50}
+            y1={i * GRID_STEP_MM}
             x2={BOARD_WIDTH_MM}
-            y2={i * 50}
+            y2={i * GRID_STEP_MM}
             stroke={theme.grid}
             style={{ pointerEvents: "none" }}
           />

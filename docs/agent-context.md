@@ -85,9 +85,11 @@ Primary references:
   - SVG board with mm coordinate system
   - local drag preview
   - sends command on release (server confirms via event)
-  - mouse-wheel/pinch zoom (`50%` to `250%`) with +/- controls and reset
+  - mouse-wheel zoom (`50%` to `250%`) with +/- controls and reset
   - drag-background panning when zoomed in
-  - touchpad two-finger scroll pans view when zoomed in
+  - touchpad two-finger scroll no longer auto-zooms below 100%; panning remains active only when zoomed in
+  - Option/Alt or pinch/Cmd/Ctrl wheel gestures trigger board zoom
+  - wheel gestures over the board are isolated from page scroll (page scroll continues normally outside board area)
 
 ### Tests
 - `services/api/tests/test_health.py`
