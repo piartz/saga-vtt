@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, TypeGuard, TypedDict
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 PROTOCOL_VERSION = 1
@@ -41,6 +41,13 @@ class TurnState(TypedDict):
     phase: str
     round: int
     active_player_id: str | None
+
+
+class LobbyRoomState(TypedDict):
+    game_id: str
+    player_count: int
+    phase: str
+    round: int
 
 
 TurnChoice = Literal["FIRST", "SECOND"]
@@ -105,6 +112,7 @@ def default_tokens() -> Dict[str, TokenState]:
 @dataclass
 class GameRoom:
     game_id: str
+    creator_client_id: str | None = None
     seq: int = 0
     connections: List[WebSocket] = field(default_factory=list)
     players_by_ws_id: Dict[int, PlayerState] = field(default_factory=dict)
@@ -153,10 +161,34 @@ def make_event(
     return event
 
 
-def create_room(game_id: str) -> GameRoom:
-    room = GameRoom(game_id=game_id)
+def create_room(game_id: str, creator_client_id: str | None = None) -> GameRoom:
+    room = GameRoom(game_id=game_id, creator_client_id=creator_client_id)
     ROOMS[game_id] = room
     return room
+
+
+def room_by_creator_client_id(creator_client_id: str) -> GameRoom | None:
+    for room in ROOMS.values():
+        if room.creator_client_id == creator_client_id:
+            return room
+    return None
+
+
+def room_lobby_snapshot(room: GameRoom) -> LobbyRoomState:
+    return {
+        "game_id": room.game_id,
+        "player_count": len(room.players_by_ws_id),
+        "phase": room.phase,
+        "round": room.round,
+    }
+
+
+def active_lobby_rooms_snapshot() -> List[LobbyRoomState]:
+    active_rooms = [
+        room_lobby_snapshot(room) for room in ROOMS.values() if len(room.players_by_ws_id) > 0
+    ]
+    active_rooms.sort(key=lambda room: room["game_id"])
+    return active_rooms
 
 
 def is_int(value: Any) -> TypeGuard[int]:
@@ -616,19 +648,37 @@ def health() -> Dict[str, str]:
 
 
 @app.post("/games")
-def create_game() -> Dict[str, Any]:
+def create_game(x_client_id: str | None = Header(default=None)) -> Dict[str, Any]:
+    creator_client_id = x_client_id.strip() if isinstance(x_client_id, str) and x_client_id.strip() else None
+    if creator_client_id is not None:
+        existing_room = room_by_creator_client_id(creator_client_id)
+        if existing_room is not None:
+            return {
+                "game_id": existing_room.game_id,
+                "protocol_version": PROTOCOL_VERSION,
+                "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
+                "tokens": list(existing_room.tokens.values()),
+                "created": False,
+            }
+
     while True:
         game_id = secrets.token_hex(4)
         if game_id not in ROOMS:
             break
 
-    room = create_room(game_id)
+    room = create_room(game_id, creator_client_id=creator_client_id)
     return {
         "game_id": game_id,
         "protocol_version": PROTOCOL_VERSION,
         "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
         "tokens": list(room.tokens.values()),
+        "created": True,
     }
+
+
+@app.get("/rooms")
+def list_active_rooms() -> Dict[str, Any]:
+    return {"rooms": active_lobby_rooms_snapshot()}
 
 
 @app.websocket("/games/{game_id}/ws")

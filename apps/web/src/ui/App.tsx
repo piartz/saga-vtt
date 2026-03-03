@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Board, type ActivationType, type BoardToken } from "./Board";
 
 type EventEnvelope = {
@@ -23,6 +23,13 @@ type EventLogMode = "READABLE" | "ADVANCED";
 type PresencePlayer = {
   id: string;
   label: string;
+};
+
+type LobbyRoom = {
+  game_id: string;
+  player_count: number;
+  phase: "lobby" | "running";
+  round: number;
 };
 
 type TurnState = {
@@ -57,9 +64,33 @@ type UndoState = {
   undo_used_this_turn_player_ids: string[];
 };
 
-function randomRoomId(): string {
-  // Friendly enough for MVP; switch to UUIDs later.
-  return Math.random().toString(16).slice(2, 10);
+function roomIdFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const room = params.get("room");
+  if (!room) return null;
+  const normalized = room.trim();
+  if (normalized.length === 0) return null;
+  return normalized;
+}
+
+function createFallbackClientId(): string {
+  return `client-${Math.random().toString(16).slice(2, 12)}`;
+}
+
+function getOrCreateClientId(): string {
+  const key = "saga_vtt_client_id";
+  try {
+    const existing = window.localStorage.getItem(key)?.trim();
+    if (existing) return existing;
+    const generated =
+      typeof window.crypto !== "undefined" && "randomUUID" in window.crypto
+        ? window.crypto.randomUUID()
+        : createFallbackClientId();
+    window.localStorage.setItem(key, generated);
+    return generated;
+  } catch {
+    return createFallbackClientId();
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -115,6 +146,23 @@ function toPresencePlayer(value: unknown): PresencePlayer | null {
   const { id, label } = value;
   if (typeof id !== "string" || typeof label !== "string") return null;
   return { id, label };
+}
+
+function toLobbyRoom(value: unknown): LobbyRoom | null {
+  if (!isRecord(value)) return null;
+  const { game_id, player_count, phase, round } = value;
+  if (typeof game_id !== "string") return null;
+  if (typeof player_count !== "number" || !Number.isInteger(player_count) || player_count < 0) return null;
+  if (!(phase === "lobby" || phase === "running")) return null;
+  if (typeof round !== "number" || !Number.isInteger(round) || round < 0) return null;
+  return { game_id, player_count, phase, round };
+}
+
+function extractLobbyRooms(value: unknown): LobbyRoom[] | null {
+  if (!isRecord(value) || !Array.isArray(value.rooms)) return null;
+  const rooms = value.rooms.map(toLobbyRoom);
+  if (rooms.some((room) => room === null)) return null;
+  return rooms as LobbyRoom[];
 }
 
 function extractHelloPlayers(payload: unknown): PresencePlayer[] | null {
@@ -451,20 +499,101 @@ export function App() {
   const [localPlayerId, setLocalPlayerId] = useState<string | null>(null);
   const [eventLogMode, setEventLogMode] = useState<EventLogMode>("READABLE");
   const [confirmMoves, setConfirmMoves] = useState(true);
-  const [gameId, setGameId] = useState<string>(() => randomRoomId());
+  const [gameId, setGameId] = useState<string | null>(() => roomIdFromUrl());
+  const [joinRoomInput, setJoinRoomInput] = useState<string>(() => roomIdFromUrl() ?? "");
+  const [lobbyRooms, setLobbyRooms] = useState<LobbyRoom[]>([]);
+  const [lobbyRoomsPending, setLobbyRoomsPending] = useState(false);
+  const [lobbyErrorMessage, setLobbyErrorMessage] = useState<string | null>(null);
   const [createRoomPending, setCreateRoomPending] = useState(false);
+  const [inviteCopyMessage, setInviteCopyMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const clientId = useMemo(() => getOrCreateClientId(), []);
 
   const browserProtocol = window.location.protocol === "https:" ? "https" : "http";
   const wsProtocol = browserProtocol === "https" ? "wss" : "ws";
   const apiHost = window.location.hostname || "localhost";
 
   const apiBaseUrl = useMemo(() => `${browserProtocol}://${apiHost}:8000`, [apiHost, browserProtocol]);
-  const wsUrl = useMemo(() => `${wsProtocol}://${apiHost}:8000/games/${gameId}/ws`, [apiHost, gameId, wsProtocol]);
+  const wsUrl = useMemo(
+    () => (gameId ? `${wsProtocol}://${apiHost}:8000/games/${gameId}/ws` : null),
+    [apiHost, gameId, wsProtocol]
+  );
+
+  const refreshLobbyRooms = useCallback(
+    async (showSpinner: boolean) => {
+      if (showSpinner) setLobbyRoomsPending(true);
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/rooms`);
+        if (!response.ok) {
+          throw new Error(`Could not load active rooms (${response.status}).`);
+        }
+        const body = (await response.json()) as unknown;
+        const parsed = extractLobbyRooms(body);
+        if (parsed === null) {
+          throw new Error("Server returned an invalid active room list.");
+        }
+        setLobbyRooms(parsed);
+        setLobbyErrorMessage(null);
+      } catch (err) {
+        if (err instanceof Error) {
+          setLobbyErrorMessage(err.message);
+        } else {
+          setLobbyErrorMessage("Could not load active rooms.");
+        }
+      } finally {
+        if (showSpinner) setLobbyRoomsPending(false);
+      }
+    },
+    [apiBaseUrl]
+  );
 
   useEffect(() => {
+    void refreshLobbyRooms(true);
+    const intervalId = window.setInterval(() => {
+      void refreshLobbyRooms(false);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [refreshLobbyRooms]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (gameId) {
+      params.set("room", gameId);
+    } else {
+      params.delete("room");
+    }
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", nextUrl);
+  }, [gameId]);
+
+  useEffect(() => {
+    if (!wsUrl) {
+      setEvents([]);
+      setTokens([]);
+      setPlayers([]);
+      setKnownPlayersById({});
+      setTurn(null);
+      setInitiative(null);
+      setLocalPlayerId(null);
+      setStatus("DISCONNECTED");
+      setInviteCopyMessage(null);
+      const currentWs = wsRef.current;
+      if (currentWs) {
+        try {
+          currentWs.close();
+        } finally {
+          wsRef.current = null;
+        }
+      }
+      return;
+    }
+
     setEvents([]);
     setTokens([]);
     setPlayers([]);
@@ -676,9 +805,13 @@ export function App() {
   async function createRoom() {
     setCreateRoomPending(true);
     setErrorMessage(null);
+    setInfoMessage(null);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/games`, { method: "POST" });
+      const response = await fetch(`${apiBaseUrl}/games`, {
+        method: "POST",
+        headers: { "X-Client-Id": clientId },
+      });
       if (!response.ok) {
         throw new Error(`Could not create room (${response.status}).`);
       }
@@ -688,7 +821,11 @@ export function App() {
         throw new Error("Server returned an invalid room response.");
       }
 
+      const wasCreated = body.created === true;
       setGameId(body.game_id);
+      setJoinRoomInput(body.game_id);
+      setInfoMessage(wasCreated ? "Room created. Joining now." : "You already have an active room. Rejoining it.");
+      void refreshLobbyRooms(false);
     } catch (err) {
       if (err instanceof Error) {
         setErrorMessage(err.message);
@@ -698,6 +835,29 @@ export function App() {
     } finally {
       setCreateRoomPending(false);
     }
+  }
+
+  async function copyInviteLink() {
+    if (!gameId) return;
+    setInviteCopyMessage(null);
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(gameId)}`;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setInviteCopyMessage("Invite link copied.");
+    } catch {
+      setInviteCopyMessage("Could not copy invite link.");
+    }
+  }
+
+  function joinRoom(candidateId: string) {
+    const trimmed = candidateId.trim();
+    if (trimmed.length === 0) {
+      setErrorMessage("Room id is required.");
+      return;
+    }
+    setErrorMessage(null);
+    setGameId(trimmed);
+    setJoinRoomInput(trimmed);
   }
 
   const activePlayerName =
@@ -746,6 +906,196 @@ export function App() {
       ? tokens.find((token) => token.id === pendingUndoRequest.token_id)?.label ?? pendingUndoRequest.token_id
       : null;
 
+  if (gameId === null) {
+    return (
+      <div
+        style={{
+          fontFamily: "system-ui, sans-serif",
+          padding: 16,
+          display: "grid",
+          gap: 16,
+          minHeight: "100dvh",
+          boxSizing: "border-box",
+          background: theme.bg,
+          color: theme.text,
+        }}
+      >
+        <header style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <h1 style={{ margin: 0 }}>Skirmish VTT Lobby</h1>
+          <button
+            onClick={createRoom}
+            disabled={createRoomPending}
+            style={{
+              padding: "6px 10px",
+              borderRadius: 6,
+              border: `1px solid ${theme.border}`,
+              background: theme.surfaceAlt,
+              color: theme.text,
+              cursor: createRoomPending ? "not-allowed" : "pointer",
+            }}
+          >
+            {createRoomPending ? "Creating..." : "Create & Join Room"}
+          </button>
+          <button
+            onClick={() => void refreshLobbyRooms(true)}
+            disabled={lobbyRoomsPending}
+            style={{
+              padding: "6px 10px",
+              borderRadius: 6,
+              border: `1px solid ${theme.border}`,
+              background: theme.surfaceAlt,
+              color: theme.text,
+              cursor: lobbyRoomsPending ? "not-allowed" : "pointer",
+            }}
+          >
+            {lobbyRoomsPending ? "Refreshing..." : "Refresh Rooms"}
+          </button>
+        </header>
+
+        {errorMessage && (
+          <div
+            style={{
+              border: `1px solid ${theme.border}`,
+              borderRadius: 8,
+              padding: "8px 12px",
+              background: theme.surfaceAlt,
+              color: "#ffb3b3",
+            }}
+          >
+            {errorMessage}
+          </div>
+        )}
+        {lobbyErrorMessage && (
+          <div
+            style={{
+              border: `1px solid ${theme.border}`,
+              borderRadius: 8,
+              padding: "8px 12px",
+              background: theme.surfaceAlt,
+              color: "#ffb3b3",
+            }}
+          >
+            {lobbyErrorMessage}
+          </div>
+        )}
+        {infoMessage && (
+          <div
+            style={{
+              border: `1px solid ${theme.border}`,
+              borderRadius: 8,
+              padding: "8px 12px",
+              background: theme.surfaceAlt,
+              color: theme.text,
+            }}
+          >
+            {infoMessage}
+          </div>
+        )}
+
+        <main style={{ display: "grid", gridTemplateColumns: "1fr minmax(280px, 360px)", gap: 16 }}>
+          <section
+            style={{
+              border: `1px solid ${theme.border}`,
+              borderRadius: 8,
+              padding: 12,
+              background: theme.surface,
+            }}
+          >
+            <h2 style={{ marginTop: 0 }}>Active Rooms</h2>
+            <div style={{ display: "grid", gap: 10 }}>
+              {lobbyRooms.map((room) => (
+                <div
+                  key={room.game_id}
+                  style={{
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 8,
+                    padding: 10,
+                    background: theme.surfaceAlt,
+                    display: "grid",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                    <strong>Room {room.game_id}</strong>
+                    <span style={{ fontSize: 12, color: theme.muted }}>
+                      {room.player_count} player{room.player_count === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: theme.muted }}>
+                      {room.phase} | Round {room.round}
+                    </span>
+                    <button
+                      onClick={() => joinRoom(room.game_id)}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: 6,
+                        border: `1px solid ${theme.border}`,
+                        background: theme.surface,
+                        color: theme.text,
+                        cursor: "pointer",
+                        fontSize: 12,
+                      }}
+                    >
+                      Join Room
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {lobbyRooms.length === 0 && (
+                <div style={{ fontSize: 13, color: theme.muted }}>
+                  No active rooms yet. Create one to start, then share the invite link.
+                </div>
+              )}
+            </div>
+          </section>
+
+          <aside
+            style={{
+              border: `1px solid ${theme.border}`,
+              borderRadius: 8,
+              padding: 12,
+              background: theme.surface,
+              display: "grid",
+              alignContent: "start",
+              gap: 10,
+            }}
+          >
+            <h2 style={{ marginTop: 0, marginBottom: 0 }}>Join by Room ID</h2>
+            <input
+              value={joinRoomInput}
+              onChange={(e) => setJoinRoomInput(e.target.value)}
+              placeholder="e.g. a1b2c3d4"
+              style={{
+                padding: 8,
+                border: `1px solid ${theme.border}`,
+                borderRadius: 6,
+                background: theme.inputBg,
+                color: theme.text,
+              }}
+            />
+            <button
+              onClick={() => joinRoom(joinRoomInput)}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 6,
+                border: `1px solid ${theme.border}`,
+                background: theme.surfaceAlt,
+                color: theme.text,
+                cursor: "pointer",
+              }}
+            >
+              Join Room
+            </button>
+            <div style={{ fontSize: 12, color: theme.muted }}>
+              Opening a room sets URL as `?room=&lt;id&gt;` so links are shareable.
+            </div>
+          </aside>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -761,6 +1111,7 @@ export function App() {
     >
       <header style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
         <h1 style={{ margin: 0 }}>Skirmish VTT</h1>
+        <div style={{ color: theme.muted }}>Room: {gameId}</div>
         <div style={{ color: theme.muted }}>WS: {status}</div>
         <div style={{ color: theme.muted }}>
           Turn:{" "}
@@ -769,34 +1120,31 @@ export function App() {
             : "unknown"}
         </div>
         <button
-          onClick={createRoom}
-          disabled={createRoomPending}
+          onClick={() => setGameId(null)}
           style={{
             padding: "6px 10px",
             borderRadius: 6,
             border: `1px solid ${theme.border}`,
             background: theme.surfaceAlt,
             color: theme.text,
-            cursor: createRoomPending ? "not-allowed" : "pointer",
+            cursor: "pointer",
           }}
         >
-          {createRoomPending ? "Creating..." : "Create Room"}
+          Back To Lobby
         </button>
-        <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          Room:
-          <input
-            value={gameId}
-            onChange={(e) => setGameId(e.target.value)}
-            style={{
-              padding: 6,
-              minWidth: 140,
-              border: `1px solid ${theme.border}`,
-              borderRadius: 6,
-              background: theme.inputBg,
-              color: theme.text,
-            }}
-          />
-        </label>
+        <button
+          onClick={copyInviteLink}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 6,
+            border: `1px solid ${theme.border}`,
+            background: theme.surfaceAlt,
+            color: theme.text,
+            cursor: "pointer",
+          }}
+        >
+          Copy Invite Link
+        </button>
         <button
           onClick={sendPing}
           disabled={status !== "CONNECTED"}
@@ -864,9 +1212,6 @@ export function App() {
           />
           Confirm Movement
         </label>
-        <small style={{ color: theme.muted }}>
-          Tip: open this page in two browser windows with the same Room ID.
-        </small>
       </header>
 
       {errorMessage && (
@@ -880,6 +1225,19 @@ export function App() {
           }}
         >
           {errorMessage}
+        </div>
+      )}
+      {inviteCopyMessage && (
+        <div
+          style={{
+            border: `1px solid ${theme.border}`,
+            borderRadius: 8,
+            padding: "8px 12px",
+            background: theme.surfaceAlt,
+            color: theme.text,
+          }}
+        >
+          {inviteCopyMessage}
         </div>
       )}
 
