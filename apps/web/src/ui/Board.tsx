@@ -39,6 +39,13 @@ function clampViewOrigin(x: number, y: number, width: number, height: number): {
   };
 }
 
+function wheelDeltaToPixels(delta: number, deltaMode: number): number {
+  // 0=pixel, 1=line, 2=page. Browsers typically emit pixel on touchpads.
+  if (deltaMode === 1) return delta * 16;
+  if (deltaMode === 2) return delta * 800;
+  return delta;
+}
+
 function clientToBoardPoint(
   svg: SVGSVGElement,
   clientX: number,
@@ -131,9 +138,27 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
 
   function onWheelZoom(e: React.WheelEvent<SVGSVGElement>) {
     e.preventDefault();
-    const anchor = clientToBoardPoint(e.currentTarget, e.clientX, e.clientY);
-    const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
-    setZoomAround(zoom + delta, anchor);
+    const deltaY = wheelDeltaToPixels(e.deltaY, e.deltaMode);
+    const deltaX = wheelDeltaToPixels(e.deltaX, e.deltaMode);
+    const isZoomGesture = e.ctrlKey || e.metaKey || zoom <= 1;
+
+    if (isZoomGesture) {
+      const anchor = clientToBoardPoint(e.currentTarget, e.clientX, e.clientY);
+      const delta = deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+      setZoomAround(zoom + delta, anchor);
+      return;
+    }
+
+    const mmPerPxX = viewportWidth / e.currentTarget.clientWidth;
+    const mmPerPxY = viewportHeight / e.currentTarget.clientHeight;
+    setViewOrigin((prev) =>
+      clampViewOrigin(
+        prev.x + deltaX * mmPerPxX,
+        prev.y + deltaY * mmPerPxY,
+        viewportWidth,
+        viewportHeight
+      )
+    );
   }
 
   function onPanStart(e: React.PointerEvent<SVGRectElement>) {
@@ -234,7 +259,7 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
         Drag a token and release to send a MOVE_TOKEN command.
       </p>
       <p style={{ marginTop: 0, color: theme.muted }}>
-        Use mouse wheel to zoom and drag the board background to pan.
+        Use mouse wheel (or pinch/Cmd+wheel) to zoom and drag/two-finger scroll to pan when zoomed in.
       </p>
       {!canMoveTokens && <p style={{ marginTop: 0, color: theme.muted }}>Connect to move tokens.</p>}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>

@@ -85,8 +85,9 @@ Primary references:
   - SVG board with mm coordinate system
   - local drag preview
   - sends command on release (server confirms via event)
-  - mouse-wheel zoom (`50%` to `250%`) with +/- controls and reset
+  - mouse-wheel/pinch zoom (`50%` to `250%`) with +/- controls and reset
   - drag-background panning when zoomed in
+  - touchpad two-finger scroll pans view when zoomed in
 
 ### Tests
 - `services/api/tests/test_health.py`
