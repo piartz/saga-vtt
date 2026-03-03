@@ -18,6 +18,7 @@ export type BoardToken = {
 type BoardProps = {
   tokens: BoardToken[];
   canMoveTokens: boolean;
+  confirmMoves: boolean;
   onMoveToken: (tokenId: string, xMm: number, yMm: number) => void;
 };
 
@@ -27,6 +28,17 @@ type PanSession = {
   startClientY: number;
   startViewX: number;
   startViewY: number;
+};
+
+type PendingMove = {
+  tokenId: string;
+  x: number;
+  y: number;
+};
+
+type ActiveDrag = {
+  tokenId: string;
+  pointerId: number;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -69,7 +81,7 @@ function clientToBoardPoint(
   return { x: pos.x, y: pos.y };
 }
 
-export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
+export function Board({ tokens, canMoveTokens, confirmMoves, onMoveToken }: BoardProps) {
   const theme = {
     surface: "#171b24",
     border: "#2c3446",
@@ -84,6 +96,9 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+  const [dragMoved, setDragMoved] = useState(false);
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const [zoom, setZoom] = useState(1);
   const [viewOrigin, setViewOrigin] = useState({ x: 0, y: 0 });
   const [panSession, setPanSession] = useState<PanSession | null>(null);
@@ -94,17 +109,25 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
 
   const renderedTokens = useMemo(
     () =>
-      tokens.map((token) =>
-        token.id === selectedId && dragPosition
-          ? { ...token, x_mm: dragPosition.x, y_mm: dragPosition.y }
-          : token
-      ),
-    [tokens, selectedId, dragPosition]
+      tokens.map((token) => {
+        if (token.id === selectedId && dragPosition) {
+          return { ...token, x_mm: dragPosition.x, y_mm: dragPosition.y };
+        }
+        if (confirmMoves && pendingMove && token.id === pendingMove.tokenId) {
+          return { ...token, x_mm: pendingMove.x, y_mm: pendingMove.y };
+        }
+        return token;
+      }),
+    [tokens, selectedId, dragPosition, confirmMoves, pendingMove]
   );
 
   const selected = useMemo(
     () => renderedTokens.find((token) => token.id === selectedId) ?? null,
     [renderedTokens, selectedId]
+  );
+  const pendingToken = useMemo(
+    () => (pendingMove ? tokens.find((token) => token.id === pendingMove.tokenId) ?? null : null),
+    [tokens, pendingMove]
   );
 
   useEffect(() => {
@@ -122,6 +145,24 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
       svg.removeEventListener("wheel", blockPageScroll);
     };
   }, []);
+
+  useEffect(() => {
+    if (!confirmMoves && pendingMove) {
+      setPendingMove(null);
+    }
+  }, [confirmMoves, pendingMove]);
+
+  useEffect(() => {
+    if (!pendingMove) return;
+    const token = tokens.find((t) => t.id === pendingMove.tokenId);
+    if (!token) {
+      setPendingMove(null);
+      return;
+    }
+    if (token.x_mm === pendingMove.x && token.y_mm === pendingMove.y) {
+      setPendingMove(null);
+    }
+  }, [tokens, pendingMove]);
 
   function eventToBoardPoint(
     e: React.PointerEvent<SVGCircleElement>
@@ -242,38 +283,97 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
     setViewOrigin({ x: 0, y: 0 });
   }
 
+  function confirmPendingMove() {
+    if (!canMoveTokens || !pendingMove) return;
+    const move = pendingMove;
+    setPendingMove(null);
+    setDragPosition(null);
+    setDragMoved(false);
+    setActiveDrag(null);
+    onMoveToken(move.tokenId, move.x, move.y);
+  }
+
+  function cancelPendingMove() {
+    setPendingMove(null);
+  }
+
   function onDrag(e: React.PointerEvent<SVGCircleElement>, tokenId: string) {
     if (!canMoveTokens) return;
+    if (confirmMoves && pendingMove && pendingMove.tokenId !== tokenId) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const token = tokens.find((t) => t.id === tokenId);
     if (!token) return;
+    const startingPosition =
+      confirmMoves && pendingMove && pendingMove.tokenId === tokenId
+        ? { x: pendingMove.x, y: pendingMove.y }
+        : { x: token.x_mm, y: token.y_mm };
+
     setSelectedId(tokenId);
-    setDragPosition({ x: token.x_mm, y: token.y_mm });
+    setDragPosition(startingPosition);
+    setDragMoved(false);
+    setActiveDrag({ tokenId, pointerId: e.pointerId });
   }
 
   function onMove(e: React.PointerEvent<SVGCircleElement>) {
-    if (!canMoveTokens || !selectedId) return;
+    if (!canMoveTokens || !selectedId || !activeDrag) return;
+    if (activeDrag.pointerId !== e.pointerId || activeDrag.tokenId !== selectedId) return;
+    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
     const token = tokens.find((t) => t.id === selectedId);
     if (!token) return;
     const pos = eventToBoardPoint(e);
     if (!pos) return;
-    setDragPosition({
+    const next = {
       x: clamp(Math.round(pos.x), token.r_mm, BOARD_WIDTH_MM - token.r_mm),
       y: clamp(Math.round(pos.y), token.r_mm, BOARD_HEIGHT_MM - token.r_mm),
+    };
+    if (!dragMoved && dragPosition && (next.x !== dragPosition.x || next.y !== dragPosition.y)) {
+      setDragMoved(true);
+    }
+    setDragPosition({
+      x: next.x,
+      y: next.y,
     });
   }
 
-  function onUp(e: React.PointerEvent<SVGCircleElement>) {
-    if (canMoveTokens && selectedId && dragPosition) {
-      onMoveToken(selectedId, dragPosition.x, dragPosition.y);
+  function endDrag(e: React.PointerEvent<SVGCircleElement>, commitMove: boolean) {
+    if (
+      commitMove &&
+      canMoveTokens &&
+      selectedId &&
+      dragPosition &&
+      dragMoved &&
+      activeDrag &&
+      activeDrag.pointerId === e.pointerId
+    ) {
+      const token = tokens.find((t) => t.id === selectedId);
+      if (token && (token.x_mm !== dragPosition.x || token.y_mm !== dragPosition.y)) {
+        if (confirmMoves) {
+          setPendingMove({
+            tokenId: selectedId,
+            x: dragPosition.x,
+            y: dragPosition.y,
+          });
+        } else {
+          onMoveToken(selectedId, dragPosition.x, dragPosition.y);
+        }
+      }
     }
-    setSelectedId(null);
     setDragPosition(null);
+    setDragMoved(false);
+    setActiveDrag(null);
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
       // ignore
     }
+  }
+
+  function onUp(e: React.PointerEvent<SVGCircleElement>) {
+    endDrag(e, true);
+  }
+
+  function onCancelDrag(e: React.PointerEvent<SVGCircleElement>) {
+    endDrag(e, false);
   }
 
   return (
@@ -288,11 +388,18 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
     >
       <h2 style={{ marginTop: 0 }}>Board (server authoritative)</h2>
       <p style={{ marginTop: 0, color: theme.muted }}>
-        Drag a token and release to send a MOVE_TOKEN command.
+        {confirmMoves
+          ? "Drag a token to stage a move, then confirm or cancel it."
+          : "Drag a token and release to send a MOVE_TOKEN command immediately."}
       </p>
       <p style={{ marginTop: 0, color: theme.muted }}>
         Hold Option/Alt (or pinch/Cmd/Ctrl gesture) to zoom. When zoomed in, use drag or two-finger scroll to pan.
       </p>
+      {confirmMoves && pendingMove && (
+        <p style={{ marginTop: 0, color: theme.muted }}>
+          One token can have a pending move at a time.
+        </p>
+      )}
       {!canMoveTokens && <p style={{ marginTop: 0, color: theme.muted }}>Connect to move tokens.</p>}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
         <button
@@ -339,6 +446,49 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
           Reset View
         </button>
       </div>
+      {confirmMoves && pendingMove && (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            marginBottom: 8,
+            flexWrap: "wrap",
+            color: theme.muted,
+          }}
+        >
+          <span>
+            Pending: {pendingToken?.label ?? pendingMove.tokenId} to ({pendingMove.x}, {pendingMove.y}) mm
+          </span>
+          <button
+            onClick={confirmPendingMove}
+            disabled={!canMoveTokens}
+            style={{
+              padding: "4px 8px",
+              borderRadius: 6,
+              border: `1px solid ${theme.border}`,
+              background: theme.tokenActive,
+              color: theme.text,
+              cursor: canMoveTokens ? "pointer" : "not-allowed",
+            }}
+          >
+            Confirm Move
+          </button>
+          <button
+            onClick={cancelPendingMove}
+            style={{
+              padding: "4px 8px",
+              borderRadius: 6,
+              border: `1px solid ${theme.border}`,
+              background: theme.token,
+              color: theme.text,
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       <svg
         ref={boardSvgRef}
@@ -389,7 +539,9 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
           />
         ))}
 
-        {renderedTokens.map((t) => (
+        {renderedTokens.map((t) => {
+          const isLockedByPending = confirmMoves && pendingMove !== null && pendingMove.tokenId !== t.id;
+          return (
           <g key={t.id}>
             <circle
               cx={t.x_mm}
@@ -401,6 +553,10 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
               onPointerDown={(e) => onDrag(e, t.id)}
               onPointerMove={onMove}
               onPointerUp={onUp}
+              onPointerCancel={onCancelDrag}
+              style={{
+                cursor: isLockedByPending ? "not-allowed" : canMoveTokens ? "grab" : "default",
+              }}
             />
             <text
               x={t.x_mm}
@@ -411,7 +567,8 @@ export function Board({ tokens, canMoveTokens, onMoveToken }: BoardProps) {
               {t.label}
             </text>
           </g>
-        ))}
+        );
+        })}
 
         {selected && (
           <text x={12} y={24} style={{ pointerEvents: "none", fontSize: 14, fill: theme.muted }}>

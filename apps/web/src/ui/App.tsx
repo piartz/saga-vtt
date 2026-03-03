@@ -259,6 +259,7 @@ export function App() {
   const [knownPlayersById, setKnownPlayersById] = useState<Record<string, PresencePlayer>>({});
   const [turn, setTurn] = useState<TurnState | null>(null);
   const [eventLogMode, setEventLogMode] = useState<EventLogMode>("READABLE");
+  const [confirmMoves, setConfirmMoves] = useState(true);
   const [gameId, setGameId] = useState<string>(() => randomRoomId());
   const [createRoomPending, setCreateRoomPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -541,6 +542,14 @@ export function App() {
         >
           End Turn
         </button>
+        <label style={{ display: "flex", gap: 6, alignItems: "center", color: theme.muted }}>
+          <input
+            type="checkbox"
+            checked={confirmMoves}
+            onChange={(e) => setConfirmMoves(e.target.checked)}
+          />
+          Confirm Movement
+        </label>
         <small style={{ color: theme.muted }}>
           Tip: open this page in two browser windows with the same Room ID.
         </small>
@@ -565,6 +574,7 @@ export function App() {
           <Board
             tokens={tokens}
             canMoveTokens={status === "CONNECTED"}
+            confirmMoves={confirmMoves}
             onMoveToken={sendMoveToken}
           />
         </section>
