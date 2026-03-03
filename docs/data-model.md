@@ -46,13 +46,27 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 
 ### Presence payloads
 - `HELLO.payload.players`: `Player[]`
+- `HELLO.payload.self_player_id`: `string`
 - `HELLO.payload.turn`: `{ phase, round, active_player_id }`
+- `HELLO.payload.initiative`: `Initiative | null`
 - `PLAYER_JOINED.payload.player`: `Player`
 - `PLAYER_LEFT.payload.player_id`: `string`
 
 ### Turn payloads
+- `INITIATIVE_ROLLED.payload.initiative`: `Initiative`
+- `TURN_ORDER_CHOSEN.payload.initiative`: `Initiative`
+- `INITIATIVE_RESET.payload.reason`: `string`
 - `GAME_STARTED.payload.turn`: `{ phase, round, active_player_id }`
 - `TURN_CHANGED.payload.turn`: `{ phase, round, active_player_id }`
+
+### Initiative payload (`Initiative`)
+- winner_player_id
+- loser_player_id
+- winner_roll
+- loser_roll
+- chooser_choice (`FIRST` | `SECOND` | `null`)
+- first_player_id (`string` | `null`)
+- second_player_id (`string` | `null`)
 
 ### Dice roll payload (`DICE_ROLLED`)
 - count

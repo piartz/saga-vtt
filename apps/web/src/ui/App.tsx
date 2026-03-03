@@ -31,6 +31,18 @@ type TurnState = {
   active_player_id: string | null;
 };
 
+type TurnChoice = "FIRST" | "SECOND";
+
+type InitiativeState = {
+  winner_player_id: string;
+  loser_player_id: string;
+  winner_roll: number;
+  loser_roll: number;
+  chooser_choice: TurnChoice | null;
+  first_player_id: string | null;
+  second_player_id: string | null;
+};
+
 function randomRoomId(): string {
   // Friendly enough for MVP; switch to UUIDs later.
   return Math.random().toString(16).slice(2, 10);
@@ -145,6 +157,51 @@ function extractTurnFromEvent(payload: unknown): TurnState | null {
   return toTurnState(payload.turn);
 }
 
+function toInitiativeState(value: unknown): InitiativeState | null {
+  if (!isRecord(value)) return null;
+  const {
+    winner_player_id,
+    loser_player_id,
+    winner_roll,
+    loser_roll,
+    chooser_choice,
+    first_player_id,
+    second_player_id,
+  } = value;
+  if (typeof winner_player_id !== "string") return null;
+  if (typeof loser_player_id !== "string") return null;
+  if (typeof winner_roll !== "number" || !Number.isInteger(winner_roll)) return null;
+  if (typeof loser_roll !== "number" || !Number.isInteger(loser_roll)) return null;
+  if (!(chooser_choice === null || chooser_choice === "FIRST" || chooser_choice === "SECOND")) return null;
+  if (!(first_player_id === null || typeof first_player_id === "string")) return null;
+  if (!(second_player_id === null || typeof second_player_id === "string")) return null;
+  return {
+    winner_player_id,
+    loser_player_id,
+    winner_roll,
+    loser_roll,
+    chooser_choice,
+    first_player_id,
+    second_player_id,
+  };
+}
+
+function extractHelloInitiative(payload: unknown): InitiativeState | null {
+  if (!isRecord(payload)) return null;
+  if (payload.initiative === null || payload.initiative === undefined) return null;
+  return toInitiativeState(payload.initiative);
+}
+
+function extractEventInitiative(payload: unknown): InitiativeState | null {
+  if (!isRecord(payload)) return null;
+  return toInitiativeState(payload.initiative);
+}
+
+function extractHelloSelfPlayerId(payload: unknown): string | null {
+  if (!isRecord(payload)) return null;
+  return typeof payload.self_player_id === "string" ? payload.self_player_id : null;
+}
+
 function upsertToken(prev: BoardToken[], next: BoardToken): BoardToken[] {
   let found = false;
   const updated = prev.map((token) => {
@@ -187,6 +244,10 @@ function playerNameForEvent(
 ): string {
   if (!playerId) return "System";
   return knownPlayersById[playerId]?.label ?? `Player ${playerId}`;
+}
+
+function maybeYouSuffix(playerId: string | undefined, localPlayerId: string | null): string {
+  return playerId !== undefined && localPlayerId !== null && playerId === localPlayerId ? " (you)" : "";
 }
 
 function formatEventSummary(
@@ -251,6 +312,26 @@ function formatEventSummary(
     return `${actorName} started the game. Round ${turn.round}, active player: ${activeName}.`;
   }
 
+  if (event.type === "INITIATIVE_ROLLED") {
+    const initiative = extractEventInitiative(payload);
+    if (!initiative) return `${actorName} rolled initiative.`;
+    const winnerName = playerNameForEvent(initiative.winner_player_id, knownPlayersById);
+    return `${winnerName} won initiative (${initiative.winner_roll} vs ${initiative.loser_roll}).`;
+  }
+
+  if (event.type === "TURN_ORDER_CHOSEN") {
+    const initiative = extractEventInitiative(payload);
+    if (!initiative) return `${actorName} chose turn order.`;
+    const firstName = playerNameForEvent(initiative.first_player_id ?? undefined, knownPlayersById);
+    const secondName = playerNameForEvent(initiative.second_player_id ?? undefined, knownPlayersById);
+    return `${actorName} chose to go ${initiative.chooser_choice}. First: ${firstName}. Second: ${secondName}.`;
+  }
+
+  if (event.type === "INITIATIVE_RESET") {
+    const reason = typeof payload.reason === "string" ? payload.reason : "unknown";
+    return `Initiative selection reset (${reason}).`;
+  }
+
   if (event.type === "TURN_CHANGED") {
     const turn = extractTurnFromEvent(payload);
     if (!turn) return `${actorName} ended the turn.`;
@@ -284,6 +365,8 @@ export function App() {
   const [players, setPlayers] = useState<PresencePlayer[]>([]);
   const [knownPlayersById, setKnownPlayersById] = useState<Record<string, PresencePlayer>>({});
   const [turn, setTurn] = useState<TurnState | null>(null);
+  const [initiative, setInitiative] = useState<InitiativeState | null>(null);
+  const [localPlayerId, setLocalPlayerId] = useState<string | null>(null);
   const [eventLogMode, setEventLogMode] = useState<EventLogMode>("READABLE");
   const [confirmMoves, setConfirmMoves] = useState(true);
   const [gameId, setGameId] = useState<string>(() => randomRoomId());
@@ -305,6 +388,8 @@ export function App() {
     setPlayers([]);
     setKnownPlayersById({});
     setTurn(null);
+    setInitiative(null);
+    setLocalPlayerId(null);
     setStatus("CONNECTING");
 
     const ws = new WebSocket(wsUrl);
@@ -329,6 +414,8 @@ export function App() {
           }
           const helloTurn = extractHelloTurn(parsed.payload);
           if (helloTurn) setTurn(helloTurn);
+          setInitiative(extractHelloInitiative(parsed.payload));
+          setLocalPlayerId(extractHelloSelfPlayerId(parsed.payload));
           return;
         }
 
@@ -370,6 +457,18 @@ export function App() {
           if (nextTurn) setTurn(nextTurn);
           const tokenSnapshot = extractTokensSnapshot(parsed.payload);
           if (tokenSnapshot) setTokens(tokenSnapshot);
+          return;
+        }
+
+        if (parsed.type === "INITIATIVE_ROLLED" || parsed.type === "TURN_ORDER_CHOSEN") {
+          const nextInitiative = extractEventInitiative(parsed.payload);
+          if (nextInitiative) setInitiative(nextInitiative);
+          return;
+        }
+
+        if (parsed.type === "INITIATIVE_RESET") {
+          setInitiative(null);
+          return;
         }
       } catch {
         // ignore
@@ -448,6 +547,15 @@ export function App() {
     });
   }
 
+  function sendChooseTurnOrder(choice: TurnChoice) {
+    send({
+      kind: "COMMAND",
+      type: "CHOOSE_TURN_ORDER",
+      client_msg_id: crypto.randomUUID(),
+      payload: { choice },
+    });
+  }
+
   async function createRoom() {
     setCreateRoomPending(true);
     setErrorMessage(null);
@@ -479,6 +587,26 @@ export function App() {
     turn?.active_player_id !== null && turn?.active_player_id !== undefined
       ? knownPlayersById[turn.active_player_id]?.label ?? `Player ${turn.active_player_id}`
       : "none";
+  const initiativeWinnerName =
+    initiative !== null
+      ? knownPlayersById[initiative.winner_player_id]?.label ?? `Player ${initiative.winner_player_id}`
+      : null;
+  const initiativeLoserName =
+    initiative !== null
+      ? knownPlayersById[initiative.loser_player_id]?.label ?? `Player ${initiative.loser_player_id}`
+      : null;
+  const isInitiativeWinner = initiative !== null && localPlayerId === initiative.winner_player_id;
+  const isInitiativeLoser = initiative !== null && localPlayerId === initiative.loser_player_id;
+  const turnOrderResolved = initiative !== null && initiative.chooser_choice !== null;
+  const amFirstPlayer =
+    turnOrderResolved && initiative !== null && localPlayerId === initiative.first_player_id;
+  const amSecondPlayer =
+    turnOrderResolved && initiative !== null && localPlayerId === initiative.second_player_id;
+  const turnOrderMessage = amFirstPlayer
+    ? "You are the first player."
+    : amSecondPlayer
+      ? "You are the second player."
+      : null;
 
   return (
     <div
@@ -561,17 +689,20 @@ export function App() {
         </button>
         <button
           onClick={sendStartGame}
-          disabled={status !== "CONNECTED"}
+          disabled={status !== "CONNECTED" || turn?.phase === "running" || initiative?.chooser_choice === null}
           style={{
             padding: "6px 10px",
             borderRadius: 6,
             border: `1px solid ${theme.border}`,
             background: theme.surfaceAlt,
             color: theme.text,
-            cursor: status === "CONNECTED" ? "pointer" : "not-allowed",
+            cursor:
+              status === "CONNECTED" && turn?.phase !== "running" && initiative?.chooser_choice !== null
+                ? "pointer"
+                : "not-allowed",
           }}
         >
-          Start Game
+          New Game
         </button>
         <button
           onClick={sendEndTurn}
@@ -636,6 +767,77 @@ export function App() {
             gap: 12,
           }}
         >
+          {initiative && initiative.chooser_choice === null && (
+            <section
+              style={{
+                border: `1px solid ${theme.border}`,
+                borderRadius: 10,
+                padding: 12,
+                background:
+                  "linear-gradient(130deg, rgba(126,162,255,0.22) 0%, rgba(23,27,36,0.95) 60%, rgba(23,27,36,1) 100%)",
+              }}
+            >
+              <h2 style={{ marginTop: 0, marginBottom: 6 }}>Who Goes First</h2>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ fontSize: 13, color: theme.muted }}>
+                  Initiative roll: <strong>{initiativeWinnerName}</strong> {initiative.winner_roll} vs{" "}
+                  <strong>{initiativeLoserName}</strong> {initiative.loser_roll}
+                </div>
+                {isInitiativeWinner && (
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <div style={{ fontSize: 14 }}>You won initiative. Choose your turn order:</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={() => sendChooseTurnOrder("FIRST")}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          border: `1px solid ${theme.border}`,
+                          background: theme.surfaceAlt,
+                          color: theme.text,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Go First
+                      </button>
+                      <button
+                        onClick={() => sendChooseTurnOrder("SECOND")}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          border: `1px solid ${theme.border}`,
+                          background: theme.surfaceAlt,
+                          color: theme.text,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Go Second
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {isInitiativeLoser && (
+                  <div style={{ fontSize: 14, color: theme.text }}>
+                    Waiting for your opponent to choose...
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+          {turnOrderResolved && turnOrderMessage && (
+            <section
+              style={{
+                border: `1px solid ${theme.border}`,
+                borderRadius: 10,
+                padding: 12,
+                background: theme.surfaceAlt,
+              }}
+            >
+              <h2 style={{ marginTop: 0, marginBottom: 6 }}>Turn Order</h2>
+              <div style={{ fontSize: 14 }}>{turnOrderMessage}</div>
+            </section>
+          )}
+
           <section>
             <h2 style={{ marginTop: 0 }}>Players</h2>
             <div style={{ display: "grid", gap: 8 }}>
@@ -653,6 +855,7 @@ export function App() {
                 >
                   <div>
                     {player.label}
+                    {maybeYouSuffix(player.id, localPlayerId)}
                     {turn?.active_player_id === player.id ? " (active)" : ""}
                   </div>
                   <div style={{ fontSize: 12, color: theme.muted }}>{player.id}</div>
@@ -718,7 +921,8 @@ export function App() {
                     {e.actor_player_id && (
                       <div style={{ fontSize: 12, color: theme.muted }}>
                         By: {knownPlayersById[e.actor_player_id]?.label ?? `Player ${e.actor_player_id}`} (
-                        {e.actor_player_id})
+                        {e.actor_player_id}
+                        {maybeYouSuffix(e.actor_player_id, localPlayerId)})
                       </div>
                     )}
                     {eventLogMode === "READABLE" ? (

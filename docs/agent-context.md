@@ -50,9 +50,13 @@ Primary references:
   - emits `PLAYER_LEFT` to remaining clients when a player disconnects
   - handles `PING` -> broadcasts `PONG`
   - includes `actor_player_id` on player-attributed events (presence, movement, dice, and command errors)
+  - includes `self_player_id` in `HELLO.payload` for client-local identity
   - includes turn snapshot in `HELLO.payload.turn` (`phase`, `round`, `active_player_id`)
-  - handles `START_GAME` -> `GAME_STARTED` turn initialization
+  - includes initiative snapshot in `HELLO.payload.initiative` (or `null`)
+  - handles `START_GAME` -> `INITIATIVE_ROLLED` (d20 roll-off, tie reroll, two-player flow)
+  - handles `CHOOSE_TURN_ORDER` (winner chooses `FIRST`/`SECOND`) -> `TURN_ORDER_CHOSEN` then `GAME_STARTED`
   - handles `END_TURN` -> `TURN_CHANGED` turn progression
+  - emits `INITIATIVE_RESET` in lobby when initiative becomes invalid due to player join/leave
   - while game is running, enforces active-player-only `MOVE_TOKEN`, `ACTIVATE_TOKEN`, and `ROLL_DICE`
   - handles `MOVE_TOKEN`:
     - validates payload shape/types
@@ -85,6 +89,9 @@ Primary references:
   - set room id manually
   - send `PING`
   - send sample `ROLL_DICE` (`3d6+1`)
+  - roll initiative (`START_GAME`) and choose turn order (`CHOOSE_TURN_ORDER`)
+  - loser waiting prompt: "Waiting for your opponent to choose..."
+  - final assignment prompt: "You are the first player" / "You are the second player"
   - start game and end turn commands
   - activate token from hover actions (`ACTIVATE_TOKEN`)
   - toggle movement confirmation mode
@@ -93,6 +100,8 @@ Primary references:
     - one-token-at-a-time pending move + explicit confirm/cancel (confirmation on)
 - Applies authoritative updates from events:
   - `HELLO` token + player snapshot
+  - `HELLO` self identity + initiative snapshot
+  - `INITIATIVE_ROLLED` / `TURN_ORDER_CHOSEN` / `INITIATIVE_RESET` initiative flow updates
   - `HELLO` / `GAME_STARTED` / `TURN_CHANGED` turn snapshot
   - `PLAYER_JOINED` / `PLAYER_LEFT` player presence updates
   - `TOKEN_MOVED` token updates
@@ -119,6 +128,7 @@ Primary references:
   - verifies authoritative dice roll broadcast to two WS clients
   - verifies dice payload validation errors
   - verifies game start, turn progression, and active-player command restrictions
+  - verifies only initiative winner can choose turn order
 - Web UI currently has no automated test suite; board interaction changes are validated via `pnpm build:web` plus manual verification.
 
 ## Docs vs Code Notes

@@ -336,9 +336,6 @@ def test_start_game_and_end_turn_broadcasts_turn_state() -> None:
         player_2 = joined["payload"]["player"]["id"]
         assert player_2 in [player["id"] for player in hello_2["payload"]["players"]]
 
-        expected_first_active = min(player_1, player_2)
-        expected_second_active = max(player_1, player_2)
-
         ws1.send_json(
             {
                 "kind": "COMMAND",
@@ -348,20 +345,56 @@ def test_start_game_and_end_turn_broadcasts_turn_state() -> None:
             }
         )
 
+        rolled_1: Dict[str, Any] = ws1.receive_json()
+        rolled_2: Dict[str, Any] = ws2.receive_json()
+
+        assert rolled_1["type"] == "INITIATIVE_ROLLED"
+        assert rolled_2["type"] == "INITIATIVE_ROLLED"
+        initiative = rolled_1["payload"]["initiative"]
+        winner_player_id = initiative["winner_player_id"]
+        loser_player_id = initiative["loser_player_id"]
+        assert winner_player_id in (player_1, player_2)
+        assert loser_player_id in (player_1, player_2)
+        assert winner_player_id != loser_player_id
+        assert initiative["chooser_choice"] is None
+        assert initiative["first_player_id"] is None
+        assert initiative["second_player_id"] is None
+
+        winner_ws = ws1 if winner_player_id == player_1 else ws2
+        loser_ws = ws2 if winner_ws is ws1 else ws1
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "CHOOSE_TURN_ORDER",
+                "client_msg_id": "choose-1",
+                "payload": {"choice": "FIRST"},
+            }
+        )
+
+        chosen_1: Dict[str, Any] = ws1.receive_json()
+        chosen_2: Dict[str, Any] = ws2.receive_json()
+        assert chosen_1["type"] == "TURN_ORDER_CHOSEN"
+        assert chosen_2["type"] == "TURN_ORDER_CHOSEN"
+        assert chosen_1["payload"]["initiative"]["chooser_choice"] == "FIRST"
+        assert chosen_1["payload"]["initiative"]["first_player_id"] == winner_player_id
+        assert chosen_1["payload"]["initiative"]["second_player_id"] == loser_player_id
+
         started_1: Dict[str, Any] = ws1.receive_json()
         started_2: Dict[str, Any] = ws2.receive_json()
-
         assert started_1["type"] == "GAME_STARTED"
         assert started_2["type"] == "GAME_STARTED"
-        assert started_1["actor_player_id"] == player_1
         assert started_1["payload"]["turn"] == {
             "phase": "running",
             "round": 1,
-            "active_player_id": expected_first_active,
+            "active_player_id": winner_player_id,
         }
+        sorted_player_ids = sorted([player_1, player_2])
+        winner_index = sorted_player_ids.index(winner_player_id)
+        round_after_first_end = 2 if winner_index == 1 else 1
 
-        first_active_ws = ws1 if expected_first_active == player_1 else ws2
-        second_active_ws = ws2 if expected_first_active == player_1 else ws1
+        first_active_ws = winner_ws
+        second_active_ws = loser_ws
 
         first_active_ws.send_json(
             {
@@ -394,8 +427,8 @@ def test_start_game_and_end_turn_broadcasts_turn_state() -> None:
         assert changed_2["type"] == "TURN_CHANGED"
         assert changed_1["payload"]["turn"] == {
             "phase": "running",
-            "round": 1,
-            "active_player_id": expected_second_active,
+            "round": round_after_first_end,
+            "active_player_id": loser_player_id,
         }
         tokens_after_end_1 = changed_1["payload"]["tokens"]
         tokens_after_end_2 = changed_2["payload"]["tokens"]
@@ -423,7 +456,7 @@ def test_start_game_and_end_turn_broadcasts_turn_state() -> None:
         assert wrapped_1["payload"]["turn"] == {
             "phase": "running",
             "round": 2,
-            "active_player_id": expected_first_active,
+            "active_player_id": winner_player_id,
         }
 
 
@@ -438,13 +471,9 @@ def test_non_active_player_cannot_end_turn_or_take_running_actions() -> None:
     ):
         hello_1: Dict[str, Any] = ws1.receive_json()
         ws2.receive_json()
-        joined: Dict[str, Any] = ws1.receive_json()
+        ws1.receive_json()
 
         player_1 = hello_1["payload"]["players"][0]["id"]
-        player_2 = joined["payload"]["player"]["id"]
-        expected_first_active = min(player_1, player_2)
-        non_active_ws = ws2 if expected_first_active == player_1 else ws1
-
         ws1.send_json(
             {
                 "kind": "COMMAND",
@@ -453,8 +482,29 @@ def test_non_active_player_cannot_end_turn_or_take_running_actions() -> None:
                 "payload": {},
             }
         )
-        ws1.receive_json()
+        rolled_1: Dict[str, Any] = ws1.receive_json()
         ws2.receive_json()
+        winner_player_id = rolled_1["payload"]["initiative"]["winner_player_id"]
+        loser_player_id = rolled_1["payload"]["initiative"]["loser_player_id"]
+
+        winner_ws = ws1 if winner_player_id == player_1 else ws2
+        loser_ws = ws2 if winner_ws is ws1 else ws1
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "CHOOSE_TURN_ORDER",
+                "client_msg_id": "choose-2",
+                "payload": {"choice": "FIRST"},
+            }
+        )
+        ws1.receive_json()  # TURN_ORDER_CHOSEN
+        ws2.receive_json()  # TURN_ORDER_CHOSEN
+        ws1.receive_json()  # GAME_STARTED
+        ws2.receive_json()  # GAME_STARTED
+
+        non_active_ws = loser_ws
+        assert loser_player_id != winner_player_id
 
         non_active_ws.send_json(
             {
@@ -503,3 +553,43 @@ def test_non_active_player_cannot_end_turn_or_take_running_actions() -> None:
         activate_error: Dict[str, Any] = non_active_ws.receive_json()
         assert activate_error["type"] == "ERROR"
         assert "ACTIVATE_TOKEN is only allowed for active player" in activate_error["payload"]["message"]
+
+def test_only_initiative_winner_can_choose_turn_order() -> None:
+    client = TestClient(app)
+    create_response = client.post("/games")
+    game_id = create_response.json()["game_id"]
+
+    with (
+        client.websocket_connect(f"/games/{game_id}/ws") as ws1,
+        client.websocket_connect(f"/games/{game_id}/ws") as ws2,
+    ):
+        hello_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        ws1.receive_json()
+
+        player_1 = hello_1["payload"]["players"][0]["id"]
+
+        ws1.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "START_GAME",
+                "client_msg_id": "start-3",
+                "payload": {},
+            }
+        )
+        rolled_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        winner_player_id = rolled_1["payload"]["initiative"]["winner_player_id"]
+        loser_ws = ws2 if winner_player_id == player_1 else ws1
+
+        loser_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "CHOOSE_TURN_ORDER",
+                "client_msg_id": "choose-invalid",
+                "payload": {"choice": "SECOND"},
+            }
+        )
+        error: Dict[str, Any] = loser_ws.receive_json()
+        assert error["type"] == "ERROR"
+        assert "Only initiative winner can choose first or second." == error["payload"]["message"]
