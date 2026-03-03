@@ -129,7 +129,6 @@ def test_activate_token_is_authoritative_and_broadcast_to_all_clients() -> None:
         assert joined["type"] == "PLAYER_JOINED"
         player_1 = hello_1["payload"]["players"][0]["id"]
         player_2 = joined["payload"]["player"]["id"]
-        expected_first_active = min(player_1, player_2)
         assert player_2 in [player["id"] for player in hello_2["payload"]["players"]]
 
         ws1.send_json(
@@ -140,11 +139,28 @@ def test_activate_token_is_authoritative_and_broadcast_to_all_clients() -> None:
                 "payload": {},
             }
         )
-        ws1.receive_json()
-        ws2.receive_json()
+        rolled_1: Dict[str, Any] = ws1.receive_json()
+        rolled_2: Dict[str, Any] = ws2.receive_json()
+        assert rolled_1["type"] == "INITIATIVE_ROLLED"
+        assert rolled_2["type"] == "INITIATIVE_ROLLED"
+        winner_player_id = rolled_1["payload"]["initiative"]["winner_player_id"]
 
-        active_ws = ws1 if expected_first_active == player_1 else ws2
-        actor_player_id = expected_first_active
+        winner_ws = ws1 if winner_player_id == player_1 else ws2
+        active_ws = winner_ws
+        actor_player_id = winner_player_id
+
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "CHOOSE_TURN_ORDER",
+                "client_msg_id": "choose-activation-order",
+                "payload": {"choice": "FIRST"},
+            }
+        )
+        ws1.receive_json()  # TURN_ORDER_CHOSEN
+        ws2.receive_json()  # TURN_ORDER_CHOSEN
+        ws1.receive_json()  # GAME_STARTED
+        ws2.receive_json()  # GAME_STARTED
 
         active_ws.send_json(
             {
@@ -193,9 +209,17 @@ def test_rest_activation_requires_no_prior_activations_this_turn() -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
-    with client.websocket_connect(f"/games/{game_id}/ws") as ws:
-        ws.receive_json()
-        ws.send_json(
+    with (
+        client.websocket_connect(f"/games/{game_id}/ws") as ws1,
+        client.websocket_connect(f"/games/{game_id}/ws") as ws2,
+    ):
+        hello_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        joined: Dict[str, Any] = ws1.receive_json()
+        assert joined["type"] == "PLAYER_JOINED"
+        player_1 = hello_1["payload"]["players"][0]["id"]
+
+        ws1.send_json(
             {
                 "kind": "COMMAND",
                 "type": "START_GAME",
@@ -203,9 +227,26 @@ def test_rest_activation_requires_no_prior_activations_this_turn() -> None:
                 "payload": {},
             }
         )
-        ws.receive_json()
+        rolled_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        winner_player_id = rolled_1["payload"]["initiative"]["winner_player_id"]
+        winner_ws = ws1 if winner_player_id == player_1 else ws2
+        active_ws = winner_ws
 
-        ws.send_json(
+        winner_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "CHOOSE_TURN_ORDER",
+                "client_msg_id": "choose-rest-order",
+                "payload": {"choice": "FIRST"},
+            }
+        )
+        ws1.receive_json()  # TURN_ORDER_CHOSEN
+        ws2.receive_json()  # TURN_ORDER_CHOSEN
+        ws1.receive_json()  # GAME_STARTED
+        ws2.receive_json()  # GAME_STARTED
+
+        active_ws.send_json(
             {
                 "kind": "COMMAND",
                 "type": "ACTIVATE_TOKEN",
@@ -213,12 +254,13 @@ def test_rest_activation_requires_no_prior_activations_this_turn() -> None:
                 "payload": {"token_id": "A", "activation_type": "move"},
             }
         )
-        first_activation: Dict[str, Any] = ws.receive_json()
+        first_activation: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
         assert first_activation["type"] == "TOKEN_ACTIVATED"
         assert first_activation["payload"]["token"]["activation_count_this_turn"] == 1
         assert first_activation["payload"]["token"]["last_activation_type"] == "move"
 
-        ws.send_json(
+        active_ws.send_json(
             {
                 "kind": "COMMAND",
                 "type": "ACTIVATE_TOKEN",
@@ -226,13 +268,13 @@ def test_rest_activation_requires_no_prior_activations_this_turn() -> None:
                 "payload": {"token_id": "A", "activation_type": "rest"},
             }
         )
-        rest_error: Dict[str, Any] = ws.receive_json()
+        rest_error: Dict[str, Any] = active_ws.receive_json()
         assert rest_error["type"] == "ERROR"
         assert "cannot activate to rest after prior activations this turn" in rest_error["payload"]["message"]
         assert ROOMS[game_id].tokens["A"]["activation_count_this_turn"] == 1
         assert ROOMS[game_id].tokens["A"]["last_activation_type"] == "move"
 
-        ws.send_json(
+        active_ws.send_json(
             {
                 "kind": "COMMAND",
                 "type": "ACTIVATE_TOKEN",
@@ -240,7 +282,8 @@ def test_rest_activation_requires_no_prior_activations_this_turn() -> None:
                 "payload": {"token_id": "B", "activation_type": "rest"},
             }
         )
-        rest_ok: Dict[str, Any] = ws.receive_json()
+        rest_ok: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
         assert rest_ok["type"] == "TOKEN_ACTIVATED"
         assert rest_ok["payload"]["token"]["id"] == "B"
         assert rest_ok["payload"]["token"]["activation_count_this_turn"] == 1
