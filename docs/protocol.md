@@ -47,12 +47,29 @@ This is the current MVP protocol implemented by the API/web app.
   - payload: `player_id`
   - includes `actor_player_id` of the leaving player
 
+### Turn structure
+- `HELLO.payload.turn` includes:
+  - `phase` (`lobby` or `running`)
+  - `round` (integer, starts at `0` in lobby)
+  - `active_player_id` (`string` or `null`)
+- `START_GAME` → `GAME_STARTED`
+  - initializes `phase = running`
+  - initializes `round = 1`
+  - selects active player from connected players (stable sorted order by player id)
+  - `GAME_STARTED.payload.turn` contains the new turn snapshot
+- `END_TURN` → `TURN_CHANGED`
+  - allowed only for the current active player
+  - advances active player to the next connected player
+  - increments `round` when the active player wraps to the start of the order
+  - `TURN_CHANGED.payload.turn` contains the updated turn snapshot
+
 ### Connectivity
 - `PING` → `PONG`
   - `PONG` includes `actor_player_id` of the player who sent the `PING`
 
 ### Board interactions
 - `MOVE_TOKEN` → `TOKEN_MOVED`
+- while `phase = running`, only active player may issue `MOVE_TOKEN`
 - Server validates:
   - payload shape and token id
   - integer mm coordinates
@@ -64,6 +81,7 @@ This is the current MVP protocol implemented by the API/web app.
 
 ### Dice
 - `ROLL_DICE` → `DICE_ROLLED`
+- while `phase = running`, only active player may issue `ROLL_DICE`
   - server-side RNG using `secrets`
   - validated payload fields:
     - `count` integer in `[1, 20]`

@@ -161,3 +161,154 @@ def test_roll_dice_rejects_invalid_payload() -> None:
         event: Dict[str, Any] = ws.receive_json()
         assert event["type"] == "ERROR"
         assert event["payload"]["message"] == "ROLL_DICE count must be an integer between 1 and 20."
+
+
+def test_start_game_and_end_turn_broadcasts_turn_state() -> None:
+    client = TestClient(app)
+    create_response = client.post("/games")
+    game_id = create_response.json()["game_id"]
+
+    with (
+        client.websocket_connect(f"/games/{game_id}/ws") as ws1,
+        client.websocket_connect(f"/games/{game_id}/ws") as ws2,
+    ):
+        hello_1: Dict[str, Any] = ws1.receive_json()
+        hello_2: Dict[str, Any] = ws2.receive_json()
+        joined: Dict[str, Any] = ws1.receive_json()
+
+        player_1 = hello_1["payload"]["players"][0]["id"]
+        player_2 = joined["payload"]["player"]["id"]
+        assert player_2 in [player["id"] for player in hello_2["payload"]["players"]]
+
+        expected_first_active = min(player_1, player_2)
+        expected_second_active = max(player_1, player_2)
+
+        ws1.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "START_GAME",
+                "client_msg_id": "start-1",
+                "payload": {},
+            }
+        )
+
+        started_1: Dict[str, Any] = ws1.receive_json()
+        started_2: Dict[str, Any] = ws2.receive_json()
+
+        assert started_1["type"] == "GAME_STARTED"
+        assert started_2["type"] == "GAME_STARTED"
+        assert started_1["actor_player_id"] == player_1
+        assert started_1["payload"]["turn"] == {
+            "phase": "running",
+            "round": 1,
+            "active_player_id": expected_first_active,
+        }
+
+        first_active_ws = ws1 if expected_first_active == player_1 else ws2
+        second_active_ws = ws2 if expected_first_active == player_1 else ws1
+
+        first_active_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "END_TURN",
+                "client_msg_id": "end-1",
+                "payload": {},
+            }
+        )
+
+        changed_1: Dict[str, Any] = ws1.receive_json()
+        changed_2: Dict[str, Any] = ws2.receive_json()
+
+        assert changed_1["type"] == "TURN_CHANGED"
+        assert changed_2["type"] == "TURN_CHANGED"
+        assert changed_1["payload"]["turn"] == {
+            "phase": "running",
+            "round": 1,
+            "active_player_id": expected_second_active,
+        }
+
+        second_active_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "END_TURN",
+                "client_msg_id": "end-2",
+                "payload": {},
+            }
+        )
+
+        wrapped_1: Dict[str, Any] = ws1.receive_json()
+        wrapped_2: Dict[str, Any] = ws2.receive_json()
+
+        assert wrapped_1["type"] == "TURN_CHANGED"
+        assert wrapped_2["type"] == "TURN_CHANGED"
+        assert wrapped_1["payload"]["turn"] == {
+            "phase": "running",
+            "round": 2,
+            "active_player_id": expected_first_active,
+        }
+
+
+def test_non_active_player_cannot_end_turn_or_take_running_actions() -> None:
+    client = TestClient(app)
+    create_response = client.post("/games")
+    game_id = create_response.json()["game_id"]
+
+    with (
+        client.websocket_connect(f"/games/{game_id}/ws") as ws1,
+        client.websocket_connect(f"/games/{game_id}/ws") as ws2,
+    ):
+        hello_1: Dict[str, Any] = ws1.receive_json()
+        ws2.receive_json()
+        joined: Dict[str, Any] = ws1.receive_json()
+
+        player_1 = hello_1["payload"]["players"][0]["id"]
+        player_2 = joined["payload"]["player"]["id"]
+        expected_first_active = min(player_1, player_2)
+        non_active_ws = ws2 if expected_first_active == player_1 else ws1
+
+        ws1.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "START_GAME",
+                "client_msg_id": "start-2",
+                "payload": {},
+            }
+        )
+        ws1.receive_json()
+        ws2.receive_json()
+
+        non_active_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "END_TURN",
+                "client_msg_id": "end-invalid",
+                "payload": {},
+            }
+        )
+        end_error: Dict[str, Any] = non_active_ws.receive_json()
+        assert end_error["type"] == "ERROR"
+        assert "Only active player" in end_error["payload"]["message"]
+
+        non_active_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "MOVE_TOKEN",
+                "client_msg_id": "move-invalid",
+                "payload": {"token_id": "A", "x_mm": 200, "y_mm": 200},
+            }
+        )
+        move_error: Dict[str, Any] = non_active_ws.receive_json()
+        assert move_error["type"] == "ERROR"
+        assert "MOVE_TOKEN is only allowed for active player" in move_error["payload"]["message"]
+
+        non_active_ws.send_json(
+            {
+                "kind": "COMMAND",
+                "type": "ROLL_DICE",
+                "client_msg_id": "roll-invalid-active",
+                "payload": {"count": 2, "sides": 6},
+            }
+        )
+        roll_error: Dict[str, Any] = non_active_ws.receive_json()
+        assert roll_error["type"] == "ERROR"
+        assert "ROLL_DICE is only allowed for active player" in roll_error["payload"]["message"]

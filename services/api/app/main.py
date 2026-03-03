@@ -31,6 +31,12 @@ class PlayerState(TypedDict):
     label: str
 
 
+class TurnState(TypedDict):
+    phase: str
+    round: int
+    active_player_id: str | None
+
+
 def default_tokens() -> Dict[str, TokenState]:
     return {
         "A": {"id": "A", "label": "A", "x_mm": 160, "y_mm": 140, "r_mm": 22},
@@ -45,6 +51,9 @@ class GameRoom:
     connections: List[WebSocket] = field(default_factory=list)
     players_by_ws_id: Dict[int, PlayerState] = field(default_factory=dict)
     tokens: Dict[str, TokenState] = field(default_factory=default_tokens)
+    phase: str = "lobby"
+    round: int = 0
+    active_player_id: str | None = None
 
     async def broadcast(self, event: Dict[str, Any], exclude_ws: WebSocket | None = None) -> None:
         for ws in list(self.connections):
@@ -103,6 +112,63 @@ def create_player(room: GameRoom) -> PlayerState:
 
 def room_players_snapshot(room: GameRoom) -> List[PlayerState]:
     return sorted(room.players_by_ws_id.values(), key=lambda player: player["id"])
+
+
+def room_turn_snapshot(room: GameRoom) -> TurnState:
+    return {
+        "phase": room.phase,
+        "round": room.round,
+        "active_player_id": room.active_player_id,
+    }
+
+
+def connected_player_ids(room: GameRoom) -> List[str]:
+    return [player["id"] for player in room_players_snapshot(room)]
+
+
+def apply_start_game(room: GameRoom) -> tuple[TurnState | None, str | None]:
+    if room.phase != "lobby":
+        return None, "Game is already running."
+
+    player_ids = connected_player_ids(room)
+    if not player_ids:
+        return None, "Cannot start game without connected players."
+
+    room.phase = "running"
+    room.round = 1
+    room.active_player_id = player_ids[0]
+    return room_turn_snapshot(room), None
+
+
+def apply_end_turn(room: GameRoom, actor_player_id: str) -> tuple[TurnState | None, str | None]:
+    if room.phase != "running":
+        return None, "Game is not running. Use START_GAME first."
+    if room.active_player_id is None:
+        return None, "No active player is set."
+    if actor_player_id != room.active_player_id:
+        return None, f"Only active player '{room.active_player_id}' can END_TURN."
+
+    player_ids = connected_player_ids(room)
+    if actor_player_id not in player_ids:
+        return None, "Active player is no longer connected."
+    if not player_ids:
+        return None, "Cannot end turn without connected players."
+
+    current_index = player_ids.index(actor_player_id)
+    next_index = (current_index + 1) % len(player_ids)
+    room.active_player_id = player_ids[next_index]
+    if next_index == 0:
+        room.round += 1
+    return room_turn_snapshot(room), None
+
+
+def ensure_command_allowed(room: GameRoom, actor_player_id: str, command_type: str) -> str | None:
+    # During lobby, commands remain permissive to preserve the existing bootstrap flow.
+    if room.phase != "running":
+        return None
+    if room.active_player_id != actor_player_id:
+        return f"{command_type} is only allowed for active player '{room.active_player_id}'."
+    return None
 
 
 def apply_move_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, str | None]:
@@ -231,6 +297,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
                         "tokens": list(room.tokens.values()),
                         "players": room_players_snapshot(room),
+                        "turn": room_turn_snapshot(room),
                     },
                 )
             )
@@ -282,7 +349,68 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 )
                 continue
 
+            if command_type == "START_GAME":
+                turn, error = apply_start_game(room)
+                if error is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": error},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                await room.broadcast(
+                    make_event(
+                        room,
+                        "GAME_STARTED",
+                        {"turn": turn},
+                        actor_player_id=player["id"],
+                    )
+                )
+                continue
+
+            if command_type == "END_TURN":
+                turn, error = apply_end_turn(room, player["id"])
+                if error is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": error},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                await room.broadcast(
+                    make_event(
+                        room,
+                        "TURN_CHANGED",
+                        {"turn": turn},
+                        actor_player_id=player["id"],
+                    )
+                )
+                continue
+
             if command_type == "MOVE_TOKEN":
+                not_allowed = ensure_command_allowed(room, player["id"], "MOVE_TOKEN")
+                if not_allowed is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": not_allowed},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
                 moved_token, error = apply_move_token(room, data.get("payload"))
                 if error is not None:
                     await ws.send_text(
@@ -310,6 +438,19 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 continue
 
             if command_type == "ROLL_DICE":
+                not_allowed = ensure_command_allowed(room, player["id"], "ROLL_DICE")
+                if not_allowed is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": not_allowed},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
                 roll_result, error = apply_roll_dice(data.get("payload"))
                 if error is not None:
                     await ws.send_text(
@@ -354,6 +495,23 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
         disconnected_player = room.players_by_ws_id.pop(id(ws), None)
         if ws in room.connections:
             room.connections.remove(ws)
+        if disconnected_player is not None and room.phase == "running":
+            if disconnected_player["id"] == room.active_player_id:
+                remaining_player_ids = connected_player_ids(room)
+                if remaining_player_ids:
+                    room.active_player_id = remaining_player_ids[0]
+                    await room.broadcast(
+                        make_event(
+                            room,
+                            "TURN_CHANGED",
+                            {"turn": room_turn_snapshot(room)},
+                            actor_player_id=disconnected_player["id"],
+                        )
+                    )
+                else:
+                    room.active_player_id = None
+                    room.phase = "lobby"
+                    room.round = 0
         if disconnected_player is not None and room.connections:
             await room.broadcast(
                 make_event(
