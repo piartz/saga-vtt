@@ -21,6 +21,14 @@ It is intentionally **generic**:
   - connect via WebSocket
   - send a `PING` command
   - receive `PONG` + server timestamp
+- A playable shared-tabletop MVP loop:
+  - create/join room with two browser clients
+  - move tokens on a server-authoritative board
+  - start game + advance turns with active-player enforcement
+  - activate tokens with typed activations (`move`, `charge`, `shoot`, `rest`)
+  - track per-turn activation count + last activation type per token
+  - enforce `rest` only if token has not been activated earlier in the turn
+  - reset token activations automatically on `END_TURN`
 - A foundation that’s friendly to “code-assisting LLMs”:
   - clear folder map
   - “first issues” in the roadmap

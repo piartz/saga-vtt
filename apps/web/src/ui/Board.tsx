@@ -6,6 +6,9 @@ const GRID_STEP_MM = 50;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.1;
+const HOVER_MENU_CLOSE_DELAY_MS = 180;
+
+export type ActivationType = "move" | "charge" | "shoot" | "rest";
 
 export type BoardToken = {
   id: string;
@@ -13,13 +16,17 @@ export type BoardToken = {
   x_mm: number;
   y_mm: number;
   r_mm: number;
+  activation_count_this_turn: number;
+  last_activation_type: ActivationType | null;
 };
 
 type BoardProps = {
   tokens: BoardToken[];
   canMoveTokens: boolean;
+  canActivateTokens: boolean;
   confirmMoves: boolean;
   onMoveToken: (tokenId: string, xMm: number, yMm: number) => void;
+  onActivateToken: (tokenId: string, activationType: ActivationType) => void;
 };
 
 type PanSession = {
@@ -81,7 +88,14 @@ function clientToBoardPoint(
   return { x: pos.x, y: pos.y };
 }
 
-export function Board({ tokens, canMoveTokens, confirmMoves, onMoveToken }: BoardProps) {
+export function Board({
+  tokens,
+  canMoveTokens,
+  canActivateTokens,
+  confirmMoves,
+  onMoveToken,
+  onActivateToken,
+}: BoardProps) {
   const theme = {
     surface: "#171b24",
     border: "#2c3446",
@@ -91,10 +105,23 @@ export function Board({ tokens, canMoveTokens, confirmMoves, onMoveToken }: Boar
     token: "#2a3345",
     tokenActive: "#3a4b66",
     tokenStroke: "#99b3ff",
+    activationMove: "#67e8f9",
+    activationCharge: "#fb923c",
+    activationShoot: "#a78bfa",
+    activationRest: "#4ade80",
+    activationFill: "#18202d",
     text: "#e7ebf3",
   } as const;
 
+  const activationStyles: Record<ActivationType, { label: string; color: string }> = {
+    move: { label: "Move", color: theme.activationMove },
+    charge: { label: "Charge", color: theme.activationCharge },
+    shoot: { label: "Shoot", color: theme.activationShoot },
+    rest: { label: "Rest", color: theme.activationRest },
+  };
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hoveredTokenId, setHoveredTokenId] = useState<string | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragMoved, setDragMoved] = useState(false);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
@@ -103,6 +130,7 @@ export function Board({ tokens, canMoveTokens, confirmMoves, onMoveToken }: Boar
   const [viewOrigin, setViewOrigin] = useState({ x: 0, y: 0 });
   const [panSession, setPanSession] = useState<PanSession | null>(null);
   const boardSvgRef = useRef<SVGSVGElement | null>(null);
+  const hoverCloseTimerRef = useRef<number | null>(null);
 
   const viewportWidth = BOARD_WIDTH_MM / zoom;
   const viewportHeight = BOARD_HEIGHT_MM / zoom;
@@ -145,6 +173,15 @@ export function Board({ tokens, canMoveTokens, confirmMoves, onMoveToken }: Boar
       svg.removeEventListener("wheel", blockPageScroll);
     };
   }, []);
+
+  useEffect(
+    () => () => {
+      if (hoverCloseTimerRef.current !== null) {
+        window.clearTimeout(hoverCloseTimerRef.current);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (!confirmMoves && pendingMove) {
@@ -300,6 +337,8 @@ export function Board({ tokens, canMoveTokens, confirmMoves, onMoveToken }: Boar
   function onDrag(e: React.PointerEvent<SVGCircleElement>, tokenId: string) {
     if (!canMoveTokens) return;
     if (confirmMoves && pendingMove && pendingMove.tokenId !== tokenId) return;
+    clearHoverCloseTimer();
+    setHoveredTokenId(null);
     e.currentTarget.setPointerCapture(e.pointerId);
     const token = tokens.find((t) => t.id === tokenId);
     if (!token) return;
@@ -376,6 +415,26 @@ export function Board({ tokens, canMoveTokens, confirmMoves, onMoveToken }: Boar
     endDrag(e, false);
   }
 
+  function clearHoverCloseTimer() {
+    if (hoverCloseTimerRef.current !== null) {
+      window.clearTimeout(hoverCloseTimerRef.current);
+      hoverCloseTimerRef.current = null;
+    }
+  }
+
+  function openHoverMenu(tokenId: string) {
+    clearHoverCloseTimer();
+    setHoveredTokenId(tokenId);
+  }
+
+  function scheduleHoverMenuClose(tokenId: string) {
+    clearHoverCloseTimer();
+    hoverCloseTimerRef.current = window.setTimeout(() => {
+      setHoveredTokenId((prev) => (prev === tokenId ? null : prev));
+      hoverCloseTimerRef.current = null;
+    }, HOVER_MENU_CLOSE_DELAY_MS);
+  }
+
   return (
     <div
       style={{
@@ -391,6 +450,9 @@ export function Board({ tokens, canMoveTokens, confirmMoves, onMoveToken }: Boar
         {confirmMoves
           ? "Drag a token to stage a move, then confirm or cancel it."
           : "Drag a token and release to send a MOVE_TOKEN command immediately."}
+      </p>
+      <p style={{ marginTop: 0, color: theme.muted }}>
+        Hover a token to pick activation type: M (move), C (charge), S (shoot), R (rest).
       </p>
       <p style={{ marginTop: 0, color: theme.muted }}>
         Hold Option/Alt (or pinch/Cmd/Ctrl gesture) to zoom. When zoomed in, use drag or two-finger scroll to pan.
@@ -541,38 +603,144 @@ export function Board({ tokens, canMoveTokens, confirmMoves, onMoveToken }: Boar
 
         {renderedTokens.map((t) => {
           const isLockedByPending = confirmMoves && pendingMove !== null && pendingMove.tokenId !== t.id;
+          const activationStyle = t.last_activation_type ? activationStyles[t.last_activation_type] : null;
+          const showActivationMenu =
+            hoveredTokenId === t.id &&
+            canActivateTokens &&
+            !isLockedByPending &&
+            activeDrag === null;
+          const activationButtons = [
+            { type: "move" as const, label: "M" },
+            { type: "charge" as const, label: "C" },
+            { type: "shoot" as const, label: "S" },
+            { type: "rest" as const, label: "R" },
+          ].filter((button) => !(button.type === "rest" && t.activation_count_this_turn > 0));
+          const buttonWidth = 18;
+          const buttonHeight = 14;
+          const buttonGap = 4;
+          const totalWidth = activationButtons.length * buttonWidth + (activationButtons.length - 1) * buttonGap;
+          const menuX = t.x_mm - totalWidth / 2;
+          const menuY = t.y_mm - t.r_mm - 22;
+
           return (
-          <g key={t.id}>
-            <circle
-              cx={t.x_mm}
-              cy={t.y_mm}
-              r={t.r_mm}
-              fill={t.id === selectedId ? theme.tokenActive : theme.token}
-              stroke={theme.tokenStroke}
-              strokeWidth="2"
-              onPointerDown={(e) => onDrag(e, t.id)}
-              onPointerMove={onMove}
-              onPointerUp={onUp}
-              onPointerCancel={onCancelDrag}
-              style={{
-                cursor: isLockedByPending ? "not-allowed" : canMoveTokens ? "grab" : "default",
-              }}
-            />
-            <text
-              x={t.x_mm}
-              y={t.y_mm + 5}
-              textAnchor="middle"
-              style={{ userSelect: "none", pointerEvents: "none", fontSize: 14, fill: theme.text }}
+            <g
+              key={t.id}
+              onPointerEnter={() => openHoverMenu(t.id)}
+              onPointerLeave={() => scheduleHoverMenuClose(t.id)}
             >
-              {t.label}
-            </text>
-          </g>
-        );
+              {activationStyle && (
+                <circle
+                  cx={t.x_mm}
+                  cy={t.y_mm}
+                  r={t.r_mm + 5}
+                  fill={theme.activationFill}
+                  stroke={activationStyle.color}
+                  strokeWidth="2"
+                  style={{ pointerEvents: "none" }}
+                />
+              )}
+              <circle
+                cx={t.x_mm}
+                cy={t.y_mm}
+                r={t.r_mm}
+                fill={t.id === selectedId ? theme.tokenActive : theme.token}
+                stroke={theme.tokenStroke}
+                strokeWidth="2"
+                onPointerDown={(e) => onDrag(e, t.id)}
+                onPointerMove={onMove}
+                onPointerUp={onUp}
+                onPointerCancel={onCancelDrag}
+                style={{
+                  cursor: isLockedByPending ? "not-allowed" : canMoveTokens ? "grab" : "default",
+                }}
+              />
+              <text
+                x={t.x_mm}
+                y={t.y_mm + 5}
+                textAnchor="middle"
+                style={{ userSelect: "none", pointerEvents: "none", fontSize: 14, fill: theme.text }}
+              >
+                {t.label}
+              </text>
+              {activationStyle && (
+                <>
+                  <circle
+                    cx={t.x_mm + t.r_mm * 0.62}
+                    cy={t.y_mm - t.r_mm * 0.62}
+                    r="5"
+                    fill={activationStyle.color}
+                    style={{ pointerEvents: "none" }}
+                  />
+                  <text
+                    x={t.x_mm}
+                    y={t.y_mm + t.r_mm + 14}
+                    textAnchor="middle"
+                    style={{ userSelect: "none", pointerEvents: "none", fontSize: 11, fill: activationStyle.color }}
+                  >
+                    {activationStyle.label} x{t.activation_count_this_turn}
+                  </text>
+                </>
+              )}
+              {showActivationMenu && (
+                <g
+                  onPointerEnter={() => openHoverMenu(t.id)}
+                  onPointerLeave={() => scheduleHoverMenuClose(t.id)}
+                >
+                  {activationButtons.map((button, index) => {
+                    const x = menuX + index * (buttonWidth + buttonGap);
+                    const y = menuY;
+                    const buttonStyle = activationStyles[button.type];
+                    return (
+                      <g
+                        key={button.type}
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          clearHoverCloseTimer();
+                          setHoveredTokenId(null);
+                          onActivateToken(t.id, button.type);
+                        }}
+                      >
+                        <rect
+                          x={x}
+                          y={y}
+                          width={buttonWidth}
+                          height={buttonHeight}
+                          rx="3"
+                          fill={buttonStyle.color}
+                          stroke={theme.border}
+                          strokeWidth="1"
+                          style={{ cursor: "pointer" }}
+                        />
+                        <text
+                          x={x + buttonWidth / 2}
+                          y={y + 10}
+                          textAnchor="middle"
+                          style={{
+                            pointerEvents: "none",
+                            userSelect: "none",
+                            fontSize: 10,
+                            fill: "#0f1115",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {button.label}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </g>
+              )}
+            </g>
+          );
         })}
 
         {selected && (
           <text x={12} y={24} style={{ pointerEvents: "none", fontSize: 14, fill: theme.muted }}>
             Selected: {selected.label} ({Math.round(selected.x_mm)}, {Math.round(selected.y_mm)})
+            {selected.last_activation_type
+              ? ` | ${activationStyles[selected.last_activation_type].label} x${selected.activation_count_this_turn}`
+              : ""}
           </text>
         )}
       </svg>

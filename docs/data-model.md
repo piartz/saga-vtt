@@ -27,6 +27,8 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - base_diameter_mm
 - position_mm: {x, y}
 - facing_deg
+- activation_count_this_turn
+- last_activation_type (`move` / `charge` / `shoot` / `rest` / null)
 - tags/status (activated, fatigued, etc. — rules-specific)
 
 ### Player (ephemeral MVP presence)
