@@ -11,7 +11,7 @@
 - Pan/zoom board (implemented: wheel zoom, +/- controls, reset, background pan)
 - Select token
 - Move token with measurement preview (client)
-- Confirm move (server validates & broadcasts)
+- Confirm move (implemented: optional toggle, one-token-at-a-time pending confirm/cancel)
 
 ## Milestone 2 — “Play a basic scenario”
 - Turn structure + active player

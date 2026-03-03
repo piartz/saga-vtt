@@ -79,7 +79,10 @@ Primary references:
   - send `PING`
   - send sample `ROLL_DICE` (`3d6+1`)
   - start game and end turn commands
-  - board token drag and release -> sends `MOVE_TOKEN`
+  - toggle movement confirmation mode
+  - board token drag preview with:
+    - immediate send on release (confirmation off)
+    - one-token-at-a-time pending move + explicit confirm/cancel (confirmation on)
 - Applies authoritative updates from events:
   - `HELLO` token + player snapshot
   - `HELLO` / `GAME_STARTED` / `TURN_CHANGED` turn snapshot
@@ -88,7 +91,7 @@ Primary references:
 - Board UI:
   - SVG board with mm coordinate system
   - local drag preview
-  - sends command on release (server confirms via event)
+  - optional one-token-at-a-time move confirmation workflow to avoid chaotic multi-token pending states
   - mouse-wheel zoom (`50%` to `250%`) with +/- controls and reset
   - drag-background panning when zoomed in
   - touchpad two-finger scroll no longer auto-zooms below 100%; panning remains active only when zoomed in
@@ -115,7 +118,7 @@ Primary references:
 1. Shared tabletop polish:
    - pan/zoom polish (basic controls implemented)
    - better token placement/selection ergonomics
-   - move preview + explicit confirm UX refinement
+   - move preview + explicit confirm UX refinement (basic one-token confirm flow implemented)
 2. Basic scenario loop:
    - activation markers
    - richer action log UI
