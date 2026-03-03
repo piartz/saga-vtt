@@ -69,15 +69,26 @@ This is the current MVP protocol implemented by the API/web app.
 
 ### Board interactions
 - `MOVE_TOKEN` → `TOKEN_MOVED`
+- `ACTIVATE_TOKEN` → `TOKEN_ACTIVATED`
 - while `phase = running`, only active player may issue `MOVE_TOKEN`
+- while `phase = running`, only active player may issue `ACTIVATE_TOKEN`
 - Server validates:
   - payload shape and token id
   - integer mm coordinates
   - board bounds (respecting token radius)
+  - activation type (`move`, `charge`, `shoot`, `rest`)
+- each `ACTIVATE_TOKEN` increments token activation count for the current turn and updates last activation type
+- `ACTIVATE_TOKEN` with `activation_type = rest` is only valid when token activation count for the turn is `0`
+- at each `END_TURN`, all token activations are cleared in the server state
+  - `TURN_CHANGED.payload.tokens` contains the post-reset token snapshot
 - `TOKEN_MOVED.payload`:
   - `token`
   - `client_msg_id`
 - `TOKEN_MOVED` includes `actor_player_id` of the player who sent `MOVE_TOKEN`
+- `TOKEN_ACTIVATED.payload`:
+  - `token`
+  - `client_msg_id`
+- `TOKEN_ACTIVATED` includes `actor_player_id` of the player who sent `ACTIVATE_TOKEN`
 
 ### Dice
 - `ROLL_DICE` → `DICE_ROLLED`

@@ -4,7 +4,7 @@ import json
 import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, TypeGuard, TypedDict
+from typing import Any, Dict, List, Literal, TypeGuard, TypedDict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +24,12 @@ class TokenState(TypedDict):
     x_mm: int
     y_mm: int
     r_mm: int
+    activation_count_this_turn: int
+    last_activation_type: ActivationType | None
+
+
+ActivationType = Literal["move", "charge", "shoot", "rest"]
+ACTIVATION_TYPES: tuple[ActivationType, ...] = ("move", "charge", "shoot", "rest")
 
 
 class PlayerState(TypedDict):
@@ -39,8 +45,24 @@ class TurnState(TypedDict):
 
 def default_tokens() -> Dict[str, TokenState]:
     return {
-        "A": {"id": "A", "label": "A", "x_mm": 160, "y_mm": 140, "r_mm": 22},
-        "B": {"id": "B", "label": "B", "x_mm": 320, "y_mm": 260, "r_mm": 22},
+        "A": {
+            "id": "A",
+            "label": "A",
+            "x_mm": 160,
+            "y_mm": 140,
+            "r_mm": 22,
+            "activation_count_this_turn": 0,
+            "last_activation_type": None,
+        },
+        "B": {
+            "id": "B",
+            "label": "B",
+            "x_mm": 320,
+            "y_mm": 260,
+            "r_mm": 22,
+            "activation_count_this_turn": 0,
+            "last_activation_type": None,
+        },
     }
 
 
@@ -101,6 +123,10 @@ def is_int(value: Any) -> TypeGuard[int]:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
+def is_activation_type(value: Any) -> TypeGuard[ActivationType]:
+    return isinstance(value, str) and value in ACTIVATION_TYPES
+
+
 def create_player(room: GameRoom) -> PlayerState:
     while True:
         player_id = secrets.token_hex(3)
@@ -137,6 +163,7 @@ def apply_start_game(room: GameRoom) -> tuple[TurnState | None, str | None]:
     room.phase = "running"
     room.round = 1
     room.active_player_id = player_ids[0]
+    reset_token_activations(room)
     return room_turn_snapshot(room), None
 
 
@@ -204,6 +231,39 @@ def apply_move_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, s
     token["x_mm"] = x_mm_int
     token["y_mm"] = y_mm_int
     return token, None
+
+
+def apply_activate_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, str | None]:
+    if not isinstance(payload, dict):
+        return None, "ACTIVATE_TOKEN payload must be an object."
+
+    token_id = payload.get("token_id")
+    activation_type = payload.get("activation_type")
+
+    if not isinstance(token_id, str):
+        return None, "ACTIVATE_TOKEN token_id must be a string."
+    if not is_activation_type(activation_type):
+        return None, "ACTIVATE_TOKEN activation_type must be one of: move, charge, shoot, rest."
+
+    token = room.tokens.get(token_id)
+    if token is None:
+        return None, f"Unknown token '{token_id}'."
+    if activation_type == "rest" and token["activation_count_this_turn"] > 0:
+        return None, f"Token '{token_id}' cannot activate to rest after prior activations this turn."
+
+    token["activation_count_this_turn"] += 1
+    token["last_activation_type"] = activation_type
+    return token, None
+
+
+def reset_token_activations(room: GameRoom) -> bool:
+    changed = False
+    for token in room.tokens.values():
+        if token["activation_count_this_turn"] != 0 or token["last_activation_type"] is not None:
+            token["activation_count_this_turn"] = 0
+            token["last_activation_type"] = None
+            changed = True
+    return changed
 
 
 class DiceRollResult(TypedDict):
@@ -407,11 +467,12 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         )
                     )
                     continue
+                reset_token_activations(room)
                 await room.broadcast(
                     make_event(
                         room,
                         "TURN_CHANGED",
-                        {"turn": turn},
+                        {"turn": turn, "tokens": list(room.tokens.values())},
                         actor_player_id=player["id"],
                     )
                 )
@@ -450,6 +511,58 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         "TOKEN_MOVED",
                         {
                             "token": moved_token,
+                            "client_msg_id": data.get("client_msg_id"),
+                        },
+                        actor_player_id=player["id"],
+                    )
+                )
+                continue
+
+            if command_type == "ACTIVATE_TOKEN":
+                if room.phase != "running":
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": "ACTIVATE_TOKEN is only allowed while game is running."},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                not_allowed = ensure_command_allowed(room, player["id"], "ACTIVATE_TOKEN")
+                if not_allowed is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": not_allowed},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                updated_token, error = apply_activate_token(room, data.get("payload"))
+                if error is not None:
+                    await ws.send_text(
+                        json.dumps(
+                            make_event(
+                                room,
+                                "ERROR",
+                                {"message": error},
+                                actor_player_id=player["id"],
+                            )
+                        )
+                    )
+                    continue
+                await room.broadcast(
+                    make_event(
+                        room,
+                        "TOKEN_ACTIVATED",
+                        {
+                            "token": updated_token,
                             "client_msg_id": data.get("client_msg_id"),
                         },
                         actor_player_id=player["id"],
@@ -532,11 +645,12 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 remaining_player_ids = connected_player_ids(room)
                 if remaining_player_ids:
                     room.active_player_id = remaining_player_ids[0]
+                    reset_token_activations(room)
                     await room.broadcast(
                         make_event(
                             room,
                             "TURN_CHANGED",
-                            {"turn": room_turn_snapshot(room)},
+                            {"turn": room_turn_snapshot(room), "tokens": list(room.tokens.values())},
                             actor_player_id=disconnected_player["id"],
                         )
                     )

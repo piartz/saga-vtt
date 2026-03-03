@@ -53,13 +53,20 @@ Primary references:
   - includes turn snapshot in `HELLO.payload.turn` (`phase`, `round`, `active_player_id`)
   - handles `START_GAME` -> `GAME_STARTED` turn initialization
   - handles `END_TURN` -> `TURN_CHANGED` turn progression
-  - while game is running, enforces active-player-only `MOVE_TOKEN` and `ROLL_DICE`
+  - while game is running, enforces active-player-only `MOVE_TOKEN`, `ACTIVATE_TOKEN`, and `ROLL_DICE`
   - handles `MOVE_TOKEN`:
     - validates payload shape/types
     - validates integer mm coordinates
     - validates board bounds using token radius
     - mutates room token state
     - broadcasts `TOKEN_MOVED` with updated token + `client_msg_id`
+  - handles `ACTIVATE_TOKEN`:
+    - validates payload shape/types (`token_id`, `activation_type`)
+    - supports activation types: `move`, `charge`, `shoot`, `rest`
+    - token cannot be deactivated manually in-turn; repeated activations are allowed and counted
+    - `rest` activation is only valid before any prior activation in the same turn
+    - broadcasts `TOKEN_ACTIVATED` with updated token + `client_msg_id`
+  - on `END_TURN`, server clears all token activations and includes token snapshot in `TURN_CHANGED.payload.tokens`
   - handles `ROLL_DICE`:
     - validates payload shape/types (`count`, `sides`, optional `modifier`)
     - enforces bounds (`count: 1..20`, `sides: 2..1000`, `modifier: -1000..1000`)
@@ -79,6 +86,7 @@ Primary references:
   - send `PING`
   - send sample `ROLL_DICE` (`3d6+1`)
   - start game and end turn commands
+  - activate token from hover actions (`ACTIVATE_TOKEN`)
   - toggle movement confirmation mode
   - board token drag preview with:
     - immediate send on release (confirmation off)
@@ -88,6 +96,8 @@ Primary references:
   - `HELLO` / `GAME_STARTED` / `TURN_CHANGED` turn snapshot
   - `PLAYER_JOINED` / `PLAYER_LEFT` player presence updates
   - `TOKEN_MOVED` token updates
+  - `TOKEN_ACTIVATED` token activation updates
+  - `TURN_CHANGED.payload.tokens` token activation resets
 - Board UI:
   - SVG board with mm coordinate system
   - local drag preview
@@ -104,6 +114,8 @@ Primary references:
   - verifies room creation
   - verifies presence join/leave events and `HELLO` player snapshot
   - verifies authoritative token move broadcast to two WS clients
+  - verifies authoritative token activation broadcast to two WS clients
+  - verifies rest-activation constraint (rest only before first activation this turn)
   - verifies authoritative dice roll broadcast to two WS clients
   - verifies dice payload validation errors
   - verifies game start, turn progression, and active-player command restrictions
@@ -120,7 +132,7 @@ Primary references:
    - better token placement/selection ergonomics
    - move preview + explicit confirm UX refinement (basic one-token confirm flow implemented)
 2. Basic scenario loop:
-   - activation markers
+   - activation markers (implemented: repeatable typed activations with per-turn count/last-type tracking)
    - richer action log UI
 3. Rules-module interface:
    - explicit `RulesModule` boundary

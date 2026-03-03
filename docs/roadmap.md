@@ -15,7 +15,7 @@
 
 ## Milestone 2 — “Play a basic scenario”
 - Turn structure + active player
-- Activation markers
+- Activation markers (implemented: typed activations `move|charge|shoot|rest`, repeatable per turn with count/last-type tracking, no manual deactivation, `rest` only before first activation, reset on end turn)
 - Dice roller (server-side)
 - Action log UI
 

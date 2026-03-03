@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Board, type BoardToken } from "./Board";
+import { Board, type ActivationType, type BoardToken } from "./Board";
 
 type EventEnvelope = {
   kind: "EVENT";
@@ -40,16 +40,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isActivationType(value: unknown): value is ActivationType {
+  return value === "move" || value === "charge" || value === "shoot" || value === "rest";
+}
+
 function toBoardToken(value: unknown): BoardToken | null {
   if (!isRecord(value)) return null;
 
-  const { id, label, x_mm, y_mm, r_mm } = value;
+  const { id, label, x_mm, y_mm, r_mm, activation_count_this_turn, last_activation_type } = value;
   if (typeof id !== "string" || typeof label !== "string") return null;
   if (typeof x_mm !== "number" || !Number.isInteger(x_mm)) return null;
   if (typeof y_mm !== "number" || !Number.isInteger(y_mm)) return null;
   if (typeof r_mm !== "number" || !Number.isInteger(r_mm)) return null;
+  if (
+    typeof activation_count_this_turn !== "number" ||
+    !Number.isInteger(activation_count_this_turn) ||
+    activation_count_this_turn < 0
+  ) {
+    return null;
+  }
+  if (!(last_activation_type === null || isActivationType(last_activation_type))) return null;
 
-  return { id, label, x_mm, y_mm, r_mm };
+  return { id, label, x_mm, y_mm, r_mm, activation_count_this_turn, last_activation_type };
 }
 
 function isEventEnvelope(value: unknown): value is EventEnvelope {
@@ -91,6 +103,13 @@ function extractHelloPlayers(payload: unknown): PresencePlayer[] | null {
 function extractMovedToken(payload: unknown): BoardToken | null {
   if (!isRecord(payload)) return null;
   return toBoardToken(payload.token);
+}
+
+function extractTokensSnapshot(payload: unknown): BoardToken[] | null {
+  if (!isRecord(payload) || !Array.isArray(payload.tokens)) return null;
+  const tokens = payload.tokens.map(toBoardToken);
+  if (tokens.some((token) => token === null)) return null;
+  return tokens as BoardToken[];
 }
 
 function extractJoinedPlayer(payload: unknown): PresencePlayer | null {
@@ -206,6 +225,13 @@ function formatEventSummary(
     return `${actorName} moved token ${movedToken.label} to (${movedToken.x_mm}, ${movedToken.y_mm}) mm.`;
   }
 
+  if (event.type === "TOKEN_ACTIVATED") {
+    const changedToken = toBoardToken(payload.token);
+    if (!changedToken) return `${actorName} activated a token.`;
+    const activationName = changedToken.last_activation_type ?? "unknown";
+    return `${actorName} activated ${changedToken.label} with ${activationName} (${changedToken.activation_count_this_turn}x this turn).`;
+  }
+
   if (event.type === "DICE_ROLLED") {
     const notation = typeof payload.notation === "string" ? payload.notation : "dice";
     const total = typeof payload.total === "number" ? payload.total : "?";
@@ -314,6 +340,14 @@ export function App() {
           return;
         }
 
+        if (parsed.type === "TOKEN_ACTIVATED") {
+          const changedToken = extractMovedToken(parsed.payload);
+          if (changedToken) {
+            setTokens((prev) => upsertToken(prev, changedToken));
+          }
+          return;
+        }
+
         if (parsed.type === "PLAYER_JOINED") {
           const joinedPlayer = extractJoinedPlayer(parsed.payload);
           if (joinedPlayer) {
@@ -334,6 +368,8 @@ export function App() {
         if (parsed.type === "GAME_STARTED" || parsed.type === "TURN_CHANGED") {
           const nextTurn = extractTurnFromEvent(parsed.payload);
           if (nextTurn) setTurn(nextTurn);
+          const tokenSnapshot = extractTokensSnapshot(parsed.payload);
+          if (tokenSnapshot) setTokens(tokenSnapshot);
         }
       } catch {
         // ignore
@@ -373,6 +409,15 @@ export function App() {
       type: "MOVE_TOKEN",
       client_msg_id: crypto.randomUUID(),
       payload: { token_id: tokenId, x_mm: xMm, y_mm: yMm },
+    });
+  }
+
+  function sendActivateToken(tokenId: string, activationType: ActivationType) {
+    send({
+      kind: "COMMAND",
+      type: "ACTIVATE_TOKEN",
+      client_msg_id: crypto.randomUUID(),
+      payload: { token_id: tokenId, activation_type: activationType },
     });
   }
 
@@ -574,8 +619,10 @@ export function App() {
           <Board
             tokens={tokens}
             canMoveTokens={status === "CONNECTED"}
+            canActivateTokens={status === "CONNECTED"}
             confirmMoves={confirmMoves}
             onMoveToken={sendMoveToken}
+            onActivateToken={sendActivateToken}
           />
         </section>
 
