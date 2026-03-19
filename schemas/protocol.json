@@ -1,0 +1,484 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://saga-vtt.dev/schemas/protocol.json",
+  "title": "Saga VTT Protocol Schema",
+  "description": "Single source of truth for all WebSocket commands and events",
+
+  "definitions": {
+    "ActivationType": {
+      "type": "string",
+      "enum": ["move", "charge", "shoot", "rest"]
+    },
+
+    "Phase": {
+      "type": "string",
+      "enum": ["lobby", "running"]
+    },
+
+    "TurnChoice": {
+      "type": "string",
+      "enum": ["FIRST", "SECOND"]
+    },
+
+    "UndoActionType": {
+      "type": "string",
+      "enum": ["MOVE_TOKEN", "ACTIVATE_TOKEN"]
+    },
+
+    "Player": {
+      "type": "object",
+      "required": ["id", "label"],
+      "properties": {
+        "id": {"type": "string"},
+        "label": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+
+    "Token": {
+      "type": "object",
+      "required": ["id", "name", "x_mm", "y_mm", "radius_mm", "activation_count_this_turn", "last_activation_type"],
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "x_mm": {"type": "integer"},
+        "y_mm": {"type": "integer"},
+        "radius_mm": {"type": "integer"},
+        "activation_count_this_turn": {"type": "integer"},
+        "last_activation_type": {
+          "oneOf": [
+            {"$ref": "#/definitions/ActivationType"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "Board": {
+      "type": "object",
+      "required": ["width_mm", "height_mm"],
+      "properties": {
+        "width_mm": {"type": "integer"},
+        "height_mm": {"type": "integer"}
+      },
+      "additionalProperties": false
+    },
+
+    "TurnState": {
+      "type": "object",
+      "required": ["phase", "round", "active_player_id"],
+      "properties": {
+        "phase": {"$ref": "#/definitions/Phase"},
+        "round": {"type": "integer"},
+        "active_player_id": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "InitiativeState": {
+      "type": "object",
+      "required": ["winner_player_id", "loser_player_id", "winner_roll", "loser_roll", "chooser_choice", "first_player_id", "second_player_id"],
+      "properties": {
+        "winner_player_id": {"type": "string"},
+        "loser_player_id": {"type": "string"},
+        "winner_roll": {"type": "integer"},
+        "loser_roll": {"type": "integer"},
+        "chooser_choice": {
+          "oneOf": [
+            {"$ref": "#/definitions/TurnChoice"},
+            {"type": "null"}
+          ]
+        },
+        "first_player_id": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "null"}
+          ]
+        },
+        "second_player_id": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "UndoRequest": {
+      "type": "object",
+      "required": ["requester_player_id", "responder_player_id", "action_type", "token_id"],
+      "properties": {
+        "requester_player_id": {"type": "string"},
+        "responder_player_id": {"type": "string"},
+        "action_type": {"$ref": "#/definitions/UndoActionType"},
+        "token_id": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+
+    "UndoState": {
+      "type": "object",
+      "required": ["pending_request", "undo_used_this_turn_player_ids"],
+      "properties": {
+        "pending_request": {
+          "oneOf": [
+            {"$ref": "#/definitions/UndoRequest"},
+            {"type": "null"}
+          ]
+        },
+        "undo_used_this_turn_player_ids": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "commands": {
+    "PING": {
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+
+    "MOVE_TOKEN": {
+      "payload": {
+        "type": "object",
+        "required": ["token_id", "x_mm", "y_mm"],
+        "properties": {
+          "token_id": {"type": "string"},
+          "x_mm": {"type": "integer"},
+          "y_mm": {"type": "integer"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "ACTIVATE_TOKEN": {
+      "payload": {
+        "type": "object",
+        "required": ["token_id", "activation_type"],
+        "properties": {
+          "token_id": {"type": "string"},
+          "activation_type": {"$ref": "#/definitions/ActivationType"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "START_GAME": {
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+
+    "CHOOSE_TURN_ORDER": {
+      "payload": {
+        "type": "object",
+        "required": ["choice"],
+        "properties": {
+          "choice": {"$ref": "#/definitions/TurnChoice"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "END_TURN": {
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+
+    "REQUEST_UNDO": {
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+
+    "RESPOND_UNDO_REQUEST": {
+      "payload": {
+        "type": "object",
+        "required": ["accept"],
+        "properties": {
+          "accept": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "ROLL_DICE": {
+      "payload": {
+        "type": "object",
+        "required": ["count", "sides"],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "sides": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 1000
+          },
+          "modifier": {
+            "type": "integer",
+            "minimum": -1000,
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+
+  "events": {
+    "PONG": {
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+
+    "HELLO": {
+      "payload": {
+        "type": "object",
+        "required": ["game_id", "protocol_version", "board", "tokens", "players", "self_player_id", "turn", "initiative", "undo"],
+        "properties": {
+          "game_id": {"type": "string"},
+          "protocol_version": {"type": "integer"},
+          "board": {"$ref": "#/definitions/Board"},
+          "tokens": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/Token"}
+          },
+          "players": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/Player"}
+          },
+          "self_player_id": {"type": "string"},
+          "turn": {"$ref": "#/definitions/TurnState"},
+          "initiative": {
+            "oneOf": [
+              {"$ref": "#/definitions/InitiativeState"},
+              {"type": "null"}
+            ]
+          },
+          "undo": {"$ref": "#/definitions/UndoState"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "PLAYER_JOINED": {
+      "payload": {
+        "type": "object",
+        "required": ["player"],
+        "properties": {
+          "player": {"$ref": "#/definitions/Player"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "PLAYER_LEFT": {
+      "payload": {
+        "type": "object",
+        "required": ["player_id"],
+        "properties": {
+          "player_id": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "INITIATIVE_ROLLED": {
+      "payload": {
+        "type": "object",
+        "required": ["initiative"],
+        "properties": {
+          "initiative": {"$ref": "#/definitions/InitiativeState"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "TURN_ORDER_CHOSEN": {
+      "payload": {
+        "type": "object",
+        "required": ["initiative"],
+        "properties": {
+          "initiative": {"$ref": "#/definitions/InitiativeState"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "GAME_STARTED": {
+      "payload": {
+        "type": "object",
+        "required": ["turn", "undo"],
+        "properties": {
+          "turn": {"$ref": "#/definitions/TurnState"},
+          "undo": {"$ref": "#/definitions/UndoState"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "INITIATIVE_RESET": {
+      "payload": {
+        "type": "object",
+        "required": ["reason"],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": ["player_joined", "player_left"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "TURN_CHANGED": {
+      "payload": {
+        "type": "object",
+        "required": ["turn", "tokens", "undo"],
+        "properties": {
+          "turn": {"$ref": "#/definitions/TurnState"},
+          "tokens": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/Token"}
+          },
+          "undo": {"$ref": "#/definitions/UndoState"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "TOKEN_MOVED": {
+      "payload": {
+        "type": "object",
+        "required": ["token", "client_msg_id"],
+        "properties": {
+          "token": {"$ref": "#/definitions/Token"},
+          "client_msg_id": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "TOKEN_ACTIVATED": {
+      "payload": {
+        "type": "object",
+        "required": ["token", "client_msg_id"],
+        "properties": {
+          "token": {"$ref": "#/definitions/Token"},
+          "client_msg_id": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "UNDO_REQUESTED": {
+      "payload": {
+        "type": "object",
+        "required": ["request", "undo"],
+        "properties": {
+          "request": {"$ref": "#/definitions/UndoRequest"},
+          "undo": {"$ref": "#/definitions/UndoState"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "UNDO_APPLIED": {
+      "payload": {
+        "type": "object",
+        "required": ["request", "token", "undo"],
+        "properties": {
+          "request": {"$ref": "#/definitions/UndoRequest"},
+          "token": {"$ref": "#/definitions/Token"},
+          "undo": {"$ref": "#/definitions/UndoState"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "UNDO_REJECTED": {
+      "payload": {
+        "type": "object",
+        "required": ["request", "undo"],
+        "properties": {
+          "request": {"$ref": "#/definitions/UndoRequest"},
+          "undo": {"$ref": "#/definitions/UndoState"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "UNDO_CANCELLED": {
+      "payload": {
+        "type": "object",
+        "required": ["reason", "undo"],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": ["player_left"]
+          },
+          "undo": {"$ref": "#/definitions/UndoState"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "DICE_ROLLED": {
+      "payload": {
+        "type": "object",
+        "required": ["count", "sides", "modifier", "rolls", "total", "notation", "client_msg_id"],
+        "properties": {
+          "count": {"type": "integer"},
+          "sides": {"type": "integer"},
+          "modifier": {"type": "integer"},
+          "rolls": {
+            "type": "array",
+            "items": {"type": "integer"}
+          },
+          "total": {"type": "integer"},
+          "notation": {"type": "string"},
+          "client_msg_id": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "ERROR": {
+      "payload": {
+        "type": "object",
+        "required": ["message"],
+        "properties": {
+          "message": {"type": "string"},
+          "client_msg_id": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

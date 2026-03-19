@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-03-19
+Last updated: 2026-03-19 (typed protocol schema added)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -26,9 +26,11 @@ Primary references:
 - Monorepo with:
   - `apps/web` (React + TypeScript, Vite)
   - `services/api` (FastAPI + WebSocket)
+  - `schemas` (JSON Schema protocol definitions - single source of truth)
+  - `tools` (type generators for TypeScript and Python)
   - `docs` (vision, architecture, protocol, roadmap, playbook)
 - GitHub Actions CI currently runs:
-  - web lint + build
+  - web lint + build (with automatic type generation)
   - API `ruff`, `mypy`, and `pytest` (including integration smoke test)
   - deterministic dependency installs (`pnpm --frozen-lockfile`, `poetry install --sync`)
   - security scanning:
@@ -39,6 +41,12 @@ Primary references:
   - Python dependencies (weekly, Monday)
   - JavaScript dependencies (weekly, Monday)
   - GitHub Actions (weekly, Monday)
+- **Typed Protocol Schema System**:
+  - Single source of truth for WebSocket protocol in `schemas/protocol.json`
+  - Auto-generates TypeScript types (`apps/web/src/protocol.generated.ts`)
+  - Auto-generates Python TypedDicts (`services/api/app/protocol_generated.py`)
+  - TypeScript generation runs automatically before build (`prebuild` script)
+  - See `schemas/README.md` and `docs/typed-protocol-schema.md` for details
 - Bootstrap script `tools/setup-and-run.sh` is interactive and platform-aware:
   - detects Linux/macOS
   - prompts before tool install/upgrade
@@ -179,7 +187,7 @@ Primary references:
    - replays and spectators
 
 ## Recommended Next Tasks
-- Add typed command/event schemas on server and client (single source of truth).
+- **Migrate codebase to use generated protocol types** (infrastructure complete, see `docs/typed-protocol-schema.md` for migration guide).
 - Extract a per-room connection manager abstraction (presence now works but is still inline in `main.py`).
 - Add WS reconnect/backoff client wrapper with resync behavior.
 - Decide and implement disconnect behavior for turn ownership (pause, auto-pass, or forfeit).
