@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-types": "node ../../tools/generate-types.mjs",
+    "prebuild": "pnpm generate-types"
   },
   "dependencies": {
     "react": "^18.2.0",
