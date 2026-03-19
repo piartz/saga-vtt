@@ -176,7 +176,7 @@ This file is generated from schemas/protocol.json
 Run 'poetry run python tools/generate_types.py' to regenerate
 """
 
-from typing import Any, Dict, List, Literal, TypedDict
+from typing import List, Literal, TypedDict
 
 '''
 
