@@ -39,3 +39,42 @@ jobs:
       - run: poetry run ruff check .
       - run: poetry run mypy app
       - run: poetry run pytest -q
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Python security scanning
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install Python dependencies
+        working-directory: services/api
+        run: poetry install --sync --no-interaction
+      - name: Run pip-audit for Python dependency vulnerabilities
+        working-directory: services/api
+        run: |
+          pipx install pip-audit
+          cd $(poetry env info --path)
+          pip-audit --desc || echo "::warning::pip-audit found vulnerabilities"
+      - name: Run Bandit for Python security issues
+        working-directory: services/api
+        run: |
+          pipx install bandit
+          bandit -r app -ll || echo "::warning::bandit found security issues"
+
+      # JavaScript security scanning
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run pnpm audit for JavaScript dependency vulnerabilities
+        working-directory: apps/web
+        run: pnpm audit --audit-level=moderate || echo "::warning::pnpm audit found vulnerabilities"

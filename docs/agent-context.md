@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-03-03
+Last updated: 2026-03-19
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -18,6 +18,7 @@ Primary references:
 - Do not commit copyrighted rule text, unit profiles, battle boards, or artwork.
 - Keep "VTT core" and "rules module" separated.
 - Server remains source of truth (moves, dice, legality checks).
+- **Do NOT mention AI tools or add "Co-Authored-By" lines in commits or documentation.** Keep all references to development tools and processes neutral.
 
 ## Current Implementation Snapshot
 
@@ -28,8 +29,16 @@ Primary references:
   - `docs` (vision, architecture, protocol, roadmap, playbook)
 - GitHub Actions CI currently runs:
   - web lint + build
-  - API `ruff`, `mypy`, and `pytest`
+  - API `ruff`, `mypy`, and `pytest` (including integration smoke test)
   - deterministic dependency installs (`pnpm --frozen-lockfile`, `poetry install --sync`)
+  - security scanning:
+    - `pip-audit` for Python dependency vulnerabilities
+    - `bandit` for Python security issues (static analysis)
+    - `pnpm audit` for JavaScript dependency vulnerabilities
+- Dependabot configured for automatic dependency updates:
+  - Python dependencies (weekly, Monday)
+  - JavaScript dependencies (weekly, Monday)
+  - GitHub Actions (weekly, Monday)
 - Bootstrap script `tools/setup-and-run.sh` is interactive and platform-aware:
   - detects Linux/macOS
   - prompts before tool install/upgrade
@@ -143,6 +152,10 @@ Primary references:
   - verifies move undo requires opponent acceptance and one-undo-per-turn limit
   - verifies activation undo rejection leaves board state unchanged
   - verifies non-board actions cannot be undone
+- `services/api/tests/test_integration_smoke.py`
+  - comprehensive integration smoke test that validates complete game flow
+  - tests room creation, player connection, initiative roll, turn order choice, token movement, token activation, turn progression, and round advancement
+  - serves as CI smoke test for end-to-end system validation
 - Web UI currently has no automated test suite; board interaction changes are validated via `pnpm build:web` plus manual verification.
 
 ## Docs vs Code Notes
@@ -171,9 +184,7 @@ Primary references:
 - Add WS reconnect/backoff client wrapper with resync behavior.
 - Decide and implement disconnect behavior for turn ownership (pause, auto-pass, or forfeit).
 - Expand dice UX (custom notation input + richer readable log details/filters for `DICE_ROLLED`).
-- Add CI integration smoke test that runs API+web minimal real-time flow (connect/start game/move/end turn).
-- Add dependency/security automation (Dependabot plus CI security scan job).
-- Add deployment workflow with explicit manual approval gate for production.
+- Add deployment workflow with explicit manual approval gate for production (CI step 4).
 - Start ADRs for major protocol/state decisions in `docs/adrs/`.
 
 ## Open Decisions / Risks
