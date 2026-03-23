@@ -1,4 +1,5 @@
 version: 2
+
 updates:
   # Python dependencies (API service)
   - package-ecosystem: "pip"
@@ -6,7 +7,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     groups:
       python-minor-patch:
         patterns:
@@ -24,7 +25,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     groups:
       npm-minor-patch:
         patterns:
@@ -43,6 +44,13 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 3
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
       - "ci"
