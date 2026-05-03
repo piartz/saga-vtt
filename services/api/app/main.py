@@ -4,10 +4,28 @@ import json
 import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Literal, TypeGuard, TypedDict
+from typing import Any, Dict, List, TypeGuard, TypedDict, cast
 
 from fastapi import FastAPI, Header, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.protocol_generated import (
+    ACTIVATE_TOKENPayload,
+    CHOOSE_TURN_ORDERPayload,
+    MOVE_TOKENPayload,
+    Phase,
+    RESPOND_UNDO_REQUESTPayload,
+    ROLL_DICEPayload,
+    ActivationType,
+    InitiativeState,
+    Player as PlayerState,
+    Token as TokenState,
+    TurnChoice,
+    TurnState,
+    UndoActionType,
+    UndoRequest as PendingUndoRequest,
+    UndoState,
+)
 
 PROTOCOL_VERSION = 1
 BOARD_WIDTH_MM = 800
@@ -18,52 +36,14 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-class TokenState(TypedDict):
-    id: str
-    label: str
-    x_mm: int
-    y_mm: int
-    r_mm: int
-    activation_count_this_turn: int
-    last_activation_type: ActivationType | None
-
-
-ActivationType = Literal["move", "charge", "shoot", "rest"]
 ACTIVATION_TYPES: tuple[ActivationType, ...] = ("move", "charge", "shoot", "rest")
-
-
-class PlayerState(TypedDict):
-    id: str
-    label: str
-
-
-class TurnState(TypedDict):
-    phase: str
-    round: int
-    active_player_id: str | None
 
 
 class LobbyRoomState(TypedDict):
     game_id: str
     player_count: int
-    phase: str
+    phase: Phase
     round: int
-
-
-TurnChoice = Literal["FIRST", "SECOND"]
-
-
-class InitiativeState(TypedDict):
-    winner_player_id: str
-    loser_player_id: str
-    winner_roll: int
-    loser_roll: int
-    chooser_choice: TurnChoice | None
-    first_player_id: str | None
-    second_player_id: str | None
-
-
-UndoActionType = Literal["MOVE_TOKEN", "ACTIVATE_TOKEN"]
 
 
 class UndoEntry(TypedDict):
@@ -72,18 +52,6 @@ class UndoEntry(TypedDict):
     token_id: str
     before: TokenState
     after: TokenState
-
-
-class PendingUndoRequest(TypedDict):
-    requester_player_id: str
-    responder_player_id: str
-    action_type: UndoActionType
-    token_id: str
-
-
-class UndoState(TypedDict):
-    pending_request: PendingUndoRequest | None
-    undo_used_this_turn_player_ids: List[str]
 
 
 def default_tokens() -> Dict[str, TokenState]:
@@ -117,7 +85,7 @@ class GameRoom:
     connections: List[WebSocket] = field(default_factory=list)
     players_by_ws_id: Dict[int, PlayerState] = field(default_factory=dict)
     tokens: Dict[str, TokenState] = field(default_factory=default_tokens)
-    phase: str = "lobby"
+    phase: Phase = "lobby"
     round: int = 0
     active_player_id: str | None = None
     initiative: InitiativeState | None = None
@@ -345,10 +313,11 @@ def apply_respond_undo_request(
         return None, None, None, None, "Only the opponent can accept or reject this undo request."
     if not isinstance(payload, dict):
         return None, None, None, None, "RESPOND_UNDO_REQUEST payload must be an object."
-    if not isinstance(payload.get("accept"), bool):
+    respond_payload = cast(RESPOND_UNDO_REQUESTPayload, payload)
+    if not isinstance(respond_payload.get("accept"), bool):
         return None, None, None, None, "RESPOND_UNDO_REQUEST payload.accept must be boolean."
 
-    accept = payload["accept"]
+    accept = respond_payload["accept"]
     requester_player_id = pending_request["requester_player_id"]
     undo_entry = latest_undoable_action_for_player(room, requester_player_id)
     resolved_request: PendingUndoRequest = {
@@ -443,7 +412,8 @@ def apply_choose_turn_order(
     if not isinstance(payload, dict):
         return None, None, "CHOOSE_TURN_ORDER payload must be an object."
 
-    choice = payload.get("choice")
+    choose_payload = cast(CHOOSE_TURN_ORDERPayload, payload)
+    choice = choose_payload.get("choice")
     if choice not in ("FIRST", "SECOND"):
         return None, None, "CHOOSE_TURN_ORDER choice must be FIRST or SECOND."
 
@@ -511,9 +481,10 @@ def apply_move_token(room: GameRoom, payload: Any) -> tuple[TokenState | None, T
     if not isinstance(payload, dict):
         return None, None, "MOVE_TOKEN payload must be an object."
 
-    token_id = payload.get("token_id")
-    x_mm = payload.get("x_mm")
-    y_mm = payload.get("y_mm")
+    move_payload = cast(MOVE_TOKENPayload, payload)
+    token_id = move_payload.get("token_id")
+    x_mm = move_payload.get("x_mm")
+    y_mm = move_payload.get("y_mm")
 
     if not isinstance(token_id, str):
         return None, None, "MOVE_TOKEN token_id must be a string."
@@ -547,8 +518,9 @@ def apply_activate_token(room: GameRoom, payload: Any) -> tuple[TokenState | Non
     if not isinstance(payload, dict):
         return None, None, "ACTIVATE_TOKEN payload must be an object."
 
-    token_id = payload.get("token_id")
-    activation_type = payload.get("activation_type")
+    activate_payload = cast(ACTIVATE_TOKENPayload, payload)
+    token_id = activate_payload.get("token_id")
+    activation_type = activate_payload.get("activation_type")
 
     if not isinstance(token_id, str):
         return None, None, "ACTIVATE_TOKEN token_id must be a string."
@@ -590,9 +562,10 @@ def apply_roll_dice(payload: Any) -> tuple[DiceRollResult | None, str | None]:
     if not isinstance(payload, dict):
         return None, "ROLL_DICE payload must be an object."
 
-    count = payload.get("count")
-    sides = payload.get("sides")
-    modifier = payload.get("modifier", 0)
+    roll_payload = cast(ROLL_DICEPayload, payload)
+    count = roll_payload.get("count")
+    sides = roll_payload.get("sides")
+    modifier = roll_payload.get("modifier", 0)
 
     if not is_int(count):
         return None, "ROLL_DICE count must be an integer between 1 and 20."
