@@ -130,10 +130,10 @@ If you have a complex type used in multiple places, add it to `"definitions"`:
   "definitions": {
     "MyComplexType": {
       "type": "object",
-      "required": ["id", "name"],
+      "required": ["id", "label"],
       "properties": {
         "id": {"type": "string"},
-        "name": {"type": "string"}
+        "label": {"type": "string"}
       },
       "additionalProperties": false
     }

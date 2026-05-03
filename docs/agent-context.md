@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-03-19 (typed protocol schema added)
+Last updated: 2026-05-03 (protocol schema aligned to runtime payloads)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -45,6 +45,7 @@ Primary references:
   - Single source of truth for WebSocket protocol in `schemas/protocol.json`
   - Auto-generates TypeScript types (`apps/web/src/protocol.generated.ts`)
   - Auto-generates Python TypedDicts (`services/api/app/protocol_generated.py`)
+  - Schema now matches runtime token and ping/pong payload shape (`label`/`r_mm`, `PING.client_time`, `PONG.echo`)
   - TypeScript generation runs automatically before build (`prebuild` script)
   - See `schemas/README.md` and `docs/typed-protocol-schema.md` for details
 - Bootstrap script `tools/setup-and-run.sh` is interactive and platform-aware:
@@ -65,7 +66,7 @@ Primary references:
   - emits `HELLO` event with protocol version, board, token snapshot, and player list
   - emits `PLAYER_JOINED` to existing clients when a new player connects
   - emits `PLAYER_LEFT` to remaining clients when a player disconnects
-  - handles `PING` -> broadcasts `PONG`
+  - handles `PING` -> broadcasts `PONG` with echoed payload (`client_time` when provided)
   - includes `actor_player_id` on player-attributed events (presence, movement, dice, and command errors)
   - includes `self_player_id` in `HELLO.payload` for client-local identity
   - includes turn snapshot in `HELLO.payload.turn` (`phase`, `round`, `active_player_id`)
@@ -187,7 +188,7 @@ Primary references:
    - replays and spectators
 
 ## Recommended Next Tasks
-- **Migrate codebase to use generated protocol types** (infrastructure complete, see `docs/typed-protocol-schema.md` for migration guide).
+- **Begin Phase 1 generated-type adoption in runtime code** (`apps/web/src/ui/App.tsx`, `services/api/app/main.py`) now that schema/runtime payload alignment is complete.
 - Extract a per-room connection manager abstraction (presence now works but is still inline in `main.py`).
 - Add WS reconnect/backoff client wrapper with resync behavior.
 - Decide and implement disconnect behavior for turn ownership (pause, auto-pass, or forfeit).
@@ -200,7 +201,7 @@ Primary references:
 - No auth/identity: all clients can currently issue movement and dice commands.
 - Presence identities are ephemeral per websocket and not stable across reconnect.
 - In-memory room state means process restart loses all games.
-- Protocol evolution strategy is documented but not yet exercised in code.
+- Generated protocol types are up-to-date, but main runtime handlers still rely on inline/manual types in `App.tsx` and `main.py`.
 
 ## Quick Session Bootstrap (for agents)
 1. Read this file.

@@ -20,10 +20,10 @@ export interface Player {
 
 export interface Token {
   id: string;
-  name: string;
+  label: string;
   x_mm: number;
   y_mm: number;
-  radius_mm: number;
+  r_mm: number;
   activation_count_this_turn: number;
   last_activation_type: ActivationType | null;
 }
@@ -61,9 +61,15 @@ export interface UndoState {
   undo_used_this_turn_player_ids: string[];
 }
 
+export interface PingPayload {
+  client_time?: string;
+}
+
 // Command Payloads
 
-export type PINGPayload = Record<string, never>;
+export type PINGPayload = {
+  client_time?: string;
+};
 
 export type MOVE_TOKENPayload = {
   token_id: string;
@@ -107,7 +113,9 @@ export interface CommandEnvelope {
 
 // Event Payloads
 
-export type PONGPayload = Record<string, never>;
+export type PONGPayload = {
+  echo: PingPayload;
+};
 
 export type HELLOPayload = {
   game_id: string;

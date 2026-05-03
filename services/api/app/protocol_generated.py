@@ -17,10 +17,10 @@ class Player(TypedDict):
 
 class Token(TypedDict):
     id: str
-    name: str
+    label: str
     x_mm: int
     y_mm: int
-    radius_mm: int
+    r_mm: int
     activation_count_this_turn: int
     last_activation_type: ActivationType | None
 
@@ -52,11 +52,14 @@ class UndoState(TypedDict):
     pending_request: UndoRequest | None
     undo_used_this_turn_player_ids: List[str]
 
+class PingPayload(TypedDict, total=False):
+    client_time: str
+
 
 # Command Payloads
 
-class PINGPayload(TypedDict):
-    pass
+class PINGPayload(TypedDict, total=False):
+    client_time: str
 
 class MOVE_TOKENPayload(TypedDict):
     token_id: str
@@ -93,7 +96,7 @@ CommandType = Literal["PING", "MOVE_TOKEN", "ACTIVATE_TOKEN", "START_GAME", "CHO
 # Event Payloads
 
 class PONGPayload(TypedDict):
-    pass
+    echo: PingPayload
 
 class HELLOPayload(TypedDict):
     game_id: str
