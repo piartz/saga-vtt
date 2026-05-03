@@ -46,6 +46,9 @@ Primary references:
   - Auto-generates TypeScript types (`apps/web/src/protocol.generated.ts`)
   - Auto-generates Python TypedDicts (`services/api/app/protocol_generated.py`)
   - Schema now matches runtime token and ping/pong payload shape (`label`/`r_mm`, `PING.client_time`, `PONG.echo`)
+  - Phase 1 adoption started in runtime code:
+    - `apps/web/src/ui/App.tsx` now imports generated envelope/state types
+    - `services/api/app/main.py` now imports generated protocol TypedDict/Literal aliases and payload types
   - TypeScript generation runs automatically before build (`prebuild` script)
   - See `schemas/README.md` and `docs/typed-protocol-schema.md` for details
 - Bootstrap script `tools/setup-and-run.sh` is interactive and platform-aware:
@@ -188,7 +191,7 @@ Primary references:
    - replays and spectators
 
 ## Recommended Next Tasks
-- **Begin Phase 1 generated-type adoption in runtime code** (`apps/web/src/ui/App.tsx`, `services/api/app/main.py`) now that schema/runtime payload alignment is complete.
+- **Complete remaining Phase 1 adoption and begin Phase 2 cleanup** (remove remaining duplicate inline protocol types/parsers in `apps/web/src/ui/App.tsx` and `services/api/app/main.py`).
 - Extract a per-room connection manager abstraction (presence now works but is still inline in `main.py`).
 - Add WS reconnect/backoff client wrapper with resync behavior.
 - Decide and implement disconnect behavior for turn ownership (pause, auto-pass, or forfeit).
@@ -201,7 +204,7 @@ Primary references:
 - No auth/identity: all clients can currently issue movement and dice commands.
 - Presence identities are ephemeral per websocket and not stable across reconnect.
 - In-memory room state means process restart loses all games.
-- Generated protocol types are up-to-date, but main runtime handlers still rely on inline/manual types in `App.tsx` and `main.py`.
+- Generated protocol types are now partially adopted, but runtime validation still relies on custom parsing/guards; full Phase 2 duplicate-type cleanup is still pending.
 
 ## Quick Session Bootstrap (for agents)
 1. Read this file.

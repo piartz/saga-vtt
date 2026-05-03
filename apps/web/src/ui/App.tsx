@@ -1,67 +1,24 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Board, type ActivationType, type BoardToken } from "./Board";
-
-type EventEnvelope = {
-  kind: "EVENT";
-  type: string;
-  seq: number;
-  server_time: string;
-  actor_player_id?: string;
-  payload: unknown;
-};
-
-type CommandEnvelope = {
-  kind: "COMMAND";
-  type: string;
-  client_msg_id: string;
-  payload: unknown;
-};
+import type {
+  CommandEnvelope,
+  EventEnvelope,
+  InitiativeState,
+  Player as PresencePlayer,
+  TurnChoice,
+  TurnState,
+  UndoRequest,
+  UndoState,
+} from "../protocol.generated";
 
 type WsStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
 type EventLogMode = "READABLE" | "ADVANCED";
-
-type PresencePlayer = {
-  id: string;
-  label: string;
-};
 
 type LobbyRoom = {
   game_id: string;
   player_count: number;
   phase: "lobby" | "running";
   round: number;
-};
-
-type TurnState = {
-  phase: "lobby" | "running";
-  round: number;
-  active_player_id: string | null;
-};
-
-type TurnChoice = "FIRST" | "SECOND";
-
-type InitiativeState = {
-  winner_player_id: string;
-  loser_player_id: string;
-  winner_roll: number;
-  loser_roll: number;
-  chooser_choice: TurnChoice | null;
-  first_player_id: string | null;
-  second_player_id: string | null;
-};
-
-type UndoActionType = "MOVE_TOKEN" | "ACTIVATE_TOKEN";
-
-type UndoRequest = {
-  requester_player_id: string;
-  responder_player_id: string;
-  action_type: UndoActionType;
-  token_id: string;
-};
-
-type UndoState = {
-  pending_request: UndoRequest | null;
-  undo_used_this_turn_player_ids: string[];
 };
 
 function roomIdFromUrl(): string | null {
