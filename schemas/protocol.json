@@ -37,13 +37,13 @@
 
     "Token": {
       "type": "object",
-      "required": ["id", "name", "x_mm", "y_mm", "radius_mm", "activation_count_this_turn", "last_activation_type"],
+      "required": ["id", "label", "x_mm", "y_mm", "r_mm", "activation_count_this_turn", "last_activation_type"],
       "properties": {
         "id": {"type": "string"},
-        "name": {"type": "string"},
+        "label": {"type": "string"},
         "x_mm": {"type": "integer"},
         "y_mm": {"type": "integer"},
-        "radius_mm": {"type": "integer"},
+        "r_mm": {"type": "integer"},
         "activation_count_this_turn": {"type": "integer"},
         "last_activation_type": {
           "oneOf": [
@@ -139,6 +139,14 @@
         }
       },
       "additionalProperties": false
+    },
+
+    "PingPayload": {
+      "type": "object",
+      "properties": {
+        "client_time": {"type": "string"}
+      },
+      "additionalProperties": false
     }
   },
 
@@ -146,7 +154,9 @@
     "PING": {
       "payload": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "client_time": {"type": "string"}
+        },
         "additionalProperties": false
       }
     },
@@ -252,7 +262,10 @@
     "PONG": {
       "payload": {
         "type": "object",
-        "properties": {},
+        "required": ["echo"],
+        "properties": {
+          "echo": {"$ref": "#/definitions/PingPayload"}
+        },
         "additionalProperties": false
       }
     },

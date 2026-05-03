@@ -22,11 +22,10 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 
 ### Token
 - id
-- name
-- owner_player_id
-- base_diameter_mm
-- position_mm: {x, y}
-- facing_deg
+- label
+- x_mm
+- y_mm
+- r_mm
 - activation_count_this_turn
 - last_activation_type (`move` / `charge` / `shoot` / `rest` / null)
 - tags/status (activated, fatigued, etc. — rules-specific)
@@ -43,6 +42,10 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - server_time
 - actor_player_id (optional)
 - client_msg_id (optional echo when tied to a client command)
+
+### Connectivity payloads
+- `PING.payload`: `{ client_time?: string }`
+- `PONG.payload`: `{ echo: { client_time?: string } }`
 
 ### Presence payloads
 - `HELLO.payload.players`: `Player[]`

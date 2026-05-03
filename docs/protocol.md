@@ -31,7 +31,9 @@ This is the current MVP protocol implemented by the API/web app.
   "kind": "COMMAND",
   "type": "PING",
   "client_msg_id": "uuid",
-  "payload": {}
+  "payload": {
+    "client_time": "2026-05-03T21:20:00Z"
+  }
 }
 ```
 
@@ -43,7 +45,11 @@ This is the current MVP protocol implemented by the API/web app.
   "seq": 12,
   "server_time": "2026-02-26T12:34:56Z",
   "actor_player_id": "a1b2c3",
-  "payload": {}
+  "payload": {
+    "echo": {
+      "client_time": "2026-05-03T21:20:00Z"
+    }
+  }
 }
 ```
 
@@ -96,6 +102,8 @@ This is the current MVP protocol implemented by the API/web app.
 
 ### Connectivity
 - `PING` → `PONG`
+  - `PING.payload` supports optional `client_time` (`string`)
+  - `PONG.payload.echo` mirrors that optional `client_time`
   - `PONG` includes `actor_player_id` of the player who sent the `PING`
 
 ### Board interactions
@@ -123,6 +131,14 @@ This is the current MVP protocol implemented by the API/web app.
   - `token`
   - `client_msg_id`
 - `TOKEN_ACTIVATED` includes `actor_player_id` of the player who sent `ACTIVATE_TOKEN`
+- token snapshots in `HELLO`, `TOKEN_MOVED`, `TOKEN_ACTIVATED`, and `TURN_CHANGED.payload.tokens` use:
+  - `id`
+  - `label`
+  - `x_mm`
+  - `y_mm`
+  - `r_mm`
+  - `activation_count_this_turn`
+  - `last_activation_type`
 - undo rules:
   - only board actions (`MOVE_TOKEN`, `ACTIVATE_TOKEN`) are undoable
   - undo request targets the latest undoable action made by the active player in the current turn

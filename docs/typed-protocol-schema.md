@@ -1,6 +1,6 @@
 # Typed Protocol Schema System
 
-**Status**: ✅ Infrastructure Complete | ⏳ Codebase Migration Pending
+**Status**: ✅ Infrastructure Complete | ✅ Schema/Runtime Alignment Complete | ⏳ Codebase Migration Pending
 
 ## What Was Built
 
@@ -10,9 +10,11 @@ A complete schema-based type generation system that provides a **single source o
 
 1. **Schema Definition** (`schemas/protocol.json`):
    - JSON Schema defining all commands, events, and shared types
-   - 11 shared definitions (Player, Token, Board, TurnState, etc.)
+   - 12 shared definitions (Player, Token, Board, TurnState, PingPayload, etc.)
    - 9 command types (PING, MOVE_TOKEN, START_GAME, etc.)
    - 17 event types (PONG, HELLO, TOKEN_MOVED, etc.)
+   - token payload fields aligned with runtime (`label`, `r_mm`)
+   - ping/pong payloads aligned with runtime (`PING.client_time`, `PONG.echo`)
 
 2. **TypeScript Generator** (`tools/generate-types.mjs`):
    - Generates type-safe TypeScript interfaces and types
