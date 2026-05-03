@@ -20,7 +20,6 @@ from app.protocol_generated import (
     InitiativeState,
     Player as PlayerState,
     Token as TokenState,
-    TurnChoice,
     TurnState,
     UndoActionType,
     UndoRequest as PendingUndoRequest,
