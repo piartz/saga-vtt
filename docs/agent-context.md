@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-05-03 (protocol schema aligned to runtime payloads)
+Last updated: 2026-06-17 (backend connection manager extracted)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -56,13 +56,18 @@ Primary references:
   - prompts before tool install/upgrade
   - uses installer fallbacks (pnpm prefers Homebrew on macOS)
 
-### Backend (`services/api/app/main.py`)
+### Backend (`services/api/app/main.py`, `services/api/app/connections.py`)
 - `GET /health` returns status + UTC time.
 - `POST /games` creates in-memory room with:
   - random `game_id`
   - `protocol_version = 1`
   - board size `800x500` mm
   - default tokens A/B
+- Per-room websocket transport/presence state is isolated in `RoomConnectionManager`:
+  - registers/removes websocket connections
+  - assigns ephemeral player identities
+  - provides player snapshots and connected-player ordering
+  - handles broadcast fan-out and stale websocket cleanup
 - `WS /games/{game_id}/ws`:
   - accepts connection
   - assigns ephemeral player identity per connection
@@ -150,6 +155,9 @@ Primary references:
   - wheel gestures over the board are isolated from page scroll (page scroll continues normally outside board area)
 
 ### Tests
+- `services/api/tests/test_connections.py`
+  - verifies `RoomConnectionManager` player assignment and snapshots
+  - verifies broadcast exclusion and stale websocket cleanup
 - `services/api/tests/test_health.py`
 - `services/api/tests/test_rooms_and_moves.py`
   - verifies room creation
@@ -192,7 +200,7 @@ Primary references:
 
 ## Recommended Next Tasks
 - **Complete remaining Phase 1 adoption and begin Phase 2 cleanup** (remove remaining duplicate inline protocol types/parsers in `apps/web/src/ui/App.tsx` and `services/api/app/main.py`).
-- Extract a per-room connection manager abstraction (presence now works but is still inline in `main.py`).
+- Extract command routing/dispatch out of the websocket loop now that transport/presence state is isolated.
 - Add WS reconnect/backoff client wrapper with resync behavior.
 - Decide and implement disconnect behavior for turn ownership (pause, auto-pass, or forfeit).
 - Expand dice UX (custom notation input + richer readable log details/filters for `DICE_ROLLED`).
@@ -204,6 +212,7 @@ Primary references:
 - No auth/identity: all clients can currently issue movement and dice commands.
 - Presence identities are ephemeral per websocket and not stable across reconnect.
 - In-memory room state means process restart loses all games.
+- Connection/presence transport state is isolated, but the websocket handler still owns command dispatch and disconnect game-state policy.
 - Generated protocol types are now partially adopted, but runtime validation still relies on custom parsing/guards; full Phase 2 duplicate-type cleanup is still pending.
 
 ## Quick Session Bootstrap (for agents)
