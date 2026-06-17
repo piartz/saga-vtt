@@ -9,6 +9,7 @@ from typing import Any, Dict, List, TypeGuard, TypedDict, cast
 from fastapi import FastAPI, Header, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.connections import RoomConnectionManager
 from app.protocol_generated import (
     ACTIVATE_TOKENPayload,
     CHOOSE_TURN_ORDERPayload,
@@ -81,8 +82,7 @@ class GameRoom:
     game_id: str
     creator_client_id: str | None = None
     seq: int = 0
-    connections: List[WebSocket] = field(default_factory=list)
-    players_by_ws_id: Dict[int, PlayerState] = field(default_factory=dict)
+    connections: RoomConnectionManager = field(default_factory=RoomConnectionManager)
     tokens: Dict[str, TokenState] = field(default_factory=default_tokens)
     phase: Phase = "lobby"
     round: int = 0
@@ -93,16 +93,7 @@ class GameRoom:
     undo_used_this_turn_player_ids: set[str] = field(default_factory=set)
 
     async def broadcast(self, event: Dict[str, Any], exclude_ws: WebSocket | None = None) -> None:
-        for ws in list(self.connections):
-            if exclude_ws is not None and ws == exclude_ws:
-                continue
-            try:
-                await ws.send_text(json.dumps(event))
-            except WebSocketDisconnect:
-                ws_id = id(ws)
-                if ws in self.connections:
-                    self.connections.remove(ws)
-                self.players_by_ws_id.pop(ws_id, None)
+        await self.connections.broadcast(event, exclude_ws=exclude_ws)
 
 
 # In-memory room registry (MVP only)
@@ -144,7 +135,7 @@ def room_by_creator_client_id(creator_client_id: str) -> GameRoom | None:
 def room_lobby_snapshot(room: GameRoom) -> LobbyRoomState:
     return {
         "game_id": room.game_id,
-        "player_count": len(room.players_by_ws_id),
+        "player_count": room.connections.player_count(),
         "phase": room.phase,
         "round": room.round,
     }
@@ -152,7 +143,7 @@ def room_lobby_snapshot(room: GameRoom) -> LobbyRoomState:
 
 def active_lobby_rooms_snapshot() -> List[LobbyRoomState]:
     active_rooms = [
-        room_lobby_snapshot(room) for room in ROOMS.values() if len(room.players_by_ws_id) > 0
+        room_lobby_snapshot(room) for room in ROOMS.values() if room.connections.has_any()
     ]
     active_rooms.sort(key=lambda room: room["game_id"])
     return active_rooms
@@ -166,17 +157,8 @@ def is_activation_type(value: Any) -> TypeGuard[ActivationType]:
     return isinstance(value, str) and value in ACTIVATION_TYPES
 
 
-def create_player(room: GameRoom) -> PlayerState:
-    while True:
-        player_id = secrets.token_hex(3)
-        already_used = any(player["id"] == player_id for player in room.players_by_ws_id.values())
-        if not already_used:
-            break
-    return {"id": player_id, "label": f"Player {player_id}"}
-
-
 def room_players_snapshot(room: GameRoom) -> List[PlayerState]:
-    return sorted(room.players_by_ws_id.values(), key=lambda player: player["id"])
+    return room.connections.players_snapshot()
 
 
 def room_turn_snapshot(room: GameRoom) -> TurnState:
@@ -238,7 +220,7 @@ def reset_undo_turn_state(room: GameRoom) -> None:
 
 
 def connected_player_ids(room: GameRoom) -> List[str]:
-    return [player["id"] for player in room_players_snapshot(room)]
+    return room.connections.connected_player_ids()
 
 
 def find_single_opponent(room: GameRoom, requester_player_id: str) -> str | None:
@@ -661,9 +643,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
     if room is None:
         room = create_room(game_id)
 
-    room.connections.append(ws)
-    player = create_player(room)
-    room.players_by_ws_id[id(ws)] = player
+    player = room.connections.add(ws)
 
     try:
         # Initial hello event
@@ -1122,9 +1102,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
         pass
     finally:
         # Remove connection
-        disconnected_player = room.players_by_ws_id.pop(id(ws), None)
-        if ws in room.connections:
-            room.connections.remove(ws)
+        disconnected_player = room.connections.remove(ws)
         if disconnected_player is not None and room.pending_undo_request is not None:
             pending_request = room.pending_undo_request
             if disconnected_player["id"] in (
@@ -1132,7 +1110,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 pending_request["responder_player_id"],
             ):
                 room.pending_undo_request = None
-                if room.connections:
+                if room.connections.has_any():
                     await room.broadcast(
                         make_event(
                             room,
@@ -1148,7 +1126,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 initiative["loser_player_id"],
             ):
                 room.initiative = None
-                if room.connections:
+                if room.connections.has_any():
                     await room.broadcast(
                         make_event(
                             room,
@@ -1181,7 +1159,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                     room.phase = "lobby"
                     room.round = 0
                     reset_undo_turn_state(room)
-        if disconnected_player is not None and room.connections:
+        if disconnected_player is not None and room.connections.has_any():
             await room.broadcast(
                 make_event(
                     room,
@@ -1191,5 +1169,5 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                 )
             )
         # Cleanup empty room
-        if not room.connections:
+        if not room.connections.has_any():
             ROOMS.pop(game_id, None)
