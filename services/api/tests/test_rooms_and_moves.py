@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 
 from app.main import ROOMS, app
 
+TOY_RULES_MODULE = {"id": "toy-skirmish", "name": "Toy Skirmish", "version": "0.1.0"}
+
 
 @pytest.fixture(autouse=True)
 def clear_rooms() -> None:
@@ -27,6 +29,7 @@ def test_create_game_room() -> None:
     assert len(body["tokens"]) >= 2
     assert body["tokens"][0]["activation_count_this_turn"] == 0
     assert body["tokens"][0]["last_activation_type"] is None
+    assert body["rules_module"] == TOY_RULES_MODULE
     assert body["created"] is True
 
 
@@ -44,6 +47,8 @@ def test_create_game_returns_existing_room_for_same_client() -> None:
     assert first_body["game_id"] == second_body["game_id"]
     assert first_body["created"] is True
     assert second_body["created"] is False
+    assert first_body["rules_module"] == TOY_RULES_MODULE
+    assert second_body["rules_module"] == TOY_RULES_MODULE
     assert len(ROOMS) == 1
 
 
@@ -87,6 +92,7 @@ def test_list_rooms_includes_connected_room_and_updates_player_count() -> None:
                 "player_count": 1,
                 "phase": "lobby",
                 "round": 0,
+                "rules_module": TOY_RULES_MODULE,
             }
         ]
 
@@ -100,6 +106,7 @@ def test_list_rooms_includes_connected_room_and_updates_player_count() -> None:
                     "player_count": 2,
                     "phase": "lobby",
                     "round": 0,
+                    "rules_module": TOY_RULES_MODULE,
                 }
             ]
 
@@ -111,6 +118,7 @@ def test_list_rooms_includes_connected_room_and_updates_player_count() -> None:
                 "player_count": 1,
                 "phase": "lobby",
                 "round": 0,
+                "rules_module": TOY_RULES_MODULE,
             }
         ]
 

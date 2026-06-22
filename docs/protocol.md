@@ -5,15 +5,25 @@ This is the current MVP protocol implemented by the API/web app.
 ## HTTP endpoints
 
 ### `POST /games`
+- Optional JSON body:
+  - `rules_module_id` (`string`, defaults to `toy-skirmish`)
 - Creates a room and returns:
   - `game_id`
   - `protocol_version`
   - `board`
   - `tokens`
+  - `rules_module`
   - `created` (`true` when a new room was created, `false` when an existing room was returned)
 - Optional header: `X-Client-Id`
   - If provided, the server enforces one created room per client id.
   - Repeated `POST /games` calls with the same `X-Client-Id` return the same room.
+
+### `GET /rules/modules`
+- Returns registered rules modules:
+  - `modules[]` with:
+    - `id`
+    - `name`
+    - `version`
 
 ### `GET /rooms`
 - Returns active rooms (rooms with at least one connected websocket player):
@@ -22,6 +32,7 @@ This is the current MVP protocol implemented by the API/web app.
     - `player_count`
     - `phase`
     - `round`
+    - `rules_module`
 
 ## Envelope (WebSocket)
 
@@ -65,6 +76,7 @@ This is the current MVP protocol implemented by the API/web app.
   - `board`
   - `tokens`
   - `players` (connected players snapshot)
+  - `rules_module`
   - `self_player_id` (the current websocket player's id)
   - `initiative` (nullable; see turn order flow below)
   - `undo` (current undo state snapshot for the running turn)

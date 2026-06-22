@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-06-22 (rules module roadmap added)
+Last updated: 2026-06-22 (rules module phase 0 started)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -48,6 +48,12 @@ Primary references:
   - phased plan from toy module guardrails through setup, resources, activations, fatigue, combat, terrain, scenarios, and content strategy
   - iteration playbook for small, test-backed development rounds
   - source/content boundary: no copyrighted rule prose, faction boards, unit profiles, scenarios, or artwork should be committed
+- Rules-module Phase 0 implementation has started:
+  - `services/api/app/rules/` contains a placeholder rules module interface, registry, and original `toy-skirmish` module metadata
+  - `GET /rules/modules` lists registered modules
+  - `POST /games` accepts optional `rules_module_id` and rejects unknown module ids
+  - room creation, active-room listings, and `HELLO` snapshots include `rules_module`
+  - protocol schema and generated TypeScript/Python protocol types include `RulesModule`
 - **Typed Protocol Schema System**:
   - Single source of truth for WebSocket protocol in `schemas/protocol.json`
   - Auto-generates TypeScript types (`apps/web/src/protocol.generated.ts`)
@@ -206,10 +212,10 @@ Primary references:
    - replays and spectators
 
 ## Recommended Next Tasks
-- Start rules-module Phase 0 from `rules-roadmap/implementation-plan.md`:
-  - define a placeholder `RulesModule` interface
-  - add an original toy rules module/fixtures
-  - prove module selection and loading without adding protected content
+- Continue rules-module Phase 0 from `rules-roadmap/implementation-plan.md`:
+  - broaden original toy fixtures for unit types, terrain traits, ability timings, and scenario setup
+  - keep module behavior passive until the first rules-specific command path is defined
+  - preserve current generic game flow while module state is threaded through snapshots
 - **Complete remaining Phase 1 adoption and begin Phase 2 cleanup** (remove remaining duplicate inline protocol types/parsers in `apps/web/src/ui/App.tsx` and `services/api/app/main.py`).
 - Extract command routing/dispatch out of the websocket loop now that transport/presence state is isolated.
 - Add WS reconnect/backoff client wrapper with resync behavior.
