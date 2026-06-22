@@ -59,7 +59,7 @@ Content boundary:
 - Does `HELLO` include enough snapshot state for reconnect?
 - Are reaction/pending-choice windows explicit?
 - Are copied prose, published examples, battle-board layout, artwork, and other expressive source material absent?
-- Can the behavior be tested with invented fixtures?
+- Can the behavior be tested with minimal SAGA Core fixtures?
 - Did docs stay aligned with code?
 
 ## Documentation Discipline

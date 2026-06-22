@@ -6,47 +6,47 @@ from app.rules.types import RulesModule
 
 
 @dataclass(frozen=True)
-class ToySkirmishModule:
+class SagaCoreModule:
     metadata: RulesModule = RulesModule(
-        id="toy-skirmish",
-        name="Toy Skirmish",
+        id="saga-core",
+        name="SAGA Core",
         version="0.1.0",
         unit_types=(
             {
                 "id": "warlord",
                 "name": "Warlord",
-                "role": "hero",
+                "role": "warlord",
                 "min_figures": 1,
                 "max_figures": 1,
-                "base_profile_id": "single-round",
-                "generates_command_resource_at_figures": 1,
+                "base_profile_id": "standard-foot-round",
+                "generates_saga_dice_at_figures": 1,
             },
             {
                 "id": "hearthguards",
                 "name": "Hearthguards",
-                "role": "elite",
+                "role": "hearthguards",
                 "min_figures": 4,
                 "max_figures": 12,
-                "base_profile_id": "small-round",
-                "generates_command_resource_at_figures": 1,
+                "base_profile_id": "standard-foot-round",
+                "generates_saga_dice_at_figures": 1,
             },
             {
                 "id": "warriors",
                 "name": "Warriors",
-                "role": "core",
+                "role": "warriors",
                 "min_figures": 4,
                 "max_figures": 12,
-                "base_profile_id": "small-round",
-                "generates_command_resource_at_figures": 4,
+                "base_profile_id": "standard-foot-round",
+                "generates_saga_dice_at_figures": 4,
             },
             {
                 "id": "levies",
                 "name": "Levies",
-                "role": "levy",
+                "role": "levies",
                 "min_figures": 4,
                 "max_figures": 12,
-                "base_profile_id": "small-round",
-                "generates_command_resource_at_figures": 6,
+                "base_profile_id": "standard-foot-round",
+                "generates_saga_dice_at_figures": 6,
             },
         ),
         terrain_traits=(
@@ -154,10 +154,10 @@ class ToySkirmishModule:
                     "confirm_ready",
                 ],
                 "turn_limit": 6,
-                "objective_ids": ["score_survival", "score_enemy_losses"],
+                "objective_ids": ["survival_points", "slaughtering_points"],
             },
         ),
     )
 
 
-TOY_SKIRMISH_MODULE = ToySkirmishModule()
+SAGA_CORE_MODULE = SagaCoreModule()

@@ -20,7 +20,7 @@
 ### Rules Module Owns
 - Game phase definitions and legal command windows.
 - Warband schema, unit traits, equipment tags, and derived stats.
-- Command-resource generation and spend rules.
+- SAGA dice generation and spend rules.
 - Ability timing, costs, trigger restrictions, and effect composition.
 - Activation legality and consequences.
 - Fatigue/exhaustion thresholds and spend effects.
@@ -48,16 +48,16 @@ The exact interface should wait until the first implementation phase, but every 
 ### Game State
 - Current phase and active player.
 - Scenario state: setup stage, deployment zones, turn limit, objectives, score.
-- Player state: command resources, pending choices, available reactions.
+- Player state: SAGA dice pool, pending choices, available reactions.
 - Unit state: ownership, type, figure count, equipment tags, fatigue, exhaustion state, activation history, position/formation.
 - Terrain state: geometry, type traits, cover/visibility/movement effects.
-- Ability state: active dice/resources, prepared abilities, used-once markers, lingering effects.
+- Ability state: allocated SAGA dice, prepared abilities, used-once markers, lingering effects.
 
 ### Commands
 Initial commands should stay coarse and intent-focused:
 
 - Setup: choose scenario, place terrain, deploy unit, confirm setup.
-- Resource phase: roll command resources, allocate resource, trigger orders ability.
+- Orders phase: roll SAGA dice, allocate SAGA dice, trigger Orders ability.
 - Activation phase: activate unit, move unit, declare charge, declare shooting, rest unit.
 - Reaction windows: spend fatigue, trigger reaction ability, pass reaction.
 - Combat choices: select target, close ranks or equivalent defensive choice, choose ability, choose casualties, resolve withdrawal.
@@ -66,7 +66,7 @@ Initial commands should stay coarse and intent-focused:
 ### Events
 Events should be facts with enough payload to replay and audit:
 
-- Resources generated, allocated, spent, removed.
+- SAGA dice generated, allocated, spent, removed.
 - Ability triggered and effects applied.
 - Unit activated, moved, charged, shot, rested.
 - Fatigue added, removed, spent, exhaustion changed.
@@ -81,9 +81,9 @@ The rules require an ability system with timing windows and costs. Avoid hard-co
 Recommended layers:
 
 - **Ability definition**: id, phase/timing keyword, cost expression, restrictions, once-per-turn behavior, effect pipeline.
-- **Trigger context**: current event, acting player, unit, target, terrain, pending combat, available resources.
+- **Trigger context**: current event, acting player, unit, target, terrain, pending combat, available SAGA dice.
 - **Effect primitives**: add dice, reroll dice, modify target number, add/remove fatigue, cancel hits, move unit, open choice.
-- **Resolver**: validates cost/restrictions, consumes resources, records event, applies effects.
+- **Resolver**: validates cost/restrictions, consumes SAGA dice, records event, applies effects.
 
 Canonical ability and special-rule names may be stored and displayed. Published ability prose should not be stored; implement the behavior in original code and keep descriptions short, functional, and non-quoted.
 

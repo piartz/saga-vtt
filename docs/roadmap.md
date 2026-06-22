@@ -22,7 +22,7 @@
 
 ## Milestone 3 — “Rules module interface”
 - Define a `RulesModule` interface (validate commands, compute derived state)
-- Make “core” run with a toy ruleset
+- Make “core” run with the SAGA Core rules module
 - Add a *SAGA module* **only if you have rights/permission**
 
 ## Milestone 4 — “Accounts & persistence”

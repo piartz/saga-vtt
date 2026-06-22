@@ -6,7 +6,7 @@ This plan is intentionally iterative. Each phase should land as one or more smal
 
 Outcome: a safe place to build rules without copying protected prose or artwork.
 
-- Add a placeholder `RulesModule` interface and a toy module with invented terms. (started)
+- Add a placeholder `RulesModule` interface and a passive SAGA Core module with canonical names. (started)
 - Add fixtures for unit types, terrain traits, ability timings, and scenario setup using canonical names where useful. (started)
 - Add server tests proving the core can load a module and reject unknown module ids. (started)
 - Add documentation for content boundaries and local-only reference material.
@@ -14,7 +14,7 @@ Outcome: a safe place to build rules without copying protected prose or artwork.
 Exit criteria:
 
 - No copied rulebook prose, published examples, battle-board layout, or artwork is committed.
-- A toy module can be selected by a room.
+- The SAGA Core module can be selected by a room.
 - Current generic game flow still works.
 
 ## Phase 1: Warband and Unit Model
@@ -22,9 +22,9 @@ Exit criteria:
 Outcome: the server understands multi-figure units and derived unit traits.
 
 - Add unit entities separate from visual tokens.
-- Represent figure count, troop class, equipment tags, fatigue, and activation history.
+- Represent figure count, unit type, equipment tags, fatigue, and activation history.
 - Keep visual token rendering compatible with unit-level state.
-- Add basic warband validation for invented toy data.
+- Add basic warband validation for SAGA Core data.
 - Add snapshot shape for units and module metadata.
 
 Exit criteria:
@@ -48,28 +48,28 @@ Exit criteria:
 - The UI can display rule-distance labels without owning legality.
 - Geometry tests cover edge cases around contact, overlap, and board bounds.
 
-## Phase 3: Turn and Resource Phase
+## Phase 3: Turn and Orders Phase
 
-Outcome: the server can run an orders/planning phase before activations.
+Outcome: the server can run an Orders phase before activations.
 
 - Model the round/turn/phase state machine.
-- Generate command resources from surviving units using module rules.
-- Add events for resource generation, allocation, spend, and cleanup.
-- Add once-per-turn and reusable resource slot behavior for toy abilities.
+- Generate SAGA dice from surviving units using module rules.
+- Add events for SAGA dice generation, allocation, spend, and cleanup.
+- Add once-per-turn and reusable SAGA dice slot behavior for SAGA Core abilities.
 - Add pending reaction windows for the non-active player.
 
 Exit criteria:
 
-- Players cannot activate units before completing the resource phase.
-- Resource state round-trips through `HELLO` snapshots.
-- Tests cover turn changes, resource caps, leftover resources, and invalid spends.
+- Players cannot activate units before completing the Orders phase.
+- SAGA dice state round-trips through `HELLO` snapshots.
+- Tests cover turn changes, SAGA dice caps, unused SAGA dice, and invalid spends.
 
 ## Phase 4: Activation Actions
 
 Outcome: units can perform the four primary activation families through module validation.
 
 - Replace the current ad hoc activation types with module-defined activation actions.
-- Implement move, charge declaration, shooting declaration, and rest for the toy module.
+- Implement move, charge declaration, shooting declaration, and rest for the SAGA Core module.
 - Track repeat activations and fatigue consequences through module rules.
 - Emit consistent activation start/resolved/cancelled events.
 
@@ -81,7 +81,7 @@ Exit criteria:
 
 ## Phase 5: Fatigue and Reaction Windows
 
-Outcome: fatigue becomes a first-class rules resource.
+Outcome: fatigue becomes first-class rules state.
 
 - Add fatigue thresholds and exhaustion state from module rules.
 - Add opponent spend windows for movement, shooting, and melee contexts.
@@ -99,7 +99,7 @@ Exit criteria:
 Outcome: ranged combat is resolved as a deterministic server pipeline.
 
 - Add target declaration, range/visibility checks, and eligible attacker count.
-- Compute attack dice, modifiers, defense dice, and casualty choices using toy data.
+- Compute attack dice, modifiers, defense dice, and casualty choices using SAGA Core data.
 - Add structured dice events with reason, source unit, target unit, and result summary.
 - Add casualty-removal command or deterministic casualty policy for early versions.
 
@@ -130,7 +130,7 @@ Outcome: scenario setup and terrain traits affect rules.
 
 - Model terrain pieces with size, movement, cover, visibility, and danger traits.
 - Add scenario setup stages: choose side, place terrain, deploy units, start game.
-- Add scenario objective and score state for a toy scenario.
+- Add scenario objective and score state for a SAGA Core scenario.
 - Keep published scenario text out of the repo.
 
 Exit criteria:
@@ -143,7 +143,7 @@ Exit criteria:
 
 Outcome: common exceptions are data-driven.
 
-- Add keyword/tag-based rule modifiers for mounts, ranged weapons, armor changes, bodyguard-style protection, and hero status.
+- Add keyword/tag-based rule modifiers for mounts, ranged weapons, armor changes, Bodyguards, and Warlord status.
 - Build effect primitives instead of bespoke branches where possible.
 - Add compatibility tests showing multiple tags compose predictably.
 

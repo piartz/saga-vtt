@@ -6,7 +6,7 @@ This is the current MVP protocol implemented by the API/web app.
 
 ### `POST /games`
 - Optional JSON body:
-  - `rules_module_id` (`string`, defaults to `toy-skirmish`)
+  - `rules_module_id` (`string`, defaults to `saga-core`)
 - Creates a room and returns:
   - `game_id`
   - `protocol_version`

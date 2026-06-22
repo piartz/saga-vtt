@@ -37,7 +37,7 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - min_figures
 - max_figures
 - base_profile_id
-- generates_command_resource_at_figures
+- generates_saga_dice_at_figures
 
 ### RulesModule.terrain_traits[]
 - id

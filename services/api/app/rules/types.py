@@ -17,7 +17,7 @@ class UnitTypeDefinition(TypedDict):
     min_figures: int
     max_figures: int
     base_profile_id: str
-    generates_command_resource_at_figures: int | None
+    generates_saga_dice_at_figures: int | None
 
 
 class TerrainTraitDefinition(TypedDict):

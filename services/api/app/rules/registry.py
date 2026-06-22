@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from app.rules.toy import TOY_SKIRMISH_MODULE
+from app.rules.saga_core import SAGA_CORE_MODULE
 from app.rules.types import RulesModule
 
-DEFAULT_RULES_MODULE_ID = TOY_SKIRMISH_MODULE.metadata.id
+DEFAULT_RULES_MODULE_ID = SAGA_CORE_MODULE.metadata.id
 
 _RULES_MODULES: dict[str, RulesModule] = {
-    TOY_SKIRMISH_MODULE.metadata.id: TOY_SKIRMISH_MODULE.metadata,
+    SAGA_CORE_MODULE.metadata.id: SAGA_CORE_MODULE.metadata,
 }
 
 

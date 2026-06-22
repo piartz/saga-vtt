@@ -19,14 +19,14 @@ The near-term goal is to grow from the current generic tabletop loop into a rule
 The rulebook structure maps cleanly into these implementation categories:
 
 - **Game setup**: board dimensions, player sides, terrain placement, deployment, scenario metadata.
-- **Warband model**: factions, units, troop classes, equipment tags, model counts, generated command resources.
+- **Warband model**: factions, units, unit types, equipment tags, figure counts, and SAGA dice generation thresholds.
 - **Measurement and geometry**: abstract range bands, base sizes, formation constraints, line of sight, contact, collision, and impassable areas.
-- **Turn engine**: alternating player turns, orders/planning phase, activation/action phase, end-of-turn cleanup.
-- **Command-resource engine**: generated dice/resources, result symbols, reusable and single-use abilities, ability timing windows.
+- **Turn engine**: alternating player turns, Orders phase, Activation phase, end-of-turn cleanup.
+- **SAGA dice engine**: generated SAGA dice, result symbols, reusable and single-use abilities, ability timing windows.
 - **Activations**: move, charge, shoot, rest, free/cancelled activations, repeat activation costs.
 - **Fatigue and exhaustion**: fatigue gain/removal, opponent fatigue spend windows, penalties to movement and combat.
 - **Combat resolution**: shooting and melee pipelines, attack pools, defense rolls, modifiers, casualty removal, post-combat movement.
 - **Terrain**: terrain size/type traits and their effects on movement, cover, visibility, fatigue, and scenario setup.
-- **Special rules and equipment**: unit status, mounts, ranged weapons, armor modifiers, bodyguard-style protection, and keyword-driven exceptions.
+- **Special rules and equipment**: unit keywords, mounts, ranged weapons, armor modifiers, Bodyguards, and keyword-driven exceptions.
 - **Scenario and scoring**: terrain setup rules, deployment, turn count, victory conditions, and score calculation.
 - **Audit and replay**: server-side validation, deterministic event stream, dice audit trail, undo/rewind boundaries.

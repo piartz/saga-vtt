@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-06-22 (rules naming policy clarified)
+Last updated: 2026-06-22 (SAGA Core terminology aligned)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -46,13 +46,14 @@ Primary references:
 - Rules-module roadmap docs now exist under `rules-roadmap/`:
   - high-level rules implementation categories
   - VTT core vs rules-module boundary
-  - phased plan from toy module guardrails through setup, resources, activations, fatigue, combat, terrain, scenarios, and content strategy
+  - phased plan from SAGA Core module guardrails through setup, Orders phase, activations, fatigue, combat, terrain, scenarios, and content strategy
   - iteration playbook for small, test-backed development rounds
   - source/content boundary: use canonical names/labels freely, but do not copy copyrighted rule prose, published examples, battle-board layout, or artwork
 - Rules-module Phase 0 implementation has started:
-  - `services/api/app/rules/` contains a placeholder rules module interface, registry, and original `toy-skirmish` module metadata
+  - `services/api/app/rules/` contains a placeholder rules module interface, registry, and passive `saga-core` module metadata
   - `GET /rules/modules` lists registered modules
   - `GET /rules/modules/{module_id}` returns passive module manifests with canonical game terminology for unit types, terrain traits, ability timings, and scenario metadata
+  - Unit type manifests expose SAGA dice generation thresholds via `generates_saga_dice_at_figures`
   - `POST /games` accepts optional `rules_module_id` and rejects unknown module ids
   - room creation, active-room listings, and `HELLO` snapshots include `rules_module`
   - protocol schema and generated TypeScript/Python protocol types include `RulesModule`
@@ -208,7 +209,7 @@ Primary references:
    - richer action log UI
 3. Rules-module interface:
    - explicit `RulesModule` boundary
-   - keep core usable with toy ruleset first
+   - keep core usable with the SAGA Core module first
 4. Accounts/persistence:
    - database-backed games/events/snapshots
    - replays and spectators
