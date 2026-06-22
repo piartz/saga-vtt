@@ -25,6 +25,43 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - id
 - name
 - version
+- unit_types[]
+- terrain_traits[]
+- ability_timings[]
+- scenarios[]
+
+### RulesModule.unit_types[]
+- id
+- name
+- role
+- min_figures
+- max_figures
+- base_profile_id
+- generates_command_resource_at_figures
+
+### RulesModule.terrain_traits[]
+- id
+- name
+- movement_effect
+- cover_effect
+- blocks_line_of_sight
+- adds_fatigue_on_entry
+
+### RulesModule.ability_timings[]
+- id
+- name
+- phase
+- trigger_window
+- repeatable_per_turn
+
+### RulesModule.scenarios[]
+- id
+- name
+- board_width_mm
+- board_height_mm
+- setup_steps[]
+- turn_limit
+- objective_ids[]
 
 ### Token
 - id

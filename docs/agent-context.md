@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-06-22 (rules module phase 0 started)
+Last updated: 2026-06-22 (toy rules fixtures added)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -51,6 +51,7 @@ Primary references:
 - Rules-module Phase 0 implementation has started:
   - `services/api/app/rules/` contains a placeholder rules module interface, registry, and original `toy-skirmish` module metadata
   - `GET /rules/modules` lists registered modules
+  - `GET /rules/modules/{module_id}` returns passive module manifests with original toy unit types, terrain traits, ability timings, and scenario metadata
   - `POST /games` accepts optional `rules_module_id` and rejects unknown module ids
   - room creation, active-room listings, and `HELLO` snapshots include `rules_module`
   - protocol schema and generated TypeScript/Python protocol types include `RulesModule`
@@ -213,7 +214,7 @@ Primary references:
 
 ## Recommended Next Tasks
 - Continue rules-module Phase 0 from `rules-roadmap/implementation-plan.md`:
-  - broaden original toy fixtures for unit types, terrain traits, ability timings, and scenario setup
+  - add documentation for local-only reference material and fixture/content boundaries
   - keep module behavior passive until the first rules-specific command path is defined
   - preserve current generic game flow while module state is threaded through snapshots
 - **Complete remaining Phase 1 adoption and begin Phase 2 cleanup** (remove remaining duplicate inline protocol types/parsers in `apps/web/src/ui/App.tsx` and `services/api/app/main.py`).

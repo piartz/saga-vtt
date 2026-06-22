@@ -25,6 +25,17 @@ This is the current MVP protocol implemented by the API/web app.
     - `name`
     - `version`
 
+### `GET /rules/modules/{module_id}`
+- Returns a rules module manifest:
+  - `id`
+  - `name`
+  - `version`
+  - `unit_types[]`
+  - `terrain_traits[]`
+  - `ability_timings[]`
+  - `scenarios[]`
+- Current manifests are passive metadata only. They do not change command legality yet.
+
 ### `GET /rooms`
 - Returns active rooms (rooms with at least one connected websocket player):
   - `rooms[]` with:
