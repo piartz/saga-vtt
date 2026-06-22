@@ -7,10 +7,19 @@ from app.main import ROOMS, app
 
 TOY_RULES_MODULE = {"id": "toy-skirmish", "name": "Toy Skirmish", "version": "0.1.0"}
 TOY_FIXTURE_IDS = {
-    "unit_types": ["captain", "sentinel", "runner"],
-    "terrain_traits": ["clear", "rough", "hazard", "obstruction"],
-    "ability_timings": ["orders", "activation", "reaction", "combat"],
-    "scenarios": ["training-field"],
+    "unit_types": ["warlord", "hearthguards", "warriors", "levies"],
+    "terrain_traits": ["open", "uneven", "dangerous", "impassable"],
+    "ability_timings": [
+        "orders",
+        "orders-reaction",
+        "activation",
+        "activation-reaction",
+        "shooting",
+        "shooting-reaction",
+        "melee",
+        "melee-reaction",
+    ],
+    "scenarios": ["clash-of-warlords"],
 }
 
 
@@ -45,9 +54,9 @@ def test_get_rules_module_manifest_includes_original_toy_fixtures() -> None:
     assert [item["id"] for item in manifest["ability_timings"]] == TOY_FIXTURE_IDS["ability_timings"]
     assert [item["id"] for item in manifest["scenarios"]] == TOY_FIXTURE_IDS["scenarios"]
     assert manifest["scenarios"][0]["setup_steps"] == [
-        "choose_sides",
+        "choose_board_edge",
         "place_terrain",
-        "deploy_units",
+        "deploy_warbands",
         "confirm_ready",
     ]
 

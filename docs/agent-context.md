@@ -51,7 +51,7 @@ Primary references:
 - Rules-module Phase 0 implementation has started:
   - `services/api/app/rules/` contains a placeholder rules module interface, registry, and original `toy-skirmish` module metadata
   - `GET /rules/modules` lists registered modules
-  - `GET /rules/modules/{module_id}` returns passive module manifests with original toy unit types, terrain traits, ability timings, and scenario metadata
+  - `GET /rules/modules/{module_id}` returns passive module manifests with public game terminology for unit types, terrain traits, ability timings, and scenario metadata
   - `POST /games` accepts optional `rules_module_id` and rejects unknown module ids
   - room creation, active-room listings, and `HELLO` snapshots include `rules_module`
   - protocol schema and generated TypeScript/Python protocol types include `RulesModule`
