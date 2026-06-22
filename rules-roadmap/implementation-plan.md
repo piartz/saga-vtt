@@ -4,16 +4,16 @@ This plan is intentionally iterative. Each phase should land as one or more smal
 
 ## Phase 0: Guardrails and Test Harness
 
-Outcome: a safe place to build rules without leaking protected content.
+Outcome: a safe place to build rules without copying protected prose or artwork.
 
 - Add a placeholder `RulesModule` interface and a toy module with invented terms. (started)
-- Add fixtures for unit types, terrain traits, ability timings, and scenario setup using original placeholder content. (started)
+- Add fixtures for unit types, terrain traits, ability timings, and scenario setup using canonical names where useful. (started)
 - Add server tests proving the core can load a module and reject unknown module ids. (started)
 - Add documentation for content boundaries and local-only reference material.
 
 Exit criteria:
 
-- No commercial rulebook text or data is committed.
+- No copied rulebook prose, published examples, battle-board layout, or artwork is committed.
 - A toy module can be selected by a room.
 - Current generic game flow still works.
 
@@ -155,15 +155,15 @@ Exit criteria:
 
 ## Phase 10: Compatible Module Content Strategy
 
-Outcome: decide how real rules content is supplied without bundling protected material.
+Outcome: decide how detailed rules content is supplied without bundling protected prose or artwork.
 
-- Decide whether the project will support local user-provided data packs, licensed content, or only original/toy modules.
+- Decide whether the project will support local user-provided data packs, licensed content, or only built-in implementations that use canonical names and original code.
 - Define import validation for external data packs.
 - Add clear runtime errors when required external content is missing.
-- Keep all committed fixtures original.
+- Keep all committed explanatory text original.
 
 Exit criteria:
 
-- Content rights approach is documented.
+- Content boundary is documented.
 - The app can distinguish engine support from unavailable proprietary content.
-- No protected source material is committed.
+- No copied protected source material is committed.

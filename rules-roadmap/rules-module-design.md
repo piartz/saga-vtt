@@ -5,7 +5,7 @@
 - Keep the VTT core independent from any single ruleset.
 - Make rules decisions replayable from commands, events, random rolls, and snapshots.
 - Support generic modules first, then a compatible module backed by original code and data.
-- Avoid bundling protected text, artwork, faction-board content, or published army/scenario material.
+- Use canonical game names/labels where helpful, but avoid bundling copied rule prose, artwork, battle-board layout, or published explanatory/scenario text.
 
 ## Boundary
 
@@ -85,7 +85,7 @@ Recommended layers:
 - **Effect primitives**: add dice, reroll dice, modify target number, add/remove fatigue, cancel hits, move unit, open choice.
 - **Resolver**: validates cost/restrictions, consumes resources, records event, applies effects.
 
-Published ability text should not be stored. Use original ids and summaries for internal test modules, and keep any real content external until rights are resolved.
+Canonical ability and special-rule names may be stored and displayed. Published ability prose should not be stored; implement the behavior in original code and keep descriptions short, functional, and non-quoted.
 
 ## Geometry Needs
 The current token movement model is enough for simple tabletop movement but not enough for full rules enforcement. Future geometry helpers should support:
@@ -100,4 +100,3 @@ The current token movement model is enough for simple tabletop movement but not 
 - Legal casualty removal without breaking formation.
 
 These helpers should remain generic core utilities. The rules module should decide how their results matter.
-

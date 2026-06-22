@@ -1,14 +1,14 @@
 # Rules Module Roadmap
 
-This directory plans the rules-module work for the skirmish VTT. It is intentionally documentation-only: no rules implementation, proprietary rule prose, faction boards, unit profiles, scenarios, or artwork should be committed here.
+This directory plans the rules-module work for the skirmish VTT. It is intentionally documentation-only: no rules implementation, copied rule prose, published examples, battle-board layout, or artwork should be committed here.
 
 The near-term goal is to grow from the current generic tabletop loop into a rules-aware game engine through small, test-backed increments. The VTT core should remain reusable, while rules-specific behavior lives behind explicit module boundaries.
 
 ## Source Handling
-- Treat local commercial rulebooks as reference material only.
-- Encode generic mechanics, state transitions, and original data structures.
-- Do not copy rule prose, examples, faction ability text, battle-board text, or published scenario text.
-- Prefer placeholder and test fixtures with invented names until there is a confirmed content-rights plan.
+- Treat local commercial rulebooks as reference material for behavior and terminology.
+- Use canonical names/labels for units, terrain, special rules, battle-board abilities, scenarios, and other game terms.
+- Encode mechanics as original code, state transitions, tests, and data structures.
+- Do not copy explanatory rule prose, published examples, authored ability descriptions, battle-board layout, scenario prose, or artwork.
 
 ## Roadmap Files
 - [rules-module-design.md](rules-module-design.md): target boundaries and domain model categories.
@@ -30,4 +30,3 @@ The rulebook structure maps cleanly into these implementation categories:
 - **Special rules and equipment**: unit status, mounts, ranged weapons, armor modifiers, bodyguard-style protection, and keyword-driven exceptions.
 - **Scenario and scoring**: terrain setup rules, deployment, turn count, victory conditions, and score calculation.
 - **Audit and replay**: server-side validation, deterministic event stream, dice audit trail, undo/rewind boundaries.
-

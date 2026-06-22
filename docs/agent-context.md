@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-06-22 (toy rules fixtures added)
+Last updated: 2026-06-22 (rules naming policy clarified)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -15,7 +15,8 @@ Primary references:
 - `docs/architecture.md`
 
 ## Constraints (Important)
-- Do not commit copyrighted rule text, unit profiles, battle boards, or artwork.
+- Do not commit copyrighted rule prose, published examples, battle-board layout, or artwork.
+- Canonical names/labels from the game are allowed in code, tests, and UI for units, terrain, special rules, battle-board abilities, scenarios, and other game terms. Rules behavior may be implemented in original code, but explanatory rulebook prose should not be copied.
 - Keep "VTT core" and "rules module" separated.
 - Server remains source of truth (moves, dice, legality checks).
 - **Do NOT mention AI tools or add "Co-Authored-By" lines in commits or documentation.** Keep all references to development tools and processes neutral.
@@ -47,11 +48,11 @@ Primary references:
   - VTT core vs rules-module boundary
   - phased plan from toy module guardrails through setup, resources, activations, fatigue, combat, terrain, scenarios, and content strategy
   - iteration playbook for small, test-backed development rounds
-  - source/content boundary: no copyrighted rule prose, faction boards, unit profiles, scenarios, or artwork should be committed
+  - source/content boundary: use canonical names/labels freely, but do not copy copyrighted rule prose, published examples, battle-board layout, or artwork
 - Rules-module Phase 0 implementation has started:
   - `services/api/app/rules/` contains a placeholder rules module interface, registry, and original `toy-skirmish` module metadata
   - `GET /rules/modules` lists registered modules
-  - `GET /rules/modules/{module_id}` returns passive module manifests with public game terminology for unit types, terrain traits, ability timings, and scenario metadata
+  - `GET /rules/modules/{module_id}` returns passive module manifests with canonical game terminology for unit types, terrain traits, ability timings, and scenario metadata
   - `POST /games` accepts optional `rules_module_id` and rejects unknown module ids
   - room creation, active-room listings, and `HELLO` snapshots include `rules_module`
   - protocol schema and generated TypeScript/Python protocol types include `RulesModule`
@@ -214,7 +215,7 @@ Primary references:
 
 ## Recommended Next Tasks
 - Continue rules-module Phase 0 from `rules-roadmap/implementation-plan.md`:
-  - add documentation for local-only reference material and fixture/content boundaries
+  - continue using canonical names for rules concepts while keeping copied rule prose out of code/docs/tests
   - keep module behavior passive until the first rules-specific command path is defined
   - preserve current generic game flow while module state is threaded through snapshots
 - **Complete remaining Phase 1 adoption and begin Phase 2 cleanup** (remove remaining duplicate inline protocol types/parsers in `apps/web/src/ui/App.tsx` and `services/api/app/main.py`).
@@ -232,7 +233,7 @@ Primary references:
 - In-memory room state means process restart loses all games.
 - Connection/presence transport state is isolated, but the websocket handler still owns command dispatch and disconnect game-state policy.
 - Generated protocol types are now partially adopted, but runtime validation still relies on custom parsing/guards; full Phase 2 duplicate-type cleanup is still pending.
-- Rules-module work has content-rights risk: commercial rulebooks may be used only as local reference unless there is an explicit rights plan. Committed modules should use original/toy fixtures until that decision is resolved.
+- Rules-module work may use canonical game names/labels for units, terrain, special rules, battle-board abilities, scenarios, and similar terms. The remaining content boundary is copied prose, published examples, battle-board layout, artwork, and other expressive source material.
 - Full rules enforcement will require richer unit geometry than the current single-token movement model, including formation, base footprint, contact, line-of-sight, terrain overlap, and casualty-removal validation.
 
 ## Quick Session Bootstrap (for agents)

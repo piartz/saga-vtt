@@ -9,7 +9,7 @@ This file provides the minimum context-loading workflow for agentic coding tools
 
 ## Working Rules
 - Keep this project server-authoritative: clients send commands, server emits events.
-- Keep rules/IP separate from VTT core. Do not add copyrighted rules text/art.
+- Keep rules/IP separate from VTT core. Do not add copyrighted rules prose or art. Canonical names/labels for units, terrain, special rules, battle-board abilities, scenarios, and other game terms are allowed.
 - Prefer small, test-backed changes and keep docs in sync when behavior changes.
 
 ## When You Finish Work

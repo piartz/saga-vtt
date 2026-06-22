@@ -3,7 +3,8 @@
 Use this file as context when you ask an LLM to help implement features.
 
 ## Project constraints
-- Do not add copyrighted rule text, unit profiles, battle boards, or artwork.
+- Do not add copyrighted rule prose, published examples, battle-board layout, or artwork.
+- Canonical names/labels are allowed for units, terrain, special rules, battle-board abilities, scenarios, and other game terms. Implement rules behavior in code/tests without copying the source prose that explains it.
 - Keep the engine generic; rules belong in a module interface.
 - Server is authoritative. Clients never decide dice or final legality of actions.
 
