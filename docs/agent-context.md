@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-06-17 (backend connection manager extracted)
+Last updated: 2026-06-22 (rules module roadmap added)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -29,6 +29,7 @@ Primary references:
   - `schemas` (JSON Schema protocol definitions - single source of truth)
   - `tools` (type generators for TypeScript and Python)
   - `docs` (vision, architecture, protocol, roadmap, playbook)
+  - `rules-roadmap` (rules-module planning, boundaries, phased implementation plan)
 - GitHub Actions CI currently runs:
   - web lint + build (with automatic type generation)
   - API `ruff`, `mypy`, and `pytest` (including integration smoke test)
@@ -41,6 +42,12 @@ Primary references:
   - Python dependencies (weekly, Monday)
   - JavaScript dependencies (weekly, Monday)
   - GitHub Actions (weekly, Monday)
+- Rules-module roadmap docs now exist under `rules-roadmap/`:
+  - high-level rules implementation categories
+  - VTT core vs rules-module boundary
+  - phased plan from toy module guardrails through setup, resources, activations, fatigue, combat, terrain, scenarios, and content strategy
+  - iteration playbook for small, test-backed development rounds
+  - source/content boundary: no copyrighted rule prose, faction boards, unit profiles, scenarios, or artwork should be committed
 - **Typed Protocol Schema System**:
   - Single source of truth for WebSocket protocol in `schemas/protocol.json`
   - Auto-generates TypeScript types (`apps/web/src/protocol.generated.ts`)
@@ -199,6 +206,10 @@ Primary references:
    - replays and spectators
 
 ## Recommended Next Tasks
+- Start rules-module Phase 0 from `rules-roadmap/implementation-plan.md`:
+  - define a placeholder `RulesModule` interface
+  - add an original toy rules module/fixtures
+  - prove module selection and loading without adding protected content
 - **Complete remaining Phase 1 adoption and begin Phase 2 cleanup** (remove remaining duplicate inline protocol types/parsers in `apps/web/src/ui/App.tsx` and `services/api/app/main.py`).
 - Extract command routing/dispatch out of the websocket loop now that transport/presence state is isolated.
 - Add WS reconnect/backoff client wrapper with resync behavior.
@@ -214,6 +225,8 @@ Primary references:
 - In-memory room state means process restart loses all games.
 - Connection/presence transport state is isolated, but the websocket handler still owns command dispatch and disconnect game-state policy.
 - Generated protocol types are now partially adopted, but runtime validation still relies on custom parsing/guards; full Phase 2 duplicate-type cleanup is still pending.
+- Rules-module work has content-rights risk: commercial rulebooks may be used only as local reference unless there is an explicit rights plan. Committed modules should use original/toy fixtures until that decision is resolved.
+- Full rules enforcement will require richer unit geometry than the current single-token movement model, including formation, base footprint, contact, line-of-sight, terrain overlap, and casualty-removal validation.
 
 ## Quick Session Bootstrap (for agents)
 1. Read this file.
