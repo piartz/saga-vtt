@@ -1,0 +1,33 @@
+# Rules Module Roadmap
+
+This directory plans the rules-module work for the skirmish VTT. It is intentionally documentation-only: no rules implementation, proprietary rule prose, faction boards, unit profiles, scenarios, or artwork should be committed here.
+
+The near-term goal is to grow from the current generic tabletop loop into a rules-aware game engine through small, test-backed increments. The VTT core should remain reusable, while rules-specific behavior lives behind explicit module boundaries.
+
+## Source Handling
+- Treat local commercial rulebooks as reference material only.
+- Encode generic mechanics, state transitions, and original data structures.
+- Do not copy rule prose, examples, faction ability text, battle-board text, or published scenario text.
+- Prefer placeholder and test fixtures with invented names until there is a confirmed content-rights plan.
+
+## Roadmap Files
+- [rules-module-design.md](rules-module-design.md): target boundaries and domain model categories.
+- [implementation-plan.md](implementation-plan.md): phased implementation rounds.
+- [iteration-playbook.md](iteration-playbook.md): how to keep each round small, reviewable, and verifiable.
+
+## High-Level Rules Categories
+The rulebook structure maps cleanly into these implementation categories:
+
+- **Game setup**: board dimensions, player sides, terrain placement, deployment, scenario metadata.
+- **Warband model**: factions, units, troop classes, equipment tags, model counts, generated command resources.
+- **Measurement and geometry**: abstract range bands, base sizes, formation constraints, line of sight, contact, collision, and impassable areas.
+- **Turn engine**: alternating player turns, orders/planning phase, activation/action phase, end-of-turn cleanup.
+- **Command-resource engine**: generated dice/resources, result symbols, reusable and single-use abilities, ability timing windows.
+- **Activations**: move, charge, shoot, rest, free/cancelled activations, repeat activation costs.
+- **Fatigue and exhaustion**: fatigue gain/removal, opponent fatigue spend windows, penalties to movement and combat.
+- **Combat resolution**: shooting and melee pipelines, attack pools, defense rolls, modifiers, casualty removal, post-combat movement.
+- **Terrain**: terrain size/type traits and their effects on movement, cover, visibility, fatigue, and scenario setup.
+- **Special rules and equipment**: unit status, mounts, ranged weapons, armor modifiers, bodyguard-style protection, and keyword-driven exceptions.
+- **Scenario and scoring**: terrain setup rules, deployment, turn count, victory conditions, and score calculation.
+- **Audit and replay**: server-side validation, deterministic event stream, dice audit trail, undo/rewind boundaries.
+
