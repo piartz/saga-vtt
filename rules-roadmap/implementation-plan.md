@@ -37,7 +37,7 @@ Exit criteria:
 
 Outcome: movement can be validated in rule-relevant terms.
 
-- Add named range bands in the rules layer and mm conversion in the core.
+- Add SAGA range bands (`VS`, `S`, `M`, `L`, and numeric multiples such as `2L`) in the rules layer and mm conversion in the core.
 - Add base-size and footprint metadata.
 - Add formation validation for a unit represented by multiple figures or a simplified formation footprint.
 - Add straight-line movement validation and terrain/collision query hooks.

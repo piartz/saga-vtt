@@ -53,6 +53,7 @@ def test_complete_game_flow_smoke() -> None:
         assert hello_1["type"] == "HELLO"
         assert hello_1["payload"]["turn"]["phase"] == "lobby"
         assert hello_1["payload"]["turn"]["round"] == 0
+        assert [unit["id"] for unit in hello_1["payload"]["units"]] == ["A-warlord", "B-warlord"]
         player_1_id = hello_1["payload"]["self_player_id"]
 
         # Player 2 receives HELLO

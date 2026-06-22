@@ -20,7 +20,7 @@ The rulebook structure maps cleanly into these implementation categories:
 
 - **Game setup**: board dimensions, player sides, terrain placement, deployment, scenario metadata.
 - **Warband model**: factions, units, unit types, equipment tags, figure counts, and SAGA dice generation thresholds.
-- **Measurement and geometry**: abstract range bands, base sizes, formation constraints, line of sight, contact, collision, and impassable areas.
+- **Measurement and geometry**: SAGA range bands (`VS`, `S`, `M`, `L`, and numeric multiples such as `2L`), base sizes, formation constraints, line of sight, contact, collision, and impassable areas.
 - **Turn engine**: alternating player turns, Orders phase, Activation phase, end-of-turn cleanup.
 - **SAGA dice engine**: generated SAGA dice, result symbols, reusable and single-use abilities, ability timing windows.
 - **Activations**: move, charge, shoot, rest, free/cancelled activations, repeat activation costs.

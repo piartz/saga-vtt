@@ -3,7 +3,8 @@ from typing import Any, Dict
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import ROOMS, app
+from app.main import ROOMS, app, validate_unit_state
+from app.rules import require_rules_module
 
 SAGA_CORE_RULES_MODULE = {"id": "saga-core", "name": "SAGA Core", "version": "0.1.0"}
 SAGA_CORE_FIXTURE_IDS = {
@@ -21,6 +22,7 @@ SAGA_CORE_FIXTURE_IDS = {
     ],
     "scenarios": ["clash-of-warlords"],
 }
+DEFAULT_UNIT_IDS = ["A-warlord", "B-warlord"]
 
 
 @pytest.fixture(autouse=True)
@@ -83,6 +85,13 @@ def test_create_game_defaults_to_saga_core_rules_module() -> None:
     body = response.json()
     assert body["rules_module"] == SAGA_CORE_RULES_MODULE
     assert ROOMS[body["game_id"]].rules_module.id == "saga-core"
+    assert [unit["id"] for unit in body["units"]] == DEFAULT_UNIT_IDS
+    assert {unit["unit_type_id"] for unit in body["units"]} == {"warlord"}
+    assert {unit["figure_count"] for unit in body["units"]} == {1}
+    assert {unit["fatigue"] for unit in body["units"]} == {0}
+    assert {unit["activation_count_this_turn"] for unit in body["units"]} == {0}
+    assert {unit["owner_player_id"] for unit in body["units"]} == {None}
+    assert [unit["token_id"] for unit in body["units"]] == ["A", "B"]
 
 
 def test_create_game_accepts_explicit_saga_core_rules_module() -> None:
@@ -126,3 +135,65 @@ def test_rules_module_is_included_in_hello_snapshot() -> None:
 
     assert hello["type"] == "HELLO"
     assert hello["payload"]["rules_module"] == SAGA_CORE_RULES_MODULE
+    assert [unit["id"] for unit in hello["payload"]["units"]] == DEFAULT_UNIT_IDS
+
+
+def test_unit_validation_rejects_unknown_unit_type() -> None:
+    rules_module = require_rules_module("saga-core")
+
+    error = validate_unit_state(
+        {
+            "id": "invalid-unit",
+            "label": "Invalid Unit",
+            "owner_player_id": None,
+            "unit_type_id": "missing",
+            "figure_count": 1,
+            "fatigue": 0,
+            "activation_count_this_turn": 0,
+            "token_id": None,
+        },
+        rules_module,
+    )
+
+    assert error == "Unit 'invalid-unit' has unknown unit_type_id 'missing'."
+
+
+def test_unit_validation_rejects_invalid_figure_count() -> None:
+    rules_module = require_rules_module("saga-core")
+
+    error = validate_unit_state(
+        {
+            "id": "small-warriors",
+            "label": "Small Warriors",
+            "owner_player_id": None,
+            "unit_type_id": "warriors",
+            "figure_count": 3,
+            "fatigue": 0,
+            "activation_count_this_turn": 0,
+            "token_id": None,
+        },
+        rules_module,
+    )
+
+    assert error == "Unit 'small-warriors' figure_count must be between 4 and 12."
+
+
+def test_unit_validation_rejects_unknown_owner() -> None:
+    rules_module = require_rules_module("saga-core")
+
+    error = validate_unit_state(
+        {
+            "id": "owned-warlord",
+            "label": "Owned Warlord",
+            "owner_player_id": "missing-player",
+            "unit_type_id": "warlord",
+            "figure_count": 1,
+            "fatigue": 0,
+            "activation_count_this_turn": 0,
+            "token_id": None,
+        },
+        rules_module,
+        valid_owner_player_ids={"player-1"},
+    )
+
+    assert error == "Unit 'owned-warlord' has unknown owner_player_id 'missing-player'."

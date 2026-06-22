@@ -12,6 +12,7 @@ This is the current MVP protocol implemented by the API/web app.
   - `protocol_version`
   - `board`
   - `tokens`
+  - `units`
   - `rules_module`
   - `created` (`true` when a new room was created, `false` when an existing room was returned)
 - Optional header: `X-Client-Id`
@@ -86,6 +87,7 @@ This is the current MVP protocol implemented by the API/web app.
   - `protocol_version`
   - `board`
   - `tokens`
+  - `units`
   - `players` (connected players snapshot)
   - `rules_module`
   - `self_player_id` (the current websocket player's id)

@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-06-22 (SAGA Core terminology aligned)
+Last updated: 2026-06-22 (unit snapshots added)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -56,7 +56,12 @@ Primary references:
   - Unit type manifests expose SAGA dice generation thresholds via `generates_saga_dice_at_figures`
   - `POST /games` accepts optional `rules_module_id` and rejects unknown module ids
   - room creation, active-room listings, and `HELLO` snapshots include `rules_module`
-  - protocol schema and generated TypeScript/Python protocol types include `RulesModule`
+  - room creation and `HELLO` snapshots include passive unit state seeded from SAGA Core (`Unit`)
+  - protocol schema and generated TypeScript/Python protocol types include `RulesModule` and `Unit`
+- SAGA distance bands for future measurement work:
+  - `VS` = 2 inches, `S` = 4 inches, `M` = 6 inches, `L` = 12 inches
+  - numeric prefixes multiply the band, e.g. `2L` = 24 inches
+  - keep rules-facing labels in rules data and convert to integer mm at the validation/display boundary
 - **Typed Protocol Schema System**:
   - Single source of truth for WebSocket protocol in `schemas/protocol.json`
   - Auto-generates TypeScript types (`apps/web/src/protocol.generated.ts`)
@@ -79,6 +84,7 @@ Primary references:
   - `protocol_version = 1`
   - board size `800x500` mm
   - default tokens A/B
+  - default passive units `A-warlord` and `B-warlord`, anchored to tokens A/B with no owner assigned yet
 - Per-room websocket transport/presence state is isolated in `RoomConnectionManager`:
   - registers/removes websocket connections
   - assigns ephemeral player identities
@@ -87,7 +93,7 @@ Primary references:
 - `WS /games/{game_id}/ws`:
   - accepts connection
   - assigns ephemeral player identity per connection
-  - emits `HELLO` event with protocol version, board, token snapshot, and player list
+  - emits `HELLO` event with protocol version, board, token snapshot, unit snapshot, and player list
   - emits `PLAYER_JOINED` to existing clients when a new player connects
   - emits `PLAYER_LEFT` to remaining clients when a player disconnects
   - handles `PING` -> broadcasts `PONG` with echoed payload (`client_time` when provided)
@@ -217,8 +223,11 @@ Primary references:
 ## Recommended Next Tasks
 - Continue rules-module Phase 0 from `rules-roadmap/implementation-plan.md`:
   - continue using canonical names for rules concepts while keeping copied rule prose out of code/docs/tests
-  - keep module behavior passive until the first rules-specific command path is defined
   - preserve current generic game flow while module state is threaded through snapshots
+- Continue rules-module Phase 1 from `rules-roadmap/implementation-plan.md`:
+  - assign unit ownership during setup/start-game flow
+  - add unit update events once unit state becomes mutable
+  - keep token movement compatible with unit-level state until formation geometry is introduced
 - **Complete remaining Phase 1 adoption and begin Phase 2 cleanup** (remove remaining duplicate inline protocol types/parsers in `apps/web/src/ui/App.tsx` and `services/api/app/main.py`).
 - Extract command routing/dispatch out of the websocket loop now that transport/presence state is isolated.
 - Add WS reconnect/backoff client wrapper with resync behavior.
@@ -234,8 +243,10 @@ Primary references:
 - In-memory room state means process restart loses all games.
 - Connection/presence transport state is isolated, but the websocket handler still owns command dispatch and disconnect game-state policy.
 - Generated protocol types are now partially adopted, but runtime validation still relies on custom parsing/guards; full Phase 2 duplicate-type cleanup is still pending.
+- Unit ownership is currently nullable and default units are temporarily anchored to single visual tokens; setup/deployment needs to assign owners before unit state can drive SAGA dice or activation legality.
 - Rules-module work may use canonical game names/labels for units, terrain, special rules, battle-board abilities, scenarios, and similar terms. The remaining content boundary is copied prose, published examples, battle-board layout, artwork, and other expressive source material.
 - Full rules enforcement will require richer unit geometry than the current single-token movement model, including formation, base footprint, contact, line-of-sight, terrain overlap, and casualty-removal validation.
+- Measurement work should use SAGA range labels (`VS`, `S`, `M`, `L`, numeric multiples) as rules-facing values and convert them to board mm only at geometry boundaries.
 
 ## Quick Session Bootstrap (for agents)
 1. Read this file.
