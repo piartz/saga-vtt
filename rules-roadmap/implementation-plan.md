@@ -6,9 +6,9 @@ This plan is intentionally iterative. Each phase should land as one or more smal
 
 Outcome: a safe place to build rules without leaking protected content.
 
-- Add a placeholder `RulesModule` interface and a toy module with invented terms.
+- Add a placeholder `RulesModule` interface and a toy module with invented terms. (started)
 - Add fixtures for unit types, terrain traits, ability timings, and scenario setup using original placeholder content.
-- Add server tests proving the core can load a module and reject unknown module ids.
+- Add server tests proving the core can load a module and reject unknown module ids. (started)
 - Add documentation for content boundaries and local-only reference material.
 
 Exit criteria:
@@ -167,4 +167,3 @@ Exit criteria:
 - Content rights approach is documented.
 - The app can distinguish engine support from unavailable proprietary content.
 - No protected source material is committed.
-

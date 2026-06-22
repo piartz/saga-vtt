@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, TypeGuard, TypedDict, cast
 
-from fastapi import FastAPI, Header, WebSocket, WebSocketDisconnect
+from fastapi import Body, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.connections import RoomConnectionManager
@@ -26,6 +26,13 @@ from app.protocol_generated import (
     UndoRequest as PendingUndoRequest,
     UndoState,
 )
+from app.rules import (
+    DEFAULT_RULES_MODULE_ID,
+    RulesModule,
+    RulesModuleSnapshot,
+    list_rules_modules,
+    require_rules_module,
+)
 
 PROTOCOL_VERSION = 1
 BOARD_WIDTH_MM = 800
@@ -44,6 +51,7 @@ class LobbyRoomState(TypedDict):
     player_count: int
     phase: Phase
     round: int
+    rules_module: RulesModuleSnapshot
 
 
 class UndoEntry(TypedDict):
@@ -80,6 +88,7 @@ def default_tokens() -> Dict[str, TokenState]:
 @dataclass
 class GameRoom:
     game_id: str
+    rules_module: RulesModule
     creator_client_id: str | None = None
     seq: int = 0
     connections: RoomConnectionManager = field(default_factory=RoomConnectionManager)
@@ -119,8 +128,16 @@ def make_event(
     return event
 
 
-def create_room(game_id: str, creator_client_id: str | None = None) -> GameRoom:
-    room = GameRoom(game_id=game_id, creator_client_id=creator_client_id)
+def create_room(
+    game_id: str,
+    creator_client_id: str | None = None,
+    rules_module: RulesModule | None = None,
+) -> GameRoom:
+    room = GameRoom(
+        game_id=game_id,
+        creator_client_id=creator_client_id,
+        rules_module=rules_module or require_rules_module(DEFAULT_RULES_MODULE_ID),
+    )
     ROOMS[game_id] = room
     return room
 
@@ -138,6 +155,7 @@ def room_lobby_snapshot(room: GameRoom) -> LobbyRoomState:
         "player_count": room.connections.player_count(),
         "phase": room.phase,
         "round": room.round,
+        "rules_module": room.rules_module.snapshot(),
     }
 
 
@@ -167,6 +185,10 @@ def room_turn_snapshot(room: GameRoom) -> TurnState:
         "round": room.round,
         "active_player_id": room.active_player_id,
     }
+
+
+def room_rules_module_snapshot(room: GameRoom) -> RulesModuleSnapshot:
+    return room.rules_module.snapshot()
 
 
 def room_initiative_snapshot(room: GameRoom) -> InitiativeState | None:
@@ -584,6 +606,22 @@ def apply_roll_dice(payload: Any) -> tuple[DiceRollResult | None, str | None]:
     }, None
 
 
+def selected_rules_module_from_body(body: Any) -> RulesModule:
+    if body is None:
+        return require_rules_module(DEFAULT_RULES_MODULE_ID)
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="POST /games body must be an object.")
+
+    module_id = body.get("rules_module_id", DEFAULT_RULES_MODULE_ID)
+    if not isinstance(module_id, str) or not module_id.strip():
+        raise HTTPException(status_code=400, detail="rules_module_id must be a non-empty string.")
+
+    try:
+        return require_rules_module(module_id.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 app = FastAPI(title="Skirmish VTT API", version="0.1.0")
 
 # Dev-friendly CORS for local frontend
@@ -601,8 +639,17 @@ def health() -> Dict[str, str]:
     return {"status": "ok", "time": utc_now_iso()}
 
 
+@app.get("/rules/modules")
+def rules_modules() -> Dict[str, Any]:
+    return {"modules": [module.snapshot() for module in list_rules_modules()]}
+
+
 @app.post("/games")
-def create_game(x_client_id: str | None = Header(default=None)) -> Dict[str, Any]:
+def create_game(
+    body: Dict[str, Any] | None = Body(default=None),
+    x_client_id: str | None = Header(default=None),
+) -> Dict[str, Any]:
+    rules_module = selected_rules_module_from_body(body)
     creator_client_id = x_client_id.strip() if isinstance(x_client_id, str) and x_client_id.strip() else None
     if creator_client_id is not None:
         existing_room = room_by_creator_client_id(creator_client_id)
@@ -612,6 +659,7 @@ def create_game(x_client_id: str | None = Header(default=None)) -> Dict[str, Any
                 "protocol_version": PROTOCOL_VERSION,
                 "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
                 "tokens": list(existing_room.tokens.values()),
+                "rules_module": room_rules_module_snapshot(existing_room),
                 "created": False,
             }
 
@@ -620,12 +668,13 @@ def create_game(x_client_id: str | None = Header(default=None)) -> Dict[str, Any
         if game_id not in ROOMS:
             break
 
-    room = create_room(game_id, creator_client_id=creator_client_id)
+    room = create_room(game_id, creator_client_id=creator_client_id, rules_module=rules_module)
     return {
         "game_id": game_id,
         "protocol_version": PROTOCOL_VERSION,
         "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
         "tokens": list(room.tokens.values()),
+        "rules_module": room_rules_module_snapshot(room),
         "created": True,
     }
 
@@ -658,6 +707,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
                         "tokens": list(room.tokens.values()),
                         "players": room_players_snapshot(room),
+                        "rules_module": room_rules_module_snapshot(room),
                         "turn": room_turn_snapshot(room),
                         "initiative": room_initiative_snapshot(room),
                         "undo": room_undo_snapshot(room),

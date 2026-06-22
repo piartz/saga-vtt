@@ -65,6 +65,17 @@
       "additionalProperties": false
     },
 
+    "RulesModule": {
+      "type": "object",
+      "required": ["id", "name", "version"],
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "version": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+
     "TurnState": {
       "type": "object",
       "required": ["phase", "round", "active_player_id"],
@@ -273,7 +284,7 @@
     "HELLO": {
       "payload": {
         "type": "object",
-        "required": ["game_id", "protocol_version", "board", "tokens", "players", "self_player_id", "turn", "initiative", "undo"],
+        "required": ["game_id", "protocol_version", "board", "tokens", "players", "self_player_id", "turn", "initiative", "undo", "rules_module"],
         "properties": {
           "game_id": {"type": "string"},
           "protocol_version": {"type": "integer"},
@@ -286,6 +297,7 @@
             "type": "array",
             "items": {"$ref": "#/definitions/Player"}
           },
+          "rules_module": {"$ref": "#/definitions/RulesModule"},
           "self_player_id": {"type": "string"},
           "turn": {"$ref": "#/definitions/TurnState"},
           "initiative": {

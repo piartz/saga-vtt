@@ -33,6 +33,12 @@ export interface Board {
   height_mm: number;
 }
 
+export interface RulesModule {
+  id: string;
+  name: string;
+  version: string;
+}
+
 export interface TurnState {
   phase: Phase;
   round: number;
@@ -123,6 +129,7 @@ export type HELLOPayload = {
   board: Board;
   tokens: Token[];
   players: Player[];
+  rules_module: RulesModule;
   self_player_id: string;
   turn: TurnState;
   initiative: InitiativeState | null;

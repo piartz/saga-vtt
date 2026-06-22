@@ -28,6 +28,11 @@ class Board(TypedDict):
     width_mm: int
     height_mm: int
 
+class RulesModule(TypedDict):
+    id: str
+    name: str
+    version: str
+
 class TurnState(TypedDict):
     phase: Phase
     round: int
@@ -104,6 +109,7 @@ class HELLOPayload(TypedDict):
     board: Board
     tokens: List[Token]
     players: List[Player]
+    rules_module: RulesModule
     self_player_id: str
     turn: TurnState
     initiative: InitiativeState | None

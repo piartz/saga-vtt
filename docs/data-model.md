@@ -14,11 +14,17 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 ### Game
 - id
 - created_at
+- rules_module
 - players[]
 - phase (lobby / running / finished)
 - active_player_id
 - round
 - state_version
+
+### RulesModule
+- id
+- name
+- version
 
 ### Token
 - id
@@ -50,6 +56,7 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 ### Presence payloads
 - `HELLO.payload.players`: `Player[]`
 - `HELLO.payload.self_player_id`: `string`
+- `HELLO.payload.rules_module`: `RulesModule`
 - `HELLO.payload.turn`: `{ phase, round, active_player_id }`
 - `HELLO.payload.initiative`: `Initiative | null`
 - `HELLO.payload.undo`: `UndoState`
