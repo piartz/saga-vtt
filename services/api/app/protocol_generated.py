@@ -24,6 +24,16 @@ class Token(TypedDict):
     activation_count_this_turn: int
     last_activation_type: ActivationType | None
 
+class Unit(TypedDict):
+    id: str
+    label: str
+    owner_player_id: str | None
+    unit_type_id: str
+    figure_count: int
+    fatigue: int
+    activation_count_this_turn: int
+    token_id: str | None
+
 class Board(TypedDict):
     width_mm: int
     height_mm: int
@@ -108,6 +118,7 @@ class HELLOPayload(TypedDict):
     protocol_version: int
     board: Board
     tokens: List[Token]
+    units: List[Unit]
     players: List[Player]
     rules_module: RulesModule
     self_player_id: str

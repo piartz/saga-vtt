@@ -55,6 +55,32 @@
       "additionalProperties": false
     },
 
+    "Unit": {
+      "type": "object",
+      "required": ["id", "label", "owner_player_id", "unit_type_id", "figure_count", "fatigue", "activation_count_this_turn", "token_id"],
+      "properties": {
+        "id": {"type": "string"},
+        "label": {"type": "string"},
+        "owner_player_id": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "null"}
+          ]
+        },
+        "unit_type_id": {"type": "string"},
+        "figure_count": {"type": "integer"},
+        "fatigue": {"type": "integer"},
+        "activation_count_this_turn": {"type": "integer"},
+        "token_id": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+
     "Board": {
       "type": "object",
       "required": ["width_mm", "height_mm"],
@@ -284,7 +310,7 @@
     "HELLO": {
       "payload": {
         "type": "object",
-        "required": ["game_id", "protocol_version", "board", "tokens", "players", "self_player_id", "turn", "initiative", "undo", "rules_module"],
+        "required": ["game_id", "protocol_version", "board", "tokens", "units", "players", "self_player_id", "turn", "initiative", "undo", "rules_module"],
         "properties": {
           "game_id": {"type": "string"},
           "protocol_version": {"type": "integer"},
@@ -292,6 +318,10 @@
           "tokens": {
             "type": "array",
             "items": {"$ref": "#/definitions/Token"}
+          },
+          "units": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/Unit"}
           },
           "players": {
             "type": "array",

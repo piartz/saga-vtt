@@ -25,6 +25,7 @@ from app.protocol_generated import (
     UndoActionType,
     UndoRequest as PendingUndoRequest,
     UndoState,
+    Unit as UnitState,
 )
 from app.rules import (
     DEFAULT_RULES_MODULE_ID,
@@ -35,6 +36,7 @@ from app.rules import (
     list_rules_modules,
     require_rules_module,
 )
+from app.rules.types import UnitTypeDefinition
 
 PROTOCOL_VERSION = 1
 BOARD_WIDTH_MM = 800
@@ -87,6 +89,101 @@ def default_tokens() -> Dict[str, TokenState]:
     }
 
 
+def unit_type_ids_by_id(rules_module: RulesModule) -> dict[str, UnitTypeDefinition]:
+    return {unit_type["id"]: unit_type for unit_type in rules_module.unit_types}
+
+
+def validate_unit_state(
+    unit: UnitState,
+    rules_module: RulesModule,
+    valid_owner_player_ids: set[str] | None = None,
+    valid_token_ids: set[str] | None = None,
+) -> str | None:
+    if not unit["id"].strip():
+        return "Unit id must be a non-empty string."
+    if not unit["label"].strip():
+        return f"Unit '{unit['id']}' label must be a non-empty string."
+
+    owner_player_id = unit["owner_player_id"]
+    if owner_player_id is not None:
+        if not owner_player_id.strip():
+            return f"Unit '{unit['id']}' owner_player_id must be null or a non-empty string."
+        if valid_owner_player_ids is not None and owner_player_id not in valid_owner_player_ids:
+            return f"Unit '{unit['id']}' has unknown owner_player_id '{owner_player_id}'."
+
+    unit_types_by_id = unit_type_ids_by_id(rules_module)
+    unit_type = unit_types_by_id.get(unit["unit_type_id"])
+    if unit_type is None:
+        return f"Unit '{unit['id']}' has unknown unit_type_id '{unit['unit_type_id']}'."
+
+    figure_count = unit["figure_count"]
+    if figure_count < unit_type["min_figures"] or figure_count > unit_type["max_figures"]:
+        return (
+            f"Unit '{unit['id']}' figure_count must be between "
+            f"{unit_type['min_figures']} and {unit_type['max_figures']}."
+        )
+
+    if unit["fatigue"] < 0:
+        return f"Unit '{unit['id']}' fatigue cannot be negative."
+    if unit["activation_count_this_turn"] < 0:
+        return f"Unit '{unit['id']}' activation_count_this_turn cannot be negative."
+
+    token_id = unit["token_id"]
+    if token_id is not None:
+        if not token_id.strip():
+            return f"Unit '{unit['id']}' token_id must be null or a non-empty string."
+        if valid_token_ids is not None and token_id not in valid_token_ids:
+            return f"Unit '{unit['id']}' references unknown token_id '{token_id}'."
+
+    return None
+
+
+def require_valid_unit_state(
+    unit: UnitState,
+    rules_module: RulesModule,
+    valid_owner_player_ids: set[str] | None = None,
+    valid_token_ids: set[str] | None = None,
+) -> None:
+    error = validate_unit_state(unit, rules_module, valid_owner_player_ids, valid_token_ids)
+    if error is not None:
+        raise ValueError(error)
+
+
+def default_units_for_rules_module(
+    rules_module: RulesModule, tokens: Dict[str, TokenState]
+) -> Dict[str, UnitState]:
+    unit_type_ids = unit_type_ids_by_id(rules_module)
+    if "warlord" not in unit_type_ids:
+        raise ValueError(f"Rules module '{rules_module.id}' must define a 'warlord' unit type.")
+
+    units: Dict[str, UnitState] = {
+        "A-warlord": {
+            "id": "A-warlord",
+            "label": "Warlord A",
+            "owner_player_id": None,
+            "unit_type_id": "warlord",
+            "figure_count": 1,
+            "fatigue": 0,
+            "activation_count_this_turn": 0,
+            "token_id": "A",
+        },
+        "B-warlord": {
+            "id": "B-warlord",
+            "label": "Warlord B",
+            "owner_player_id": None,
+            "unit_type_id": "warlord",
+            "figure_count": 1,
+            "fatigue": 0,
+            "activation_count_this_turn": 0,
+            "token_id": "B",
+        },
+    }
+    valid_token_ids = set(tokens)
+    for unit in units.values():
+        require_valid_unit_state(unit, rules_module, valid_token_ids=valid_token_ids)
+    return units
+
+
 @dataclass
 class GameRoom:
     game_id: str
@@ -95,6 +192,7 @@ class GameRoom:
     seq: int = 0
     connections: RoomConnectionManager = field(default_factory=RoomConnectionManager)
     tokens: Dict[str, TokenState] = field(default_factory=default_tokens)
+    units: Dict[str, UnitState] = field(default_factory=dict)
     phase: Phase = "lobby"
     round: int = 0
     active_player_id: str | None = None
@@ -105,6 +203,10 @@ class GameRoom:
 
     async def broadcast(self, event: Dict[str, Any], exclude_ws: WebSocket | None = None) -> None:
         await self.connections.broadcast(event, exclude_ws=exclude_ws)
+
+    def __post_init__(self) -> None:
+        if not self.units:
+            self.units = default_units_for_rules_module(self.rules_module, self.tokens)
 
 
 # In-memory room registry (MVP only)
@@ -191,6 +293,10 @@ def room_turn_snapshot(room: GameRoom) -> TurnState:
 
 def room_rules_module_snapshot(room: GameRoom) -> RulesModuleSnapshot:
     return room.rules_module.snapshot()
+
+
+def room_units_snapshot(room: GameRoom) -> List[UnitState]:
+    return [room.units[unit_id] for unit_id in sorted(room.units)]
 
 
 def room_initiative_snapshot(room: GameRoom) -> InitiativeState | None:
@@ -669,6 +775,7 @@ def create_game(
                 "protocol_version": PROTOCOL_VERSION,
                 "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
                 "tokens": list(existing_room.tokens.values()),
+                "units": room_units_snapshot(existing_room),
                 "rules_module": room_rules_module_snapshot(existing_room),
                 "created": False,
             }
@@ -684,6 +791,7 @@ def create_game(
         "protocol_version": PROTOCOL_VERSION,
         "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
         "tokens": list(room.tokens.values()),
+        "units": room_units_snapshot(room),
         "rules_module": room_rules_module_snapshot(room),
         "created": True,
     }
@@ -716,6 +824,7 @@ async def game_ws(ws: WebSocket, game_id: str) -> None:
                         "protocol_version": PROTOCOL_VERSION,
                         "board": {"width_mm": BOARD_WIDTH_MM, "height_mm": BOARD_HEIGHT_MM},
                         "tokens": list(room.tokens.values()),
+                        "units": room_units_snapshot(room),
                         "players": room_players_snapshot(room),
                         "rules_module": room_rules_module_snapshot(room),
                         "turn": room_turn_snapshot(room),

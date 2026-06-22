@@ -90,7 +90,12 @@ Canonical ability and special-rule names may be stored and displayed. Published 
 ## Geometry Needs
 The current token movement model is enough for simple tabletop movement but not enough for full rules enforcement. Future geometry helpers should support:
 
-- Range bands as named distances backed by mm/inch conversion.
+- SAGA range bands as named distances backed by mm/inch conversion:
+  - `VS` = 2 inches
+  - `S` = 4 inches
+  - `M` = 6 inches
+  - `L` = 12 inches
+  - numeric prefixes multiply the ruler length, e.g. `2L` = 24 inches.
 - Unit formation validation across multiple figures.
 - Base sizes and model footprint checks.
 - Straight-line movement paths and path length limits.

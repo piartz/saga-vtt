@@ -28,6 +28,17 @@ export interface Token {
   last_activation_type: ActivationType | null;
 }
 
+export interface Unit {
+  id: string;
+  label: string;
+  owner_player_id: string | null;
+  unit_type_id: string;
+  figure_count: number;
+  fatigue: number;
+  activation_count_this_turn: number;
+  token_id: string | null;
+}
+
 export interface Board {
   width_mm: number;
   height_mm: number;
@@ -128,6 +139,7 @@ export type HELLOPayload = {
   protocol_version: number;
   board: Board;
   tokens: Token[];
+  units: Unit[];
   players: Player[];
   rules_module: RulesModule;
   self_player_id: string;

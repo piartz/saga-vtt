@@ -9,6 +9,16 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - +x to the right, +y downward
 - Facing angle in degrees (0 = right, 90 = down) or radians (pick one and stick to it)
 
+## SAGA Distance Bands
+Rules-facing distances should use SAGA range labels and convert to board units at the rules/core boundary.
+
+- `VS` = 2 inches
+- `S` = 4 inches
+- `M` = 6 inches
+- `L` = 12 inches
+- A numeric prefix multiplies the ruler length, e.g. `2L` = 24 inches and `3M` = 18 inches.
+- Store board coordinates in integer mm; keep range-band labels in rules data and convert to mm for validation/display.
+
 ## Entities
 
 ### Game
@@ -73,6 +83,16 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 - last_activation_type (`move` / `charge` / `shoot` / `rest` / null)
 - tags/status (activated, fatigued, etc. — rules-specific)
 
+### Unit
+- id
+- label
+- owner_player_id (`string` / null while setup ownership is unresolved)
+- unit_type_id
+- figure_count
+- fatigue
+- activation_count_this_turn
+- token_id (`string` / null; temporary visual anchor until richer formation state exists)
+
 ### Player (ephemeral MVP presence)
 - id
 - label
@@ -92,6 +112,7 @@ Use **continuous coordinates** in millimeters (mm) to avoid floating conversion 
 
 ### Presence payloads
 - `HELLO.payload.players`: `Player[]`
+- `HELLO.payload.units`: `Unit[]`
 - `HELLO.payload.self_player_id`: `string`
 - `HELLO.payload.rules_module`: `RulesModule`
 - `HELLO.payload.turn`: `{ phase, round, active_player_id }`

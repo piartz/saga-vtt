@@ -29,6 +29,8 @@ def test_create_game_room() -> None:
     assert len(body["tokens"]) >= 2
     assert body["tokens"][0]["activation_count_this_turn"] == 0
     assert body["tokens"][0]["last_activation_type"] is None
+    assert [unit["id"] for unit in body["units"]] == ["A-warlord", "B-warlord"]
+    assert [unit["token_id"] for unit in body["units"]] == ["A", "B"]
     assert body["rules_module"] == SAGA_CORE_RULES_MODULE
     assert body["created"] is True
 
@@ -49,6 +51,7 @@ def test_create_game_returns_existing_room_for_same_client() -> None:
     assert second_body["created"] is False
     assert first_body["rules_module"] == SAGA_CORE_RULES_MODULE
     assert second_body["rules_module"] == SAGA_CORE_RULES_MODULE
+    assert second_body["units"] == first_body["units"]
     assert len(ROOMS) == 1
 
 
