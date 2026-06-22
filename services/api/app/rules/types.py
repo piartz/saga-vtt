@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol, TypedDict
+from typing import Protocol
+
+from typing_extensions import TypedDict
 
 
 class RulesModuleSnapshot(TypedDict):
