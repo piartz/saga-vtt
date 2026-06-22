@@ -22,7 +22,7 @@ Write a short round brief:
 - Manual verification steps.
 - Known shortcuts.
 
-Do not paste protected rule prose into issues, docs, tests, fixtures, or commit messages. Convert reference material into original acceptance criteria and invented fixture names.
+Do not paste protected rule prose into issues, docs, tests, fixtures, or commit messages. Canonical names/labels for units, terrain, special rules, battle-board abilities, scenarios, and other terms are allowed; convert explanatory text into original acceptance criteria and code behavior.
 
 ## Recommended Order Inside a Round
 1. Add or update schema/protocol definitions when needed.
@@ -58,14 +58,13 @@ Content boundary:
 - Are random rolls server-side and auditable?
 - Does `HELLO` include enough snapshot state for reconnect?
 - Are reaction/pending-choice windows explicit?
-- Are protected names, prose, examples, boards, scenarios, and profiles absent?
-- Can the behavior be tested with invented fixtures?
+- Are copied prose, published examples, battle-board layout, artwork, and other expressive source material absent?
+- Can the behavior be tested with minimal SAGA Core fixtures?
 - Did docs stay aligned with code?
 
 ## Documentation Discipline
 - Keep roadmap files strategic, not rulebook-like.
 - Document mechanics as software responsibilities and state transitions.
-- Use invented examples for fixtures and tests.
+- Use canonical names where useful, but keep examples and explanatory text original.
 - Update `docs/protocol.md` and `docs/data-model.md` when the protocol or data model changes.
 - Update `docs/agent-context.md` at the end of every behavior-changing round.
-

@@ -29,7 +29,9 @@ from app.protocol_generated import (
 from app.rules import (
     DEFAULT_RULES_MODULE_ID,
     RulesModule,
+    RulesModuleManifest,
     RulesModuleSnapshot,
+    get_rules_module,
     list_rules_modules,
     require_rules_module,
 )
@@ -642,6 +644,14 @@ def health() -> Dict[str, str]:
 @app.get("/rules/modules")
 def rules_modules() -> Dict[str, Any]:
     return {"modules": [module.snapshot() for module in list_rules_modules()]}
+
+
+@app.get("/rules/modules/{module_id}")
+def rules_module_manifest(module_id: str) -> RulesModuleManifest:
+    module = get_rules_module(module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail=f"Unknown rules module '{module_id}'.")
+    return module.manifest()
 
 
 @app.post("/games")

@@ -6,7 +6,7 @@ This is the current MVP protocol implemented by the API/web app.
 
 ### `POST /games`
 - Optional JSON body:
-  - `rules_module_id` (`string`, defaults to `toy-skirmish`)
+  - `rules_module_id` (`string`, defaults to `saga-core`)
 - Creates a room and returns:
   - `game_id`
   - `protocol_version`
@@ -24,6 +24,17 @@ This is the current MVP protocol implemented by the API/web app.
     - `id`
     - `name`
     - `version`
+
+### `GET /rules/modules/{module_id}`
+- Returns a rules module manifest:
+  - `id`
+  - `name`
+  - `version`
+  - `unit_types[]`
+  - `terrain_traits[]`
+  - `ability_timings[]`
+  - `scenarios[]`
+- Current manifests are passive metadata only. They do not change command legality yet.
 
 ### `GET /rooms`
 - Returns active rooms (rooms with at least one connected websocket player):
