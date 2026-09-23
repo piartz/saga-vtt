@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-06-22 (unit snapshots added)
+Last updated: 2026-09-23 (Dependabot maintenance skill added)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -43,6 +43,11 @@ Primary references:
   - Python dependencies (weekly, Monday)
   - JavaScript dependencies (weekly, Monday)
   - GitHub Actions (weekly, Monday)
+- Repo-local `.agents/skills/dependabot-maintainer` workflow:
+  - audits Dependabot alerts and pull requests in read-only mode by default
+  - separates vulnerability priority from dependency-change regression risk
+  - provides deterministic context-collection and Python/web/Actions verification helpers
+  - requires explicit authorization before pushing or mutating pull requests or alerts
 - Rules-module roadmap docs now exist under `rules-roadmap/`:
   - high-level rules implementation categories
   - VTT core vs rules-module boundary
@@ -221,6 +226,7 @@ Primary references:
    - replays and spectators
 
 ## Recommended Next Tasks
+- Exercise `$dependabot-maintainer` against a real alert in Audit mode, refine its risk policy from observed evidence, and keep GitHub mutations manual until the workflow has a reliable track record.
 - Continue rules-module Phase 0 from `rules-roadmap/implementation-plan.md`:
   - continue using canonical names for rules concepts while keeping copied rule prose out of code/docs/tests
   - preserve current generic game flow while module state is threaded through snapshots
@@ -237,6 +243,7 @@ Primary references:
 - Start ADRs for major protocol/state decisions in `docs/adrs/`.
 
 ## Open Decisions / Risks
+- Dependency-maintenance automation is intentionally report-first. The web app has no automated UI tests, and the current `pip-audit`, Bandit, and `pnpm audit` CI steps downgrade findings to warnings; these gaps prevent broad automatic merge decisions.
 - Event ordering and replay consistency under reconnect are not yet specified.
 - No auth/identity: all clients can currently issue movement and dice commands.
 - Presence identities are ephemeral per websocket and not stable across reconnect.
