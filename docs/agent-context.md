@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-06-22 (unit snapshots added)
+Last updated: 2026-10-19 (Dependabot auto-merge added)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -43,6 +43,9 @@ Primary references:
   - Python dependencies (weekly, Monday)
   - JavaScript dependencies (weekly, Monday)
   - GitHub Actions (weekly, Monday)
+  - `.github/workflows/dependabot-auto-merge.yml` enables squash auto-merge for Dependabot PRs whose updates are all patch/minor; majors and minor bumps of `0.x` packages are left for manual review
+  - auto-merge waits for the `web`, `api`, and `security` checks, which a repository ruleset on `main` marks as required
+- Ruff lint rules are pinned in `services/api/pyproject.toml` (`[tool.ruff.lint] select`) so ruff upgrades cannot widen lint scope; adopting newer rule families is a deliberate, separate change
 - Rules-module roadmap docs now exist under `rules-roadmap/`:
   - high-level rules implementation categories
   - VTT core vs rules-module boundary
@@ -235,6 +238,8 @@ Primary references:
 - Expand dice UX (custom notation input + richer readable log details/filters for `DICE_ROLLED`).
 - Add deployment workflow with explicit manual approval gate for production (CI step 4).
 - Start ADRs for major protocol/state decisions in `docs/adrs/`.
+- Decide whether to adopt ruff's wider default rules (UP/SIM/B/RUF/I families; about 138 findings, mostly auto-fixable) in a dedicated cleanup PR.
+- Add a minimal web smoke test so web dependency updates are checked for runtime breakage, not only lint and build.
 
 ## Open Decisions / Risks
 - Event ordering and replay consistency under reconnect are not yet specified.
@@ -247,6 +252,10 @@ Primary references:
 - Rules-module work may use canonical game names/labels for units, terrain, special rules, battle-board abilities, scenarios, and similar terms. The remaining content boundary is copied prose, published examples, battle-board layout, artwork, and other expressive source material.
 - Full rules enforcement will require richer unit geometry than the current single-token movement model, including formation, base footprint, contact, line-of-sight, terrain overlap, and casualty-removal validation.
 - Measurement work should use SAGA range labels (`VS`, `S`, `M`, `L`, numeric multiples) as rules-facing values and convert them to board mm only at geometry boundaries.
+- Dependabot auto-merge relies on CI as its only safety gate. The web app has no runtime/UI tests, so a web dependency regression that still lints and builds would merge unnoticed.
+- Auto-merges are performed with `GITHUB_TOKEN`, which does not trigger the `push` CI run on `main`; the PR's CI run is the only check for those commits.
+- The `security` CI job is advisory: audit and bandit findings emit warnings and never fail the job.
+- Dependabot vulnerability alerts and security updates are intentionally disabled until the app reaches MVP; only scheduled version updates are active.
 
 ## Quick Session Bootstrap (for agents)
 1. Read this file.
