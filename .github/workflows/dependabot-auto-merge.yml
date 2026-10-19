@@ -1,0 +1,60 @@
+name: Dependabot auto-merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      # Also verifies the PR commits were authored and signed by Dependabot,
+      # so a PR with manually pushed commits fails here and is never auto-merged.
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Only patch/minor updates qualify. Majors, unknown update types, and minor
+      # bumps of 0.x packages (breaking under semver) are left for manual review.
+      - name: Check update policy
+        id: policy
+        env:
+          UPDATED_DEPS: ${{ steps.metadata.outputs.updated-dependencies-json }}
+        run: |
+          blocked=$(jq -r '
+            if length == 0 then "(no dependency metadata)" else
+              [.[] | select(
+                (.updateType | IN("version-update:semver-patch", "version-update:semver-minor") | not)
+                or (.updateType == "version-update:semver-minor" and ((.prevVersion // "") | test("^v?0\\.")))
+              ) | .dependencyName] | join(", ")
+            end' <<< "$UPDATED_DEPS")
+          if [ -n "$blocked" ]; then
+            echo "::notice::Manual review required for: $blocked"
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Merges only after the required CI checks on main pass.
+      - name: Enable auto-merge
+        if: steps.policy.outputs.eligible == 'true'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --squash "$PR_URL"
+
+      # Dependabot can refresh a grouped PR with new updates; drop auto-merge if
+      # it no longer qualifies. Fails harmlessly when auto-merge was never enabled.
+      - name: Disable auto-merge
+        if: steps.policy.outputs.eligible == 'false'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --disable-auto "$PR_URL" || true
