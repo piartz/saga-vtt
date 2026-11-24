@@ -35,4 +35,4 @@ Additional Universes, named Heroes, mercenary/Legendary profiles, creatures, mag
 
 ## Immediate next slice
 
-`P00.1` and `P00.2` are complete: the versioned source baseline, requirement map, decision register, source interpretations, content gates, regression cases, and work-package status live in `services/api/app/rules/provenance/data/`. Next take `P00.3` (capability metadata design and ADRs), then `P01.1`: extract command dispatch and deterministic state reduction while retaining the bootstrap behavior. None of these tasks requires guessing faction content.
+P00 is complete: the versioned source baseline, requirement map, decision register, source interpretations, content gates, regression cases, and work-package status live in `services/api/app/rules/provenance/data/`, and ADRs 0001-0005 in `docs/adrs/` record the selected seat, transaction, mode, geometry, and content-pack defaults. Next take `P01.1`: extract command dispatch and deterministic state reduction while retaining the bootstrap behavior. None of these tasks requires guessing faction content.

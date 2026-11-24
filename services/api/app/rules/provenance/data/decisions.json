@@ -3,19 +3,22 @@
     "id": "D01",
     "kind": "engineering_default",
     "title": "Two fixed player seats; spectators cannot command",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0001-fixed-seats-and-resume-credentials.md"
   },
   {
     "id": "D02",
     "kind": "engineering_default",
     "title": "Individual figures are authoritative",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0004-per-figure-fixed-point-geometry.md"
   },
   {
     "id": "D03",
     "kind": "engineering_default",
     "title": "Fixed-point internal coordinates; bands and inches for players",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0004-per-figure-fixed-point-geometry.md"
   },
   {
     "id": "D04",
@@ -33,31 +36,36 @@
     "id": "D06",
     "kind": "engineering_default",
     "title": "Pause on disconnect; no implicit auto-pass or forfeit",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0001-fixed-seats-and-resume-credentials.md"
   },
   {
     "id": "D07",
     "kind": "engineering_default",
     "title": "Sandbox retained; enforced rooms reject legacy bypasses",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0003-sandbox-and-enforced-game-modes.md"
   },
   {
     "id": "D08",
     "kind": "engineering_default",
     "title": "Deterministic reducer, serialized transactions, recorded RNG",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0002-deterministic-reducer-and-event-ledger.md"
   },
   {
     "id": "D09",
     "kind": "engineering_default",
     "title": "In-memory store first; Postgres durability before release",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0002-deterministic-reducer-and-event-ledger.md"
   },
   {
     "id": "D10",
     "kind": "engineering_default",
     "title": "Declarative versioned content packs with reviewed handlers",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0005-content-packs-and-capability-readiness.md"
   },
   {
     "id": "D11",
@@ -69,19 +77,22 @@
     "id": "D12",
     "kind": "engineering_default",
     "title": "Committed undo disabled in enforced games",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0003-sandbox-and-enforced-game-modes.md"
   },
   {
     "id": "D13",
     "kind": "engineering_default",
     "title": "Generic warband is the first implementation target",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0005-content-packs-and-capability-readiness.md"
   },
   {
     "id": "D14",
     "kind": "engineering_default",
     "title": "Curated terrain and base shapes; original ability UI",
-    "status": "selected"
+    "status": "selected",
+    "adr": "docs/adrs/0004-per-figure-fixed-point-geometry.md"
   },
   {
     "id": "D15",

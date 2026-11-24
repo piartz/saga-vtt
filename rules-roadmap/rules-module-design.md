@@ -10,7 +10,7 @@
 | Generic engine | Serialized transactions, reducer, event store, RNG requests, pending-choice protocol, seat identity | New `services/api/app/engine/` |
 | Generic geometry | Distances, footprints, intersections, swept corridors, spatial index | New `services/api/app/geometry/` |
 | SAGA rules | Phases, profiles, formation policies, dice/abilities, fatigue, combat, scenario/scoring | Extend `services/api/app/rules/`; split `saga_core.py` into a package only in a focused migration |
-| Content packs | Versioned definitions, provenance, capabilities, faction/ability/profile data | `services/api/app/rules/packs/` or a dedicated data directory selected in P00 |
+| Content packs | Versioned definitions, provenance, capabilities, faction/ability/profile data | `services/api/app/rules/packs/<pack-id>/<version>/` ([ADR 0005](../docs/adrs/0005-content-packs-and-capability-readiness.md)) |
 | Schema | Shared envelopes and typed state/command/event/choice definitions | `schemas/protocol.json` and existing generators |
 | Web projections | Snapshot/event application, reconnect/resync, action/choice rendering | Extract from `apps/web/src/ui/App.tsx` into protocol/store/feature components |
 | Board | Selection, base rendering, terrain, previews, measurement, highlights | Evolve `apps/web/src/ui/Board.tsx` behind focused geometry/view interfaces |
@@ -32,6 +32,22 @@ The current `RulesModuleProvider` only supplies metadata. Evolve it without pret
 An ability pack is declarative, schema-validated data plus registered, reviewed effect handlers where necessary. Never evaluate Python/JavaScript supplied by an imported pack. Unknown effects, recursive cycles, incompatible versions, or missing referenced definitions fail configuration, not mid-combat.
 
 Separate definition validity and roster-preview availability from enforced-play readiness. P02 may expose the approved generic roster for inspection/configuration, but it cannot certify a playable pack while any inherited rule, equipment effect, board cost, or selected scenario behavior is missing. Gate enforced game start on the selected pack/scenario's complete capability set. Intermediate slices use internal conformance fixtures and explicitly incomplete previews; they must not let a Warlord fight with silently missing Resilience or an unimplemented ability consume dice.
+
+## Module metadata and capability status
+
+Selected in [ADR 0005](../docs/adrs/0005-content-packs-and-capability-readiness.md). The module manifest (`GET /rules/modules/{module_id}`) gains these fields in the first slice that exposes a real capability. Until then, today's passive manifest is provisional and counts as `preview` at most.
+
+| Field | Content |
+| --- | --- |
+| `source` | Registry source ID and SHA-256 the module targets (`CORE-2022`) |
+| `capabilities` | `{id, status, requirements}` per capability. Status is `missing`, `preview`, or `enforced`; requirement IDs come from the provenance registry |
+| `packs` | Available pack IDs, versions, content hashes, and `draft`/`released` status |
+| `readiness` | Per selected pack and scenario: `preview_ready`, `enforced_ready`, and the missing capability IDs or open content gates (for example G01) |
+
+- Capability IDs are stable dotted names owned by the rules module, for example `activation.grant`, `movement.ordinary`, `shooting`, `melee.close_ranks`, `rule.resilience`. Core code never interprets them.
+- Mark a capability `enforced` only when its behavior is implemented and test evidence is recorded in the registry: requirement or regression-case test paths. A manifest entry alone is not evidence.
+- Readiness is computed from capability status and registry gates, never hand-set. An enforced start is rejected with the missing IDs; preview stays available.
+- Packs declare required capabilities in `pack.json`. Scenarios declare theirs in their adapter. Test-only fixture abilities are never selectable.
 
 ## State model
 
@@ -142,7 +158,7 @@ Generic queries must include:
 - Existence of a clear source-base to target-base sight segment; not merely a center ray.
 - Deployment half-planes/strips, scenario bounds, terrain separation and supported-shape width.
 
-Document one numerical tolerance/error bound in the geometry ADR. Exact integer/rational comparisons should decide distance thresholds where feasible; do not scatter epsilons or enlarge legality by a client pixel. Approximation for oval footprints must have a documented error bound and boundary fixtures. No persistent state may depend on canvas zoom or viewport size.
+Document one numerical tolerance/error bound in the geometry ADR: [ADR 0004](../docs/adrs/0004-per-figure-fixed-point-geometry.md) records the representation and assigns the bound to P03.3. Exact integer/rational comparisons should decide distance thresholds where feasible; do not scatter epsilons or enlarge legality by a client pixel. Approximation for oval footprints must have a documented error bound and boundary fixtures. No persistent state may depend on canvas zoom or viewport size.
 
 A movement proposal carries ordered figure IDs, ruler segments/waypoints, and final poses. Validate the full formation atomically, retaining an intermediate occupancy view for each figure's completed move. Ordinary movement uses another unit member at its current position for the VS check and the first mover for the S/M radius; charges require an already moved VS neighbor and keep the first mover as final reference. Deployment requires an already placed VS neighbor after the first figure. Do not turn these into one stricter shared validator. A preview is local/read-only; it cannot reserve the outcome across an opponent reaction. Compute final legality after reactions.
 
