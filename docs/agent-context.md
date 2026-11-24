@@ -1,12 +1,12 @@
 # Agent Context
 
-Last updated: 2026-10-19 (Dependabot auto-merge added)
+Last updated: 2026-11-24 (source-based game engine implementation plan; documentation only)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
 ## Project Mission
 - Build a browser-based, server-authoritative virtual tabletop (VTT) for skirmish play.
-- Keep the engine generic and rules-modular (Saga-ready, not Saga-IP bundled).
+- Keep the engine generic and rules-modular, with SAGA mechanics isolated in the rules module.
 - Near-term product target: two players can complete a full online game flow with shared state and an audit-friendly action log.
 
 Primary references:
@@ -19,6 +19,7 @@ Primary references:
 - Canonical names/labels from the game are allowed in code, tests, and UI for units, terrain, special rules, battle-board abilities, scenarios, and other game terms. Rules behavior may be implemented in original code, but explanatory rulebook prose should not be copied.
 - Keep "VTT core" and "rules module" separated.
 - Server remains source of truth (moves, dice, legality checks).
+- The project owner stated on 2026-11-24 that Studio Tomahawk has authorized the work. Use the local rules as reference for mechanics; retain the repository's original-code/data and no-copied-prose/art boundaries.
 - **Do NOT mention AI tools or add "Co-Authored-By" lines in commits or documentation.** Keep all references to development tools and processes neutral.
 
 ## Current Implementation Snapshot
@@ -46,13 +47,16 @@ Primary references:
   - `.github/workflows/dependabot-auto-merge.yml` enables squash auto-merge for Dependabot PRs whose updates are all patch/minor; majors and minor bumps of `0.x` packages are left for manual review
   - auto-merge waits for the `web`, `api`, and `security` checks, which a repository ruleset on `main` marks as required
 - Ruff lint rules are pinned in `services/api/pyproject.toml` (`[tool.ruff.lint] select`) so ruff upgrades cannot widen lint scope; adopting newer rule families is a deliberate, separate change
-- Rules-module roadmap docs now exist under `rules-roadmap/`:
-  - high-level rules implementation categories
-  - VTT core vs rules-module boundary
-  - phased plan from SAGA Core module guardrails through setup, Orders phase, activations, fatigue, combat, terrain, scenarios, and content strategy
-  - iteration playbook for small, test-backed development rounds
-  - source/content boundary: use canonical names/labels freely, but do not copy copyrighted rule prose, published examples, battle-board layout, or artwork
-- Rules-module Phase 0 implementation has started:
+- A source-based, documentation-only game engine plan now exists under `rules-roadmap/`:
+  - `README.md` defines complete playable scope and reading order.
+  - `implementation-plan.md` replaces the former Phase 0-10 outline with work packages P00-P15, dependencies, implementation slices, migration obligations, and exit criteria.
+  - `rules-coverage.md` maps R01-R34 to the supplied 2022 rulebook, including all core actions, unit/equipment/special rules, setup, terrain, dice, scenarios, and online play requirements.
+  - `rules-module-design.md` specifies proposed runtime/state, per-figure geometry, reaction choices, event transactions, protocol evolution, content packs, UI, and recovery.
+  - `validation-and-release.md` defines focused tests and full-game/restart/replay acceptance scripts.
+  - `decisions-and-source-gaps.md` records engineering defaults, explicit digital adaptations, source ambiguities, and missing complete faction material.
+  - `iteration-playbook.md` gives per-slice implementation and handoff instructions.
+  - The plan was checked against `rules/SAGA_-_Rulebook_2022_261124_161828.pdf`; the PDF is a local untracked reference, not a committed asset. No engine, schema, protocol, or data-model implementation changed with this plan.
+- Rules-module scaffolding has started (Phase 0 in the previous roadmap):
   - `services/api/app/rules/` contains a placeholder rules module interface, registry, and passive `saga-core` module metadata
   - `GET /rules/modules` lists registered modules
   - `GET /rules/modules/{module_id}` returns passive module manifests with canonical game terminology for unit types, terrain traits, ability timings, and scenario metadata
@@ -64,7 +68,7 @@ Primary references:
 - SAGA distance bands for future measurement work:
   - `VS` = 2 inches, `S` = 4 inches, `M` = 6 inches, `L` = 12 inches
   - numeric prefixes multiply the band, e.g. `2L` = 24 inches
-  - keep rules-facing labels in rules data and convert to integer mm at the validation/display boundary
+  - current documents/runtime use integer mm; the new plan proposes a versioned fixed-point 0.1 mm migration to preserve exact imperial distances, plus a distinct metric mode (50/100/150/300 mm). This proposal is not implemented. Never mix metric rulers with an imperial table.
 - **Typed Protocol Schema System**:
   - Single source of truth for WebSocket protocol in `schemas/protocol.json`
   - Auto-generates TypeScript types (`apps/web/src/protocol.generated.ts`)
@@ -180,6 +184,9 @@ Primary references:
   - wheel gestures over the board are isolated from page scroll (page scroll continues normally outside board area)
 
 ### Tests
+- `services/api/tests/test_rules_modules.py`
+  - verifies module listing/manifests, room selection, passive unit snapshots, and basic unit validation
+  - does not verify SAGA gameplay; its recruitment-sized unit validation needs separation from surviving-unit validation in P02
 - `services/api/tests/test_connections.py`
   - verifies `RoomConnectionManager` player assignment and snapshots
   - verifies broadcast exclusion and stale websocket cleanup
@@ -223,18 +230,16 @@ Primary references:
    - database-backed games/events/snapshots
    - replays and spectators
 
-## Recommended Next Tasks
-- Continue rules-module Phase 0 from `rules-roadmap/implementation-plan.md`:
-  - continue using canonical names for rules concepts while keeping copied rule prose out of code/docs/tests
-  - preserve current generic game flow while module state is threaded through snapshots
-- Continue rules-module Phase 1 from `rules-roadmap/implementation-plan.md`:
-  - assign unit ownership during setup/start-game flow
-  - add unit update events once unit state becomes mutable
-  - keep token movement compatible with unit-level state until formation geometry is introduced
+## Next Recommended Tasks
+- Follow `rules-roadmap/README.md` and the P00-P15 plan; the old Phase 0-10 numbering is superseded.
+- Start P00.1: establish the source/requirement registry and pin the supplied book revision; track source questions Q01-Q05 and acquire two complete compatible faction lists/battle boards for P12.
+- Then start P01.1: extract command dispatch and introduce deterministic reduction/event-store contracts while retaining sandbox behavior.
+- Continue P01 with stable seats, dedupe/version checks, pause/resume, and an enforced-mode boundary before adding rules-dependent commands.
+- Use P02-P03 for actual ownership, recruitment versus surviving-unit validation, individual figures, and exact geometry. Passive metadata does not count as completed rules enforcement.
 - **Complete remaining Phase 1 adoption and begin Phase 2 cleanup** (remove remaining duplicate inline protocol types/parsers in `apps/web/src/ui/App.tsx` and `services/api/app/main.py`).
 - Extract command routing/dispatch out of the websocket loop now that transport/presence state is isolated.
 - Add WS reconnect/backoff client wrapper with resync behavior.
-- Decide and implement disconnect behavior for turn ownership (pause, auto-pass, or forfeit).
+- Implement the planned disconnect pause/resume policy in P01/P14; today's runtime still auto-passes the disconnected active player's turn.
 - Expand dice UX (custom notation input + richer readable log details/filters for `DICE_ROLLED`).
 - Add deployment workflow with explicit manual approval gate for production (CI step 4).
 - Start ADRs for major protocol/state decisions in `docs/adrs/`.
@@ -242,8 +247,12 @@ Primary references:
 - Add a minimal web smoke test so web dependency updates are checked for runtime breakage, not only lint and build.
 
 ## Open Decisions / Risks
-- Event ordering and replay consistency under reconnect are not yet specified.
-- No auth/identity: all clients can currently issue movement and dice commands.
+- The new plan is documentation only. Today's d20 initiative, 800x500 mm board, token activations, generic dice, and permissive movement remain bootstrap behavior, not source-verified SAGA enforcement.
+- The supplied core PDF lacks complete faction lists/battle boards. Two complete compatible packs and applicable corrections are release gates, although independent engine work can proceed.
+- Source questions Q01-Q05 cover the small-terrain width label, Resilience exhaustion boundary, metric ruler width, Presence scope, and Improvised Projectiles/close-ranks interaction. Record a source-backed resolution or explicit variant before claiming affected conformance.
+- The plan selects per-figure geometry, fixed-point coordinates, fixed player seats, serialized event transactions, disconnect pause, and durable storage before release. These are proposed defaults, not implemented capabilities; see `rules-roadmap/decisions-and-source-gaps.md`.
+- Planned event ordering/replay/reconnect contracts are documented, but runtime support is not implemented.
+- No stable seat authentication or unit ownership enforcement: current active-player restrictions alone do not provide the planned authorization model.
 - Presence identities are ephemeral per websocket and not stable across reconnect.
 - In-memory room state means process restart loses all games.
 - Connection/presence transport state is isolated, but the websocket handler still owns command dispatch and disconnect game-state policy.
@@ -251,7 +260,7 @@ Primary references:
 - Unit ownership is currently nullable and default units are temporarily anchored to single visual tokens; setup/deployment needs to assign owners before unit state can drive SAGA dice or activation legality.
 - Rules-module work may use canonical game names/labels for units, terrain, special rules, battle-board abilities, scenarios, and similar terms. The remaining content boundary is copied prose, published examples, battle-board layout, artwork, and other expressive source material.
 - Full rules enforcement will require richer unit geometry than the current single-token movement model, including formation, base footprint, contact, line-of-sight, terrain overlap, and casualty-removal validation.
-- Measurement work should use SAGA range labels (`VS`, `S`, `M`, `L`, numeric multiples) as rules-facing values and convert them to board mm only at geometry boundaries.
+- Measurement work should use SAGA range labels (`VS`, `S`, `M`, `L`, multiples and ordered sums) and the game's pinned mode; do not perpetuate whole-mm rounding when implementing the planned precision migration.
 - Dependabot auto-merge relies on CI as its only safety gate. The web app has no runtime/UI tests, so a web dependency regression that still lints and builds would merge unnoticed.
 - Auto-merges are performed with `GITHUB_TOKEN`, which does not trigger the `push` CI run on `main`; the PR's CI run is the only check for those commits.
 - The `security` CI job is advisory: audit and bandit findings emit warnings and never fail the job.
@@ -264,5 +273,5 @@ Primary references:
    - `services/api/app/main.py`
    - `apps/web/src/ui/App.tsx`
    - `apps/web/src/ui/Board.tsx`
-4. Check `docs/roadmap.md` and pick a smallest useful increment.
+4. For engine work, read `rules-roadmap/README.md` and select the next prerequisite-complete Pxx slice; use `docs/roadmap.md` for broader product work.
 5. If behavior changes, update this file before ending the session.
