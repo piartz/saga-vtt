@@ -196,12 +196,16 @@ def _record(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[dict[str, Any]]]:
 
     monkeypatch.setattr(secrets, "randbelow", scripted_randbelow)
 
-    session = Session(TestClient(app))
-    try:
-        _play_session(session)
-    finally:
-        for stack in session.stacks.values():
-            stack.close()
+    # As a context manager the test client runs every connection on one event loop, as a real
+    # server does. Without it each websocket gets its own loop thread, and cross-loop broadcasts
+    # can occasionally lose a wake-up and hang.
+    with TestClient(app) as client:
+        session = Session(client)
+        try:
+            _play_session(session)
+        finally:
+            for stack in session.stacks.values():
+                stack.close()
 
     assert next(rolls, None) is None, "every scripted roll must be consumed"
     assert "transcript" not in ROOMS, "the room is removed when the last player leaves"
