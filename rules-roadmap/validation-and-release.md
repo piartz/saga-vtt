@@ -21,7 +21,7 @@ Choose/add test dependencies deliberately when the relevant implementation begin
 
 Assert these after every accepted command and event reduction in test sequences:
 
-1. Every living/deployed figure belongs to exactly one unit and stable seat; destroyed figures cannot act. Original recruitment identities/counts do not change.
+1. Every recruited figure belongs to exactly one stable seat and either its unassigned recruitment pool or one committed unit. Deployment transfers it atomically from pool to unit. Record the permitted pre-organization exchange in the recruitment ledger; lock original unit membership/counts when deployment commits. Destroyed figures cannot act or return to the pool.
 2. Eight SAGA dice per player, exactly one location each; allocations are complete valid cost groups. No duplicate die can pay two abilities.
 3. No partial transaction: invalid proposals leave gameplay state unchanged. Legitimate rule cancellation is a recorded outcome with the appropriate costs/history.
 4. Fatigue is within the profile's cap; exhaustion matches the count; histories belong to a specific player turn and distinguish kinds.
@@ -41,10 +41,12 @@ All examples below are original test arrangements. The Warrior-archer example us
 | Area | Test fixture and expected assertion |
 | --- | --- |
 | Fractional shooting | Five eligible Warrior shooters contribute ceil(5/2)=3 dice. Pre-pool +2 gives starting pool 5; a later +9 is limited to 10 total attack dice. |
+| Melee pre-pool limits | Four Hearthguards generate eight natural dice. A pre-pool grant of seven bonus dice is limited to four by actual figure count, giving twelve before closing ranks/cap. Presence does not increase that limit. Later bonuses use the separate twice-starting-pool rule. |
+| Unitless shooting | A synthetic source expressly grants twelve bonus attack dice with no shooting unit. Its source policy resolves those twelve without a fake figure count or zero-natural-pool cap; reject additional attack dice from SAGA abilities. Verify ordinary unit pool limits independently. |
 | Base profiles and derived Armour | Assert the four source profiles and all seven chosen loadouts. Base Armour is 5 for Warlord/Hearthguards, 4 for Warriors/Levies. Horses derive 5 melee / 4 shooting; foot Levies without ranged weapons derive 4 / 4 and bow Levies 3 / 3. Repeated queries and deployment draft equipment changes preserve base values and apply each modifier once. |
 | Levy Aggression exception | Five bow Levies contribute ceil(5/2)=3 ranged dice and ceil(5/3)=2 melee dice; five Levies without ranged weapons contribute ceil(5/2)=3 melee dice. All Levies retain base shooting Aggression 1/2; that characteristic alone grants no shooting action. |
 | Inherited rules | Both Warlord loadouts carry Determination, We Obey, Presence, Bodyguards, Pride, and Resilience(1), with R21 behavior checks. Hero classification alone does not confer Heroic Unit. Bows/horses forbid close ranks; horses deny cover and apply formation, movement, and terrain-fatigue rules. |
-| Deployment choices | Group the first player's current deployment from its troop pool, let the opponent choose in response, then group the first player's remainder. Assert the scenario quota policy, troop conservation, and immutable committed placements without requiring a frozen full organization. |
+| Deployment choices | In Clash, declare N=7 including Warlord, deploy four units including Warlord, then opponent-all, then three remaining units. With N=6, use three and three. Choose sizes/equipment at each opportunity. Reject an infeasible initial N and a commitment that strands figures or makes the remaining unit slots impossible. Preserve totals and committed placements without freezing future groupings. |
 | Cancel before reaction | A charge cancelled using fatigue spends its paid/free grant and creates no Activation/Reaction window; resolved history stays unchanged. Duplicate cancellation cannot spend fatigue twice. |
 | Old Grudge cancellation | Cancel a free first attempt; its free entitlement is consumed. A later attempt needs another valid grant, while its resolved-action counter still starts at zero. |
 | Coin tie-break | Tied d6 results invoke one fair server heads/tails draw with preassigned seats; non-ties do not. Retry/replay preserves the original result. |
@@ -54,8 +56,11 @@ All examples below are original test arrangements. The Warrior-archer example us
 | Generation | Surviving Hearthguard unit of one generates; Warriors three do not/four do; Levies five do not/six do. All eight dice already allocated is not zero generation. |
 | Rest and repetition | Rest, move, move: rest removes one; first move adds no repetition fatigue; second adds one. A cancelled intervening action changes neither resolved history nor consecutive-shot eligibility. |
 | Fatigue composition | A horse unit with previous MCS activation ends a new move in dangerous terrain: repetition, horse terrain, dangerous terrain are distinct causes, final count capped at exhaustion. |
+| Fatigue and ability prohibition | A combat effect forbidding SAGA abilities also blocks that player's combat fatigue use. Merely having no allocated dice does not. The explicit mercenary fatigue exception remains available. |
 | Formation | Two clusters each having a close neighbor but no connected VS chain fail. Removing the only bridging figure as a casualty fails when another valid loss choice exists. |
+| Intermediate cohesion | Ordinary movement can use a still-unmoved unit member as its VS neighbor while meeting the first-mover radius and final formation checks. The equivalent charge placement requires an already moved neighbor. First deployment figure and lone Hero need no prior neighbor. |
 | Path legality | Clear endpoint beyond an intervening terrain/unit barrier is rejected; own-unit figures may be crossed; other-unit gaps have their specific blocking policy. |
+| Sight versus movement gaps | A third-party unit's gap can block sight even above movement's S/M threshold; firing/target-unit gaps are exempt from sight blocking. A target figure can still obscure a farther target figure. Movement's threshold follows the blocking unit's mount status. |
 | Range/cover | One quantum below/equal/above each threshold using exact imperial bands and inch distances; a base sliver outside cover denies whole-unit cover; a high-terrain tangent is governed by the documented crossing policy. |
 | Charge | First mover contacts, but final figure forces whole-unit S reduction making contact impossible: restore all charging positions while retaining spent grant and reactions. |
 | Exhaustion timing | Unit enters melee exhausted, enemy spends fatigue, -1 remains. Unit becomes exhausted only later in melee, no retroactive -1. |
@@ -68,6 +73,7 @@ All examples below are original test arrangements. The Warrior-archer example us
 | Withdrawal | Full-S route available rejects a shorter route. Blocked required retreat triggers the opposing minimum-separation fallback, without terrain/repeat fatigue. |
 | Scoring | Five slain Warriors total three points, not five per-figure rounded points. Split those losses among units without changing class subtotal; add only the appropriate destruction bonuses. |
 | Terminal thresholds | 7-0 and 8-7 draw; 8-6 wins. Zero generated at turn start uses a different terminal reason. Warlord death without zero generation does not automatically end play. |
+| Content readiness | A valid generic roster can be previewed before all mechanics exist, but enforced start fails while Resilience, required equipment behavior, board costs, or selected scenario capabilities are missing. No incomplete rule is silently ignored. |
 
 ## Network, security, and recovery cases
 
@@ -90,7 +96,7 @@ Use the approved generic pack for initial complete-game runs, including its spec
 
 1. Create an enforced six-point Clash room; join two stable seats and a read-only observer.
 2. Use the generic pack for both seats, legal troop purchases and base choices, the imperial band/inch measurement configuration, chaos off; accept named digital setup conventions.
-3. Complete d6 first-player setup (coin toss on ties), terrain alternation/reposition/final offer, scenario-directed deployment A with unit grouping/equipment chosen at each step, and second-player pregame dice. Verify invalid actor/zone/cost attempts are rejected.
+3. Complete d6 first-player setup (coin toss on ties), terrain alternation/reposition/final offer, Clash's first-player total-unit declaration and deployment A with unit grouping/equipment chosen at each step, and second-player pregame dice. Verify invalid actor/zone/cost/count/remainder attempts are rejected.
 4. Play Orders with carry-over allocations, both reaction windows, all applicable approved generic abilities; exercise advanced timing separately with conformance fixtures if absent from the generic board. Exercise free and paid activations, manoeuvre, rest, repeat fatigue, and optional fatigue spending.
 5. Resolve at least one covered shot, reaction changing eligibility, charge, closed-ranks melee, casualty-prevention choice, unit destruction fatigue, and withdrawal. Both clients show the same rolls and outcomes.
 6. Complete six turns each without an earlier defeat; compare score categories, winner/draw, final board, and completed-turn counts with independently calculated expectations.
@@ -98,7 +104,7 @@ Use the approved generic pack for initial complete-game runs, including its spec
 
 ### E02 - Setup and source options
 
-Run deployment B with both diagonals/edge assignments and C from both seats. Include odd first-player unit count, maximum terrain catalog counts, one-large restrictions, nonround bases, and exact imperial distances and C-to-S distance-label normalization (without changing Method C). Exercise every sourced equipment/Hero rule via the core suite and all selectable faction options via pack tests. Verify all owner rulings Q01-Q10, including an Improvised Projectiles defender closing ranks when charged and an independent restriction still preventing that choice.
+Run deployment B with both diagonals/edge assignments and C from both seats. Include odd first-player unit count, maximum terrain catalog counts, one-large restrictions, nonround bases, and exact imperial distances and C-to-S distance-label normalization (without changing Method C). Exercise every sourced equipment/Hero rule via the core suite and all selectable faction options via pack tests. Verify all owner rulings Q01-Q11, including an Improvised Projectiles defender closing ranks when charged and an independent restriction still preventing that choice.
 
 ### E03 - Scenario endings and chaos
 

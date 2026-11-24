@@ -22,7 +22,7 @@ Core must not branch on names such as Warlord, Woods, or Javelins. It supplies p
 The current `RulesModuleProvider` only supplies metadata. Evolve it without pretending it already validates rules:
 
 - `manifest()` exposes version, profiles, capabilities, and UI labels.
-- `validate_configuration(config, packs)` checks compatible sources, supported capabilities, scenario, roster options, and imperial measurement configuration.
+- `validate_configuration(config, packs)` checks compatible sources, supported capabilities, scenario, roster options, and imperial measurement configuration. Distinguish a roster-preview validation result from an enforced-play readiness result.
 - `initial_state(config, seats)` produces a setup state, not two ownerless demo tokens.
 - `decide(state, command, actor)` returns typed rejection or a bounded resolution plan: facts, RNG requests, and/or choices.
 - `reduce(state, event)` applies facts deterministically. It does not consult wall clock, sockets, random sources, or a changed pack.
@@ -30,6 +30,8 @@ The current `RulesModuleProvider` only supplies metadata. Evolve it without pret
 - `project(state, viewer)` provides a complete permitted snapshot. Private resume credentials and unrevealed setup drafts are never included in opponent views.
 
 An ability pack is declarative, schema-validated data plus registered, reviewed effect handlers where necessary. Never evaluate Python/JavaScript supplied by an imported pack. Unknown effects, recursive cycles, incompatible versions, or missing referenced definitions fail configuration, not mid-combat.
+
+Separate definition validity and roster-preview availability from enforced-play readiness. P02 may expose the approved generic roster for inspection/configuration, but it cannot certify a playable pack while any inherited rule, equipment effect, board cost, or selected scenario behavior is missing. Gate enforced game start on the selected pack/scenario's complete capability set. Intermediate slices use internal conformance fixtures and explicitly incomplete previews; they must not let a Warlord fight with silently missing Resilience or an unimplemented ability consume dice.
 
 ## State model
 
@@ -43,7 +45,7 @@ Names below are proposed domain concepts. Keep protocol DTOs separate from inter
 | TurnState | Fixed seat order, round, global player-turn ID, active seat, turns completed per seat, Orders/Activation substate, expiry checkpoints |
 | Warband | Owner seat, generic/faction pack, recruitment ledger, original figures, unassigned troop pool, deployed units, dice inventory, battle-board allocations, option approvals |
 | Unit | Stable ID, troop class/profile, owner, figure IDs, equipment/keywords, fatigue, initial count, status, histories scoped by player-turn ID; alive count derived |
-| Figure | ID, original unit/profile/class, base shape/dimensions, position/orientation, alive/deployed state; decorative artwork never affects geometry |
+| Figure | Stable recruitment identity, profile/class, base shape/dimensions, position/orientation, alive/deployed state; original unit assigned on deployment commitment, then immutable; decorative artwork never affects geometry |
 | Terrain | ID, sourced preset, transformed footprint, height, difficulty, cover, size class, locked/setup status; effects preserve provenance |
 | SagaDie | ID, owner, current symbol, location (`available`, `inactive`, `allocated`), allocation ID; inventory exactly eight |
 | AbilityDefinition | ID, source, cost alternatives, basic/advanced classification, keywords, actor/target restrictions, effect steps, explicit overrides, capability dependencies |
@@ -56,7 +58,7 @@ Names below are proposed domain concepts. Keep protocol DTOs separate from inter
 | Combat | Attacker/defender, source activation, stage, start-exhaustion flags, initial pools, bonus pools, dice/effects, casualties by stage, outcome/withdrawal |
 | Roll | ID, purpose, resolution, die IDs, count/sides/symbol mapping, raw values, ordered modifiers/rerolls with player attribution, final values |
 | CasualtyLedger | Original identity, source/cause, step, prevented/redirected/actual losses, pre-removal footprint, destruction IDs |
-| ScenarioState | Setup substep/actor, terrain sequence, deployment method/zones, scenario-defined quota basis/evaluator and committed placements, chaos, objectives, score breakdowns, terminal reason |
+| ScenarioState | Setup substep/actor, terrain sequence, deployment method/zones, scenario-defined quota basis/evaluator, declared unit total where required and committed placements, chaos, objectives, score breakdowns, terminal reason |
 | GameResult | Winner/draw, reason, final turns, scoring facts, rules/content hashes, final event cursor/state hash; immutable |
 
 Use physical count, SAGA-ability-effective count (Presence), aggression sum, initial count, and scoring count as distinct queries. Presence is never used for special rules or non-ability counts. Avoid a universal `unit.size` helper. Recruitment validation cannot be reused to reject reduced surviving units.
@@ -66,7 +68,7 @@ Use physical count, SAGA-ability-effective count (Presence), aggression sum, ini
 ```mermaid
 stateDiagram-v2
     [*] --> Configure
-    Configure --> Terrain: config and rosters accepted
+    Configure --> Terrain: config and recruitment totals accepted
     Terrain --> Deploy: final terrain offer resolved
     Deploy --> Pregame: all units legally deployed
     Pregame --> TurnStart: setup effects complete
@@ -86,14 +88,14 @@ Pause is an orthogonal status preserving the exact phase, resolution stack, RNG 
 
 At player-turn start, run source-defined scenario checks before allowing a new action. At turn end, finish queued effects before scoring/advance. Expiry must distinguish end of this player turn, end of owner's next turn, end of activation, and end of combat. A simple decrement on active-player change is insufficient.
 
-During deployment, construct units from the remaining recruitment pool at each scenario step and atomically debit the figures when their placement commits. Do not require all unit sizes/equipment in advance. Snapshot remaining pools and committed units so reconnect cannot undo revealed placements. The scenario adapter supplies quota counting and step progression; generic core must not infer a final unit count or substitute points for units.
+During deployment, construct units from the remaining recruitment pool at each scenario step and atomically debit the figures when their placement commits. Do not require all unit sizes/equipment in advance. Snapshot remaining pools and committed units so reconnect cannot undo revealed placements. The scenario adapter supplies quota counting and step progression; generic core must not infer a final unit count or substitute points for units. Clash records the first player's declared final count N before its first deployment, sets the first quota to ceil(N/2) including the Warlord, and requires the remaining pool to fill exactly N minus the committed-unit count (Q11). This declaration fixes a count, not the undeployed unit definitions.
 
 ## Serialized command transactions
 
 For each game, one logical writer executes:
 
 1. Authenticate seat and parse the schema. Reject malformed types, booleans passed as integers, out-of-bounds payload sizes, and unknown fields/commands.
-2. Look up `(game_id, seat_id, client_msg_id)`. Same ID and same payload returns the original receipt; same ID with different payload is an error. Do this before stale-version rejection for a genuine retry.
+2. Look up `(game_id, seat_id, client_msg_id)`. Same ID and same payload returns the original receipt; same ID with different payload is an error. Do this before stale-version rejection for a genuine retry. Perform or recheck that lookup inside the same serialized transaction used for mutation; a pre-lock cache lookup alone is insufficient. The durable store enforces receipt-key uniqueness.
 3. Under the room's lock/transaction, check `expected_state_version`, permissions, pending choice ID/version, rules/content versions, and phase legality.
 4. Resolve against a working state. Commit accepted declaration/costs and explicit reaction choices at their proper checkpoints; do not keep an in-memory call stack waiting for the opponent.
 5. Obtain randomness through the server RNG service only when the rules demand it. Append raw values as facts; client cannot supply pools, results, final hits, or winners.
@@ -102,7 +104,7 @@ For each game, one logical writer executes:
 
 Use an in-memory event-store implementation for early slices with the same transaction contract as the later durable store. Keep one server process/writer per room initially; do not add Redis/distributed writes before there is a deployment need.
 
-Today's `seq` advances on private HELLO/error traffic as well as shared broadcasts. Define a durable domain-event cursor distinct from transport sequencing in the new protocol. Clients detect gaps in the domain stream, not gaps caused by someone else's private response. `state_version` changes only on committed gameplay mutations; PING/presence/private errors cannot stale every action. Snapshot includes its cursor/version so applying later events is unambiguous.
+Today's `seq` advances on private HELLO/error traffic as well as shared broadcasts. Define a durable domain-event cursor distinct from transport sequencing in the new protocol. Clients detect gaps in the domain stream, not gaps caused by someone else's private response. `state_version` changes only on committed gameplay mutations; PING, informational presence notifications, and private errors do not advance it. Disconnect-driven pause and subsequent resume are gameplay transitions and do advance it, preserving the prior phase and choice. Snapshot includes its cursor/version so applying later events is unambiguous.
 
 ## Randomness and replay
 
@@ -116,7 +118,8 @@ Pre-action order is attempt/cost commitment -> applicable fatigue-cancellation c
 
 A choice identifies its resolution, trigger occurrence, owning seat, response type, legal options/constraints, and state version. Replies contain only selected IDs/values, not a claimed outcome. Distinguish:
 
-- One-shot defender decisions: close ranks only in melee after a charge (never in shooting), allowing Improvised Projectiles unless another restriction applies; casualty selections, prevention, deployment adjustment.
+- Defender-only close-ranks decision in melee after a charge (never in shooting), allowing Improvised Projectiles unless another restriction applies.
+- Affected-owner decisions: casualty selections and prevention for either side; deployment choices for the current deploying player. These are not all defender-only decisions.
 - Alternating windows: combat ability/fatigue/pass with priority and consecutive-pass count.
 - Opponent windows: two Orders reactions and ability-specific Activation reactions.
 - Ordered effects: player chooses ordering for their simultaneous effects, then next player acts.
@@ -134,14 +137,14 @@ Generic queries must include:
 - Minimum and maximum footprint distance, inclusive/strict comparisons, containment and boundary contact.
 - Connected-component and valid-reference-figure checks.
 - Circle and oriented nonround footprint intersection, swept translation corridors and permitted final rotation.
-- Unit-gap blocking regions, with caller-supplied rule policy (movement and sight differ).
+- Unit-gap blocking regions, with caller-supplied rule policy: movement uses the blocking unit's S/M threshold; sight blocks all third-party unit gaps without that cutoff and excludes firing/target-unit gaps.
 - Terrain intersections over the whole path; high-boundary crossing count with tangent cases specified.
 - Existence of a clear source-base to target-base sight segment; not merely a center ray.
 - Deployment half-planes/strips, scenario bounds, terrain separation and supported-shape width.
 
 Document one numerical tolerance/error bound in the geometry ADR. Exact integer/rational comparisons should decide distance thresholds where feasible; do not scatter epsilons or enlarge legality by a client pixel. Approximation for oval footprints must have a documented error bound and boundary fixtures. No persistent state may depend on canvas zoom or viewport size.
 
-A movement proposal carries ordered figure IDs, ruler segments/waypoints, and final poses. Validate the full formation atomically. A preview is local/read-only; it cannot reserve the outcome across an opponent reaction. Compute final legality after reactions.
+A movement proposal carries ordered figure IDs, ruler segments/waypoints, and final poses. Validate the full formation atomically, retaining an intermediate occupancy view for each figure's completed move. Ordinary movement uses another unit member at its current position for the VS check and the first mover for the S/M radius; charges require an already moved VS neighbor and keep the first mover as final reference. Deployment requires an already placed VS neighbor after the first figure. Do not turn these into one stricter shared validator. A preview is local/read-only; it cannot reserve the outcome across an opponent reaction. Compute final legality after reactions.
 
 Charge/withdrawal are constrained placements, not arbitrary endpoints. Given the selected figure order, solve/validate legal contact candidates before allowing a noncontact approach, then maximize permitted approach under movement/cohesion constraints. For withdrawal, validate the full-S route and obstacle justification before accepting a shorter alternative; try the opposing minimum-separation fallback only when required. P03/P10 must demonstrate a deterministic feasibility approach on adversarial layouts. A heuristic unable to find a route is not proof that none exists. If the implementation cannot establish the obligation, return a placement problem for correction and keep the resolution pending; do not claim full rules support until these cases have a validated solver. Persist chosen placements, so replay does not rerun optimization.
 
@@ -167,8 +170,8 @@ These names are design vocabulary; add final concrete payloads to the schema one
 
 | Intent family | Minimum intent | Authoritative facts/projection |
 | --- | --- | --- |
-| Configure/ready | Pack/scenario IDs, options, roster purchases/groupings, readiness | Configuration/roster accepted, ownership assigned, setup stage changed |
-| Setup | Terrain preset/pose, reposition/final-placement response, deployment roll adjustment/diagonal, figure poses | Terrain placed/moved/locked, deployment method/zones/units, pregame effects |
+| Configure/ready | Pack/scenario IDs, options, recruitment purchases/exchange, readiness | Configuration/roster accepted, ownership assigned, setup stage changed |
+| Setup | Terrain preset/pose, reposition/final-placement response, deployment roll adjustment/diagonal, scenario-required unit count, unit grouping/equipment and figure poses | Terrain placed/moved/locked, declared quota/remaining slots, deployment method/zones/units, pregame effects |
 | Orders | Reclaim allocation IDs, initial roll intent, allocation dice IDs/ability, trigger intent, end-phase intent | Dice rolled/allocated/returned, ability triggered, effects/choices, phase changed |
 | Activation | Grant/ability ID, unit(s), action/target as appropriate | Activation declared, reaction opened, action resolved/cancelled, fatigue/history changed |
 | Movement/placement | Resolution ID and ordered per-figure paths/poses | Authoritative poses or typed rejection with relevant figure IDs |

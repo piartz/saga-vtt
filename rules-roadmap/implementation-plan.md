@@ -23,6 +23,7 @@ Begin with [the generic warband](generic-warband.md); no named faction sources a
 | `ROLL_DICE` count <=20 | RNG service seed implementation | Structured rule rolls, ordinary/SAGA distinction; melee may roll 32 attack dice |
 | Terrain manifest `adds_fatigue_on_entry`, generic cover/LOS booleans | Discovery API shape only | Finishing versus crossing; independent height/difficulty/cover/size and geometry queries |
 | Manifest `melee-reaction`, `survival_points`, `slaughtering_points` | Existing IDs need compatibility handling | Core keyword is Melee for either role; Clash uses massacre scoring; verify/replace labels with schema migration |
+| Timing manifest `repeatable_per_turn` | Timing labels only | Usage limits belong to individual abilities and basic/advanced classification, not a shared timing keyword |
 | `make_event` increments seq for private/shared responses | Envelope concept | Durable domain event cursor and state version separate from transport sequencing |
 | Token-only undo | Sandbox feature | Transaction-aware safe undo; disable bypass in enforced play |
 | `test_integration_smoke.py` | Transport regression suite | Currently tests only a bootstrap turn cycle; add real setup-to-result suite |
@@ -70,7 +71,7 @@ This is a safe default execution order, not a request for concurrent work. Speci
 **Depends on:** none. **Covers:** provenance for all requirements, especially R01/R33.
 
 1. `P00.1`: Create the machine-readable source/requirement registry from [coverage](rules-coverage.md), pin source hash, and record selected digital conventions. Preserve open questions as unresolved; do not claim official FAQ verification.
-2. `P00.2`: Apply recorded owner rulings Q01-Q10 without reopening them, including corrected Q06: CORE-2022 pp.44-47 and referenced special rules determine base profiles and derived equipment effects. Start with the seven generic loadouts; record the still-needed generic board/activation specification. Collect named faction sources only for later packs; do not gate generic profile work on them.
+2. `P00.2`: Apply recorded owner rulings Q01-Q11 without reopening them, including corrected Q06 for source profiles and Q11 for Clash's declared unit count. Record the explicit source interpretations in coverage, including the p.26 pre-pool cap taking precedence over p.29's example. Start with the seven generic loadouts; record the still-needed generic board/activation specification. Collect named faction sources only for later packs; do not gate generic profile work on them.
 3. `P00.3`: Add capability/source support status to module metadata design, confirm pack storage/validation format, and record the geometry/protocol/state decisions as ADRs when implementation begins.
 
 **Touch:** `rules-roadmap/`, new source registry under rules data, `docs/adrs/`; metadata schema only if needed in that slice.
@@ -83,7 +84,7 @@ This is a safe default execution order, not a request for concurrent work. Speci
 
 1. `P01.1`: Extract dispatch from the WS loop, introduce deterministic reducer and in-memory event-store adapter; preserve sandbox regression behavior. Add explicit sandbox/enforced routing boundary.
 2. `P01.2`: Stable seats and private resume credentials; separate presence/spectators; fixed seat order; enforced rooms pause on disconnect and survive empty connections.
-3. `P01.3`: Per-room serialized transactions, typed schema validation, dedupe receipts, expected versions, domain event cursor, full snapshot/resync, injected RNG interface.
+3. `P01.3`: Per-room serialized transactions, typed schema validation, dedupe receipts checked inside the transaction, expected versions, domain event cursor, full snapshot/resync, injected RNG interface. Verify both generators preserve the schema constructs introduced, including mixed required/optional fields; generated types alone do not validate incoming JSON.
 4. `P01.4`: Block legacy token/roll/undo commands from bypassing enforced rules; protocol-version handshake for changed identity/envelopes.
 
 **Touch:** `app/main.py`, `connections.py`, new `app/engine/`, `app/commands/`, schema/generators, web connection/store, transport tests.
@@ -95,19 +96,19 @@ This is a safe default execution order, not a request for concurrent work. Speci
 **Depends on:** P01. **Covers:** R02-R03, R20/R24 model.
 
 1. `P02.1`: Implement the four CORE-2022 base profiles and seven chosen generic loadouts first. Store immutable base Armour and rational melee/shooting Aggression, inherited special-rule IDs, and generation thresholds; derive equipment modifiers and the Levy no-ranged-weapon melee exception separately. Register all six Warlord rules and horse/bow policies for full enforcement in P08-P11. Keep Hero class/Warlord role and physical/effective counts distinct. Preserve legacy manifest compatibility through versioning.
-2. `P02.2`: Recruitment ledger, point bundles/single exchange, faction validation hooks, unit organization, individual figure/base state, stable owners; original size immutable.
+2. `P02.2`: Recruitment ledger, point bundles/single exchange, faction validation hooks, unit organization, individual figure/base state, stable owners. Undeployed figures belong to the recruitment pool; original unit identity/count becomes immutable on deployment commitment.
 3. `P02.3`: Roster editor/import validation and unit inspection. Ordinary surviving count permits 1..3; destroyed units retain ledger identity and cannot act.
 
 **Touch:** rules/domain state and schema; new roster tests/components; default room fixture construction.
 
-**Exit/tests:** no ownerless deployed units; valid and invalid budgets/groupings; exact one Warlord; profile versus equipment legality; subminimum survivors; undeployed recruitment pool can form legal units during scenario steps; committed units cannot be retroactively regrouped. Generic Levies without ranged weapons derive Armour 4 / 4 and melee Aggression 1/2; bow Levies derive Armour 3 / 3 and melee Aggression 1/3, with shooting Aggression 1/2. Mounted Warlord/Hearthguard Armour derives 5 / 4 once from base 5. All six Warlord rule IDs and troop generation thresholds are present; shooting stats do not grant ranged actions. The approved generic pack is selectable; unrelated synthetic fixtures remain test-only.
+**Exit/tests:** no ownerless deployed units; valid and invalid budgets/groupings; exact one Warlord; profile versus equipment legality; subminimum survivors; undeployed recruitment pool can form legal units during scenario steps; committed units cannot be retroactively regrouped. Generic Levies without ranged weapons derive Armour 4 / 4 and melee Aggression 1/2; bow Levies derive Armour 3 / 3 and melee Aggression 1/3, with shooting Aggression 1/2. Mounted Warlord/Hearthguard Armour derives 5 / 4 once from base 5. All six Warlord rule IDs and troop generation thresholds are present; shooting stats do not grant ranged actions. The approved generic roster is available for preview/configuration; enforced play stays gated on complete pack/scenario capabilities in P12/P13. Synthetic fixtures remain internal to conformance tests.
 
 ## P03 - Exact geometry and formation
 
 **Depends on:** P02. **Covers:** R01/R04 and queries for R05/R14-R19.
 
 1. `P03.1`: Fixed-point conversion, C-to-S distance normalization, and band/inch measurements, circular/nonround bases, within/entirely-within predicates, board bounds. Version coordinates once; render all measurements from the same config.
-2. `P03.2`: Connected formation graph, reference validation, ordered placements, obstacles/inter-figure barriers, swept corridors and end rotation.
+2. `P03.2`: Connected formation graph, reference validation, ordered placements with distinct ordinary-move/charge/deployment neighbor checks, obstacles/inter-figure barriers, swept corridors and end rotation.
 3. `P03.3`: LOS segment/terrain queries, deployment-region helpers, bounded deterministic contact/withdrawal feasibility approach with documented numerical tolerance and adversarial tests.
 4. `P03.4`: Board renders individual bases and selection/group previews; add read-only ruler/range/formation diagnostics and non-drag placement inputs.
 
@@ -132,7 +133,7 @@ This is a safe default execution order, not a request for concurrent work. Speci
 **Depends on:** P01-P02. **Covers:** R08/R10-R12/R31 infrastructure.
 
 1. `P05.1`: Serializable resolution stack, choice lifecycle, actor/role permissions, parent resumption, two-pass alternating window, empty-window progression.
-2. `P05.2`: Typed ability costs, trigger IDs, restrictions, effect order/dependencies, captured/deferred values, durations, explicit overrides; deterministic RNG continuations.
+2. `P05.2`: Typed ability costs, trigger IDs, restrictions, effect order/dependencies, captured/deferred values, durations, explicit overrides; deterministic RNG continuations. Carry the combat rule coupling ability prohibitions to fatigue use, with the explicit mercenary exception; distinguish it from having no allocated ability dice.
 3. `P05.3`: Generic pending-choice/priority panel, effect ordering UI, read-only opponent state, resync during nested choice.
 
 **Touch:** engine resolutions, rules effects/timings, schema, choice UI, unit/integration tests.
@@ -157,12 +158,12 @@ This is a safe default execution order, not a request for concurrent work. Speci
 
 1. `P07.1`: Game configuration and both-player option agreement, recruitment totals with unassigned troops, correct table/edges, Clash first-player procedure with coin-toss tie-break.
 2. `P07.2`: Alternating terrain placement, legal reposition after three, opponent final offer, immutable terrain lock.
-3. `P07.3`: Deployment die/adjustment and A/B/C zones; scenario-defined quotas and order, including Clash's first-half/Warlord, opponent, remainder steps. Form units and select equipment at each opportunity; validate every figure and remaining troop pool. Do not impose this sequence on other scenarios or freeze future unit groupings.
+3. `P07.3`: Deployment die/adjustment and A/B/C zones; scenario-defined quotas and order. For Clash, record the first player's declared final N including Warlord, require ceil(N/2) in the first batch including Warlord, then opponent-all and floor(N/2) remainder (Q11). Form units and select equipment at each opportunity; validate every figure and feasibility of the remaining pool/count. Do not impose this sequence/count declaration on other scenarios or freeze future unit groupings.
 4. `P07.4`: Second-player three-die pregame allocation, chaos setup hooks, readiness/start barrier. Provide full setup wizard and step back only before its committed/revealed boundary.
 
 **Touch:** scenario setup module, state/schema, setup wizard, geometry/integration tests.
 
-**Exit/tests:** both edge orientations for each method; odd quota; no out-of-zone base sliver; no missing figure; no pregame ability triggering; wrong setup actor rejected. Start enters actual Orders, not today's demo running phase.
+**Exit/tests:** both edge orientations for each method; odd/even declared count and quota; reject impossible remaining partition; no out-of-zone base sliver; no missing figure; no pregame ability triggering; wrong setup actor rejected. The start transition enters actual Orders when selected capabilities are complete; until then exercise it only with internal fixtures, not a falsely playable generic pack.
 
 ## P08 - Movement, rest, manoeuvre, fatigue
 
@@ -180,7 +181,7 @@ This is a safe default execution order, not a request for concurrent work. Speci
 
 **Depends on:** P08 (and P03-P06). **Covers:** R16-R17/R20, ranged parts R22.
 
-1. `P09.1`: Weapon/range/LOS eligibility, single target, reaction revalidation, unitless source shape; show per-figure eligibility.
+1. `P09.1`: Weapon/range/LOS eligibility with sight-specific third-party gap policy, single target, reaction revalidation, unitless source shape; show per-figure eligibility.
 2. `P09.2`: Initial/bonus pool caps, ability/fatigue window, ordered attack/defence RNG/effects, automatic hits, cover and Armour.
 3. `P09.3`: Prevention extension hooks, owned casualty choices/cohesion, loss/destruction ledger, post-shoot fatigue and complete combat summary. Special prevention implementations arrive P11.
 
@@ -193,7 +194,7 @@ This is a safe default execution order, not a request for concurrent work. Speci
 **Depends on:** P09 (reuses pool/loss infrastructure). **Covers:** R15/R18-R20.
 
 1. `P10.1`: Charge placement/contact solver, fixed reference, mandatory approach, reaction revalidation and cancellation rollback; apply repetition/terrain fatigue before melee.
-2. `P10.2`: Close ranks, both pools, alternating effects/fatigue, latched exhaustion, simultaneous attack/defence handling, ordered casualty selection and contact preservation.
+2. `P10.2`: Close ranks and solid-cover consequences, both pools with explicit pre-pool figure/natural-dice limits, alternating effects/fatigue, latched exhaustion, simultaneous attack/defence handling, ordered casualty selection and contact preservation.
 3. `P10.3`: Outcome calculation, end fatigue, withdrawal obligation and validated blocked-route fallback; complete placement UI and resume at every choice.
 
 **Touch:** charge/melee/withdrawal policies, geometry solver, ledger, UI, regression fixtures.

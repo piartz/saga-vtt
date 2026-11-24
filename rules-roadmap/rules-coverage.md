@@ -8,12 +8,12 @@ This maps mechanics to implementation responsibilities and original acceptance c
 | --- | --- | --- |
 | CORE-2022 | Local `rules/SAGA_-_Rulebook_2022_261124_161828.pdf`, English 2022 printing, ISBN 979-10-95599-25-8 | Read for this plan; 52 PDF pages. Printed numbers match one-based PDF pages for the mechanics below. |
 | CORE-2022 fingerprint | SHA-256 `67c8de47a3a0171cecd0fd655d2721bfeb6b7dcc1e4ee5f4e4bdb015cd562a3f` | Pin this revision; filename alone is insufficient. |
-| OWNER-2026-11-24 | Project owner clarifications recorded in the decision register | Resolves Q01-Q10, including the generic starter, deployment, cancellation, and coin-toss tie-break; takes precedence over conflicting source wording for this project. |
+| OWNER-2026-11-24 | Project owner clarifications recorded in the decision register | Resolves Q01-Q11, including the generic starter, deployment, cancellation, and coin-toss tie-break; takes precedence over conflicting source wording for this project. |
 | ERRATA | Official corrections/FAQ applicable to this printing | Not supplied or verified; see the decision register. Do not assume the PDF is the latest rules. |
 | FACTION-A / FACTION-B | Two compatible, complete faction lists, battle boards, dice mappings, and applicable corrections | Missing; required only when adding these later faction packs, not to begin the generic warband. |
 | EXPANSIONS | Further Universe and Book of Battles material | Missing; separate follow-on scope. |
 
-The PDF is image-only. OCR was used for navigation; terrain, scenario, profile, and Resilience pages were also checked visually. OCR drops table cells and confuses S with other letters. The scan uses `C` on p.35; the owner has confirmed it means S wherever used as a distance (Q01). Prefer detailed chapters over the abbreviated reference sheet on PDF p.51; record conflicts rather than resolving them from memory.
+The PDF is image-only. OCR was used for navigation; terrain, scenario, profile, movement, combat, and Resilience pages were also checked visually. OCR drops table cells and confuses S with other letters. The scan uses `C` on p.35; the owner has confirmed it means S wherever used as a distance (Q01). Apply owner rulings first, then explicit detailed rules and their stated exceptions. An illustrative example or abbreviated reference sheet does not silently override a detailed rule. In particular, the melee example on p.29 does not enforce the figure-count limit on pre-pool bonus attack dice stated on p.26; use the p.26 limit and original regression fixtures, not the example's pool arithmetic. This is the plan's explicit source interpretation, not a claim of verified official errata.
 
 For each implemented requirement, maintain its ID, source/page/section, correction/interpretation ID, implementation paths, test paths, supported content IDs, and status (`planned`, `in_progress`, `verified`, `source_blocked`). Acceptance names below describe proposed tests, not existing tests.
 
@@ -66,13 +66,14 @@ Support agreed 4..8 points, default 6, exactly one free Warlord, and recruitment
 
 **Source:** pp.8-9, 16-18, 20-21, 28, 39. **Packages:** P03, P08, P10.
 
-- Support circular and noncircular bases, including rectangular/oval orientation. Validate p.8 bounds: foot within 30 mm square with stated 20 mm minimum, mounted within 50 mm square with 40 x 20 mm minimum, Heroes up to 60 mm square. Define shape-specific bounds explicitly.
+- Support circular and noncircular bases, including rectangular/oval orientation. Validate p.8 bounds: foot within 30 mm square with stated 20 mm minimum, mounted within 50 mm square with 40 x 20 mm minimum, Heroes up to 60 mm square with the relevant foot/mounted minimum. Preserve the stated 20 mm minimum round diameter/square width. Define shape-specific bounds explicitly; decorative figures on a Hero base are not extra game figures.
 - Vision is 360 degrees; orientation still matters to footprint geometry.
 - Require a single connected VS adjacency graph, plus an eligible reference figure within S of all others (M for horse-mounted units). Separate clusters with close neighbors are invalid.
-- Validate per-figure movement order against already moved figures. Ordinary movement can choose its final reference; charge fixes the first mover as reference. Apply the intermediate positioning rules too.
+- For ordinary movement, each figure after the first must finish within VS of another figure in its unit at that moment and within S of the first mover (M for horses). Page 16 does not require that VS neighbor to have moved already. Recheck the complete formation afterward; the final reference may be any eligible figure.
+- For charges, each figure after the first must finish within VS of an already moved figure and within S/M of the first mover; the first mover remains the reference. During deployment, place the first figure, then each subsequent figure within VS of an already placed figure of the same unit; validate final reference radius and connected formation. Do not require a lone Hero/first figure to have a nonexistent neighbor.
 - Preserve cohesion through casualties and, in melee, contact when possible. A unit centroid/aggregate token cannot enforce these rules.
 
-**Acceptance:** single Hero/survivor formation is legal; disconnected clusters rejected; reference is a figure, not centroid; mounted radius; nonround rotation; casualty removing a formation bridge rejected.
+**Acceptance:** single Hero/survivor and first deployment figure are legal; ordinary movement may use an unmoved neighbor if intermediate and final checks pass, while charge/deployment require a moved/placed neighbor; disconnected clusters rejected; reference is a figure, not centroid; mounted radius; nonround rotation; casualty removing a formation bridge rejected.
 
 ### R05 - Terrain definitions
 
@@ -116,11 +117,11 @@ First player places the first piece; then alternate with at least S separation a
 
 - First player rolls d6 and selects -1/0/+1, clamped to 1..6. Preserve raw/modified results; 1-2/3-4/5-6 select A/B/C.
 - A: whole bases between S and L from owner's long edge. B: first player chooses diagonal; each army deploys in its corresponding half, wholly between M and L from that line. C: use each player's right-hand short edge, wholly between M and L+M from it, with no figures within M of any edge. Use player-relative coordinates.
-- Clash specifies a first half including Warlord, opponent deployment, then first-player remainder; apply its unit quota/rounding in the scenario adapter. Other scenarios define their own quota basis and order. Players form units during these opportunities, not before all deployment (Q09); do not replace a units quota with points/figures or impose a global organization freeze. Validate whole footprints, formation, bounds, terrain, other units, and inter-figure barriers.
+- For Clash, the first player declares the eventual total unit count N, including the Warlord, before their first deployment (Q11). Validate that the recruitment pool can form exactly N legal units. Their first batch is ceil(N/2) units including the Warlord, followed by the opponent's entire warband and then the first player's remaining floor(N/2) units. At each commitment, check that the remaining figures can still form exactly the remaining declared number of units. Only the count is fixed: sizes and equipment are chosen during deployment (Q09). Other scenarios supply their own quota policy; do not impose Clash's count declaration globally or substitute points/figures for its units quota. Validate whole footprints, formation, bounds, terrain, other units, and inter-figure barriers.
 - Second player rolls and allocates three SAGA dice before turn one without triggering abilities. These are part of the same eight-die inventory.
 - Apply selected chaos effects at explicit pregame checkpoints, then lock setup. Provide ready controls and legal-zone overlays.
 
-**Acceptance:** A/B/C from both edges; odd unit count; Warlord in first batch; three pregame dice cannot trigger; no start with missing figures.
+**Acceptance:** A/B/C from both edges; exactly M from an edge is forbidden in C; declared odd/even counts and rounded quotas; Warlord in first batch; reject a count or placement leaving an impossible remainder; three pregame dice cannot trigger; no start with missing figures or an incorrect final unit count.
 
 ### R08 - Turn lifecycle
 
@@ -156,6 +157,8 @@ Core keywords: Orders, Orders/Reaction, Activation, Activation/Reaction, Shootin
 
 Combat opportunities alternate from attacker; passing does not permanently withdraw, but two consecutive passes end the window. Fatigue occupies the relevant opportunity. At most one Activation/Reaction ability responds to a triggering occurrence; track trigger IDs, not a one-per-turn approximation. Complete nested reactions then revalidate/resume parent action. Simultaneous effects resolve attacker before defender, otherwise active player before opponent; each player chooses their own ordering.
 
+Armour references in Shooting/Shooting-Reaction abilities use shooting Armour; Melee abilities use melee Armour. Placement/trigger limits belong to the ability's basic/advanced classification and explicit exceptions, not to its timing keyword. An Orders/Reaction window can contain several eligible abilities; the single-reaction-per-occurrence limit is specific to Activation/Reaction.
+
 **Acceptance:** pass/act/pass/pass; one reaction per trigger; nested resumption; nonretroactive values; dependent/independent clauses.
 
 ### R12 - Activation grants and cancellation
@@ -164,7 +167,7 @@ Combat opportunities alternate from attacker; passing does not permanently withd
 
 Actions require a validated grant from an ability, special rule, manoeuvre, equipment, or scenario. Implement move/charge/shoot/rest and typed scenario extensions. Free cost is independent from fatigue exemption. Exempt activations still count for later repetition. Track all resolved activations, resolved move/charge/shoot count, last resolved kind, and one-use grants separately.
 
-Multi-unit abilities select distinct targets up front, then fully resolve each activation/combat; choose action/target at that unit's activation where allowed. Cancellation spends dice/grant but does not count as resolved or add repetition fatigue. Offer applicable fatigue cancellation before opening Activation/Reaction; a cancelled attempt opens no such window (Q07). A consumed free attempt, including Old Grudge, is not available again just because the action never resolved (Q08). Failed charges restore positions without refunding resolved reactions/costs.
+Multi-unit abilities select distinct friendly targets up front, then fully resolve each activation/combat; choose action/target at that unit's activation where allowed. Activation abilities cannot activate enemy units. Cancellation spends dice/grant but does not count as resolved or add repetition fatigue. Offer applicable fatigue cancellation before opening Activation/Reaction; a cancelled attempt opens no such window (Q07). A consumed free attempt, including Old Grudge, is not available again just because the action never resolved (Q08). Enforce each grant's own use limit; reusable free permissions must not accidentally become once-per-turn grants. Failed charges restore positions without refunding resolved reactions/costs.
 
 **Acceptance:** no grant/no action; free versus exempt; cancellation cost/history; multi-unit queue revalidates next unit.
 
@@ -178,6 +181,7 @@ Multi-unit abilities select distinct targets up front, then fully resolve each a
 - Rest removes one fatigue and must be the first resolved activation that player turn. No second rest. Direct removal is not a rest activation.
 - Unit destruction immediately gives friendly units within S fatigue, measured from the entire simultaneous pre-removal footprint; apply once per destroyed unit.
 - Opponent can spend two fatigue before resolution to cancel any activation, or one to reduce move/charge to S. Only defender spends shooter's fatigue for +1 Armour. In melee either side may increase own or reduce opposing Armour, one use per opportunity, within bounds.
+- During shooting/melee, an effect prohibiting a player from triggering SAGA abilities also prohibits that player's fatigue use, unless an explicit exception applies. An empty ability allocation is not itself a prohibition. The mercenary rule explicitly retains fatigue use (R24); pre-action fatigue cancellation/reduction is a separate window.
 - Capture exhausted-at-melee-start for -1 attack results. Later fatigue changes do not retroactively change that penalty.
 
 **Acceptance:** rest then first move; cancelled rest; destruction radius; charge fatigue before melee; latched exhaustion.
@@ -186,7 +190,7 @@ Multi-unit abilities select distinct targets up front, then fully resolve each a
 
 **Source:** pp.16-19, 32, 39. **Packages:** P03, P04, P08.
 
-Default M, horse open movement L. Validate ordered per-figure routes and swept base corridors. Ordinary L can bend M+M; every nonfinal ruler must be completed. Own figures may be crossed; other-unit bases block. Gaps between figures of another unit block movement if separation <= S (M for mounted). No ending in contact with another friendly unit or ordinary movement contacting enemies.
+Default M, horse open movement L. Validate ordered per-figure routes and swept base corridors. Ordinary L can bend M+M; every nonfinal ruler must be completed. Own figures may be crossed; other-unit bases block. Gaps between figures of another unit block movement if separation <= S, or M when that blocking unit is horse-mounted; the moving unit's mount status does not select this threshold. No ending in contact with another friendly unit or ordinary movement contacting enemies. Apply R04's intermediate placement checks as well as final formation.
 
 Nonround bases reorient only at end and no base part may exceed allowed travel. Validate route, rotation, bounds, formation, and terrain atomically. Manoeuvre is a free first activation wholly on open ground and strictly further than L from every enemy throughout its path, not just endpoints.
 
@@ -206,9 +210,9 @@ If the full formation cannot be placed legally, cancel and restore positions. On
 
 **Source:** pp.22-25, 34, 37-39. **Packages:** P03, P04, P09.
 
-Select one target; no splitting. Determine range and clear base-to-target sight per firing figure; recompute after reactions and cancel if none can shoot. Own shooters do not block; other figures and third-party unit gaps do. Do not reuse movement's gap threshold without checking p.22's distinct sight rule. Include high-terrain boundaries, multiple pieces, target figures, and 360-degree sight. Unitless shooting is a typed source with source-defined target/pool, not a fake token.
+Select one target; no splitting. Determine range and clear base-to-target sight per firing figure; recompute after reactions and cancel if none can shoot. Figures in the firing unit do not block sight. Other figures do, including figures of the target unit in front of the chosen target figure. The space between figures of a third-party unit also blocks sight, with no S/M gap cutoff in p.22's sight rule. Gaps within the firing or target unit do not block sight. Do not reuse movement's thresholded gap policy. Include high-terrain boundaries, multiple pieces, and 360-degree sight. Unitless shooting is a typed source with source-defined target/pool and range/LOS requirements, not a fake token.
 
-**Acceptance:** per-figure eligibility; last shooter invalidated; own versus third-unit obstruction; unitless origin.
+**Acceptance:** per-figure eligibility; last shooter invalidated; own versus third-unit obstruction; third-party gap above movement's threshold still blocks sight; target-unit gaps do not block but intervening target figures do; unitless origin.
 
 ### R17 - Shooting pipeline
 
@@ -216,7 +220,9 @@ Select one target; no splitting. Determine range and clear base-to-target sight 
 
 Sequence: pool -> alternating abilities/fatigue -> attack rolls/effects -> defence rolls/effects -> prevention/casualties.
 
-Initial pool = ceil(sum eligible aggression), then pre-pool bonuses limited by both natural dice and actual unit size, then cap eight; save this starting pool. Presence does not alter caps. Later bonuses are limited to twice the starting pool when rolling, normally sixteen. Implement explicit unitless exceptions; no unrestricted extra ability dice for those attacks.
+For a shooting unit, natural pool = ceil(sum eligible aggression); pre-pool bonus attack dice are limited to min(natural pool, actual unit size), then cap the combined starting pool at eight. Save this starting pool. Presence does not alter caps. Later bonuses are limited to twice the starting pool when rolling, normally sixteen. Collect pre-existing bonus defence dice at the pool step too; they are separate from attack-pool limits.
+
+For unitless shooting, pp.23/25 supply an explicit exception: the source defines the target and bonus attack dice, with no figure-generated pool required. Roll the source-granted dice; do not discard them because a zero natural pool or figure count would imply a zero cap. No extra attack dice can be added through SAGA abilities. Record the source's pool and limit policy explicitly, including any override of ordinary unit caps; do not generalize this exception to an ordinary unit whose pool became zero.
 
 Compare final results with shooting Armour, add automatic hits, grant defender hit-count dice plus bonuses. Save on 4+, or 3+ in cover; solid cover also gives +1 shooting Armour within cap. Attacker's roll effects precede defender's; each orders their own. Reroll abilities must be triggered before results are known. Defender chooses losses, including figures outside range/sight, preserving cohesion; apply prevention first and repeat-shooting fatigue afterward.
 
@@ -228,7 +234,7 @@ Compare final results with shooting Armour, add automatic hits, grant defender h
 
 Sequence: close ranks -> both pools -> abilities/fatigue -> both attacks -> both defences -> prevention/casualties -> outcome/fatigue/withdrawal.
 
-All figures fight, not only those touching. Apply limited pre-pool bonuses, discard ceil(half) if closing ranks, then cap starting pool at sixteen. Later dice cap twice that pool, normally thirty-two; today's generic twenty-die limit is unsuitable. Close ranks is a defender choice at the melee step after a charge, subject to equipment; it is never available against shooting (owner ruling Q05). Attacker never benefits from melee cover. Save 5+, defender solid cover/closed ranks 4+.
+All figures fight, not only those touching. Natural pool = ceil(sum melee aggression); pre-pool bonus attack dice are limited to min(natural pool, actual unit size). After adding permitted bonuses, discard ceil(half) if closing ranks, then cap the starting pool at sixteen. Keep pre-existing bonus defence dice separately. Later attack dice cap at twice that saved starting pool, normally thirty-two; today's generic twenty-die limit is unsuitable. Close ranks is a defender choice at the melee step after a charge, subject to equipment; it is never available against shooting (owner ruling Q05). It grants solid cover for this melee, including the withdrawal rule, and does not stack a second save bonus on existing solid cover. Attacker never benefits from melee cover. Save 5+, defender solid cover/closed ranks 4+.
 
 Both pools survive simultaneous damage resolution. Defender removes first; preserve cohesion/contact, including earlier ability losses. Determine outcome using actual Step 6 losses, excluding prevented losses and Bodyguards transfers; annihilation overrides casualty comparison, mutual annihilation draws. Early destruction still permits remaining steps; contact broken before Step 4 is a distinct early ending. Combat roles are independent of active seat.
 
@@ -238,7 +244,7 @@ Both pools survive simultaneous damage resolution. Defender removes first; prese
 
 **Source:** pp.28-29, 35. **Package:** P10.
 
-Apply combat fatigue attacker then defender, capped. No withdrawal if either unit is eliminated. Normally loser withdraws; draw sends attacker back. Surviving solid-cover defender forces attacker back if not outnumbered, overriding normal outcome.
+Apply combat fatigue attacker then defender, capped. No withdrawal if either unit is eliminated. Normally loser withdraws; draw sends attacker back. Surviving solid-cover defender forces attacker back if not outnumbered, overriding normal outcome. Compare actual surviving figures after casualties; Presence does not apply.
 
 First withdrawing figure is furthest from enemy unit and goes S directly away from its nearest enemy. Shorter/other-direction routes require obstruction/bounds; then move remaining figures with distance/cohesion requirements. Withdrawal is not an activation or ordinary move for terrain penalties, but still respects impassable objects and contact restrictions. If the obligated unit cannot withdraw, opponent makes minimum separation. Validate necessity; do not teleport/delete figures.
 

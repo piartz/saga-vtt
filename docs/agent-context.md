@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-11-24 (source-corrected base troop profiles, inherited rules, and derived loadouts; documentation only)
+Last updated: 2026-11-24 (final planning review and Clash unit-count ruling; documentation only)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -56,6 +56,8 @@ Primary references:
   - `decisions-and-source-gaps.md` records engineering defaults, explicit digital adaptations, owner rulings, remaining source questions, and missing complete faction material. Q01-Q04 are resolved: C means S; Resilience exchanges may reach exhaustion but cannot start exhausted and cancel up to X casualties per fatigue; use bands/inches; Presence only affects SAGA abilities. Q05 is also resolved: close ranks is charge-only, never against shooting; Improvised Projectiles does not forbid it when charged, unless another restriction applies.
   - `generic-warband.md` defines the first implementation target: four CORE-2022 base profiles, all inherited troop rules, and seven owner-selected loadouts. Corrected Q06 supersedes earlier owner-supplied numbers: base Armour is 5 for Warlord/Hearthguards and 4 for Warriors/Levies; horses and bows derive Armour penalties. Levy base Aggression is 1/3 melee / 1/2 shooting, with melee 1/2 without ranged weapons; Warrior shooting Aggression is 1/2. Both Warlord loadouts retain Determination, We Obey, Presence, Bodyguards, Pride, and Resilience(1). Q07-Q10 set cancellation before Activation/Reaction, consumption of cancelled free attempts including Old Grudge, unit formation during scenario-directed deployment, and coin tosses for tied initiative d6 rolls.
   - `iteration-playbook.md` gives per-slice implementation and handoff instructions.
+  - `review-readiness.md` records the final source/code review. Corrections make intermediate movement/deployment cohesion, sight versus movement gaps, combat fatigue prohibitions, pre-pool limits, preview versus enforced-play capability gates, and transactional dedupe explicit. The legacy onboarding task list now points to the P00-P15 plan.
+  - Q11 resolves Clash's quota: first player declares final unit count N including Warlord before deployment; first batch is ceil(N/2) including Warlord, then opponent-all, then floor(N/2). Sizes/equipment remain deployment-time choices; every commitment must leave a feasible remaining partition matching N.
   - The plan was checked against `rules/SAGA_-_Rulebook_2022_261124_161828.pdf`; the PDF is a local untracked reference, not a committed asset. No engine, schema, protocol, or data-model implementation changed with this plan.
 - Rules-module scaffolding has started (Phase 0 in the previous roadmap):
   - `services/api/app/rules/` contains a placeholder rules module interface, registry, and passive `saga-core` module metadata
@@ -233,7 +235,8 @@ Primary references:
 
 ## Next Recommended Tasks
 - Follow `rules-roadmap/README.md` and the P00-P15 plan; the old Phase 0-10 numbering is superseded.
-- Start P00.1: establish the source/requirement registry and pin the supplied book revision; apply resolved owner rulings Q01-Q10 and prioritize the generic pack. Specify generic activation/board content for full play; named faction sources are later work.
+- Start P00.1: establish the source/requirement registry and pin the supplied book revision; apply resolved owner rulings Q01-Q11 and prioritize the generic pack. Specify generic activation/board content for full play; named faction sources are later work.
+- Carry the final review's source interpretations and regression cases into that registry, including p.26's pre-pool bonus limit despite the conflicting p.29 example. No further owner rule decision blocks P00/P01.
 - Then start P01.1: extract command dispatch and introduce deterministic reduction/event-store contracts while retaining sandbox behavior.
 - Continue P01 with stable seats, dedupe/version checks, pause/resume, and an enforced-mode boundary before adding rules-dependent commands.
 - Use P02-P03 for source-backed base profiles, inherited rules and derived equipment characteristics, actual ownership, recruitment versus surviving-unit validation, individual figures, and exact geometry. Follow corrected Q06 and the generic-warband tables; passive metadata does not count as completed rules enforcement.
@@ -250,7 +253,8 @@ Primary references:
 ## Open Decisions / Risks
 - The new plan is documentation only. Today's d20 initiative, 800x500 mm board, token activations, generic dice, and permissive movement remain bootstrap behavior, not source-verified SAGA enforcement.
 - The generic warband is the initial target; named faction lists/boards are no longer an initial implementation gate. Generic profiles do not yet specify an activation/board model, which is still needed before a complete generic game can be claimed. Troop values and special rules now come from CORE-2022 pp.44-47 and referenced equipment sections; earlier generic numerical overrides are superseded. Base Armour must remain separate from derived modifiers. Shooting characteristics do not grant ordinary ranged actions to loadouts without a weapon.
-- Owner rulings resolve Q01-Q10. Deployment quota/counting is scenario-defined; do not impose a universal half-army formula or freeze all unit groupings before deployment. Close ranks is only against charges, never shooting; Improvised Projectiles does not disqualify a defender, but independent equipment/status restrictions still apply. Do not reopen these rulings; future source gaps must be tracked separately.
+- Owner rulings resolve Q01-Q11. Deployment quota/counting is scenario-defined; Clash fixes only the first player's declared total unit count before deployment, not future groupings/equipment. Do not impose that procedure globally. Close ranks is only against charges, never shooting; Improvised Projectiles does not disqualify a defender, but independent equipment/status restrictions still apply. Do not reopen these rulings; future source gaps must be tracked separately.
+- The final review supports starting P00/P01 against the supplied book and owner rulings. Generic board costs/effects remain a P12 content gate; official FAQ currency is unverified. P03 must prove geometry feasibility/tolerance behavior, and enforced play must remain unavailable while any selected pack/scenario capability is missing. A roster preview is not evidence of playable rules enforcement.
 - The plan selects per-figure geometry, fixed-point coordinates, fixed player seats, serialized event transactions, disconnect pause, and durable storage before release. These are proposed defaults, not implemented capabilities; see `rules-roadmap/decisions-and-source-gaps.md`.
 - Planned event ordering/replay/reconnect contracts are documented, but runtime support is not implemented.
 - No stable seat authentication or unit ownership enforcement: current active-player restrictions alone do not provide the planned authorization model.
