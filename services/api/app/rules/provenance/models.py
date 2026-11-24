@@ -99,7 +99,7 @@ class Decision(_Record):
     title: str = Field(min_length=1)
     status: DecisionStatus
     source_id: str | None = None
-    adr: str | None = None
+    adr: str | None = Field(default=None, pattern=r"^docs/adrs/\d{4}-[a-z0-9-]+\.md$")
 
     @model_validator(mode="after")
     def _check_kind(self) -> Decision:

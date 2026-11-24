@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-11-24 (P00.2 interpretations, content gates, and regression cases; no gameplay, protocol, or data-model change)
+Last updated: 2026-11-24 (P00.3 capability design and ADRs 0001-0005; P00 complete; no gameplay, protocol, or data-model change)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -65,7 +65,15 @@ Primary references:
   - it records identifiers and status only, never rules text; nothing at runtime consumes it yet
   - P00.2 added `interpretations.json` (I01: p.26 melee pre-pool cap over the p.29 example; I02: unitless shooting rolls source-granted dice without a figure cap), `content_gates.json` (G01-G06 mirroring the missing-content table; the `GENERIC-BOARD` source is missing and open G01 blocks P12.1-P12.3), and `regression_cases.json` (RC01-RC16 indexing the validation table's rows for owner rulings/interpretations, each with requirements and owning slices)
   - additional checks: an open gate's blocked slices cannot be `complete`; a satisfied gate needs available sources; every resolved owner ruling and recorded interpretation has a regression case; a case's slices belong to its requirements' packages; `verified` cases need test paths
-  - P00.1 and P00.2 are marked complete in `work_packages.json`; every requirement and regression case remains `planned`
+  - P00.3 linked D-decisions to ADRs via the `adr` field (restricted to `docs/adrs/NNNN-*.md`)
+  - P00 (P00.1-P00.3) is marked complete in `work_packages.json`; every requirement and regression case remains `planned`
+- ADRs in `docs/adrs/` (all Accepted 2026-11-24, recording plan defaults):
+  - 0001 fixed seats, private resume credentials (hashed, sent in the first websocket message), presence/spectators separate, pause on disconnect (D01, D06)
+  - 0002 decide/reduce split, one writer per room, dedupe inside the transaction, domain cursor separate from transport `seq`, injectable RNG, in-memory store then Postgres (D08, D09)
+  - 0003 explicit immutable `sandbox`/`enforced` room mode; legacy token/dice/undo commands rejected in enforced play; committed undo disabled there (D07, D12)
+  - 0004 per-figure geometry, integer `q` = 0.1 mm coordinates (1 inch = 254 q), band-first imperial display, exact threshold comparisons; tolerance bound left to P03.3 (D02, D03, D14)
+  - 0005 content packs at `services/api/app/rules/packs/<pack-id>/<version>/` as strict-validated JSON, handler IDs instead of executable content, released versions immutable with locked SHA-256, capability status `missing`/`preview`/`enforced` with computed preview- and enforced-readiness (D10, D13)
+- `rules-roadmap/rules-module-design.md` now specifies the module manifest's planned `source`, `capabilities`, `packs`, and `readiness` fields; not implemented yet
 - Rules-module scaffolding has started (Phase 0 in the previous roadmap):
   - `services/api/app/rules/` contains a placeholder rules module interface, registry, and passive `saga-core` module metadata
   - `GET /rules/modules` lists registered modules
@@ -195,7 +203,8 @@ Primary references:
 
 ### Tests
 - `services/api/tests/test_rules_provenance.py`
-  - verifies registry completeness and rejects invalid registry data (28 mutation cases)
+  - verifies registry completeness and rejects invalid registry data (29 mutation cases)
+  - checks ADRs follow the template (title, numbering, sections) and that each ADR's recorded D-decisions match the registry's `adr` links
   - checks the registry against `rules-roadmap/rules-coverage.md` (IDs, titles, pages, packages, cited decisions, fingerprint, measurement values), `implementation-plan.md` (package titles, slice IDs, milestones, dependency-graph closure), `decisions-and-source-gaps.md` (decision IDs, resolved status, content-gate rows), and `validation-and-release.md` (regression case areas and order); interpretation citations in coverage sections must match their requirement links
   - verifies the local rulebook PDF against the pinned SHA-256 when present; skipped otherwise (CI)
 - `services/api/tests/test_rules_modules.py`
@@ -246,20 +255,18 @@ Primary references:
 
 ## Next Recommended Tasks
 - Follow `rules-roadmap/README.md` and the P00-P15 plan; the old Phase 0-10 numbering is superseded.
-- P00.1 and P00.2 are done. The generic activation/board specification (G01, source `GENERIC-BOARD`) is the open owner-content input; it blocks only P12.1-P12.3. Named faction sources are later work. No further owner rule decision blocks P00/P01.
-- Next, P00.3: capability/support status in module metadata design, the content-pack storage location/format, and ADRs for seats, coordinates, transactions, and packs; fill the `adr` field of the matching D-decisions.
+- The generic activation/board specification (G01, source `GENERIC-BOARD`) is the open owner-content input; it blocks only P12.1-P12.3. Named faction sources are later work. No further owner rule decision blocks P00/P01.
+- P00 is complete. Next, P01.1: extract command dispatch from the websocket loop into `app/commands/`, add `app/engine/` with a deterministic reducer and in-memory event store, and the explicit sandbox/enforced room mode (ADRs 0002/0003), preserving all sandbox tests. Split into a behavior-preserving extraction PR and a reducer/store PR.
 - Every slice from now on updates requirement status/evidence, regression case status/test paths, and slice status in `services/api/app/rules/provenance/data/`. When a new source ambiguity appears, add an open Q-question or an I-interpretation there rather than hiding it in code.
 - Apply corrected Q05 throughout P10/P11: definition-level close-ranks prohibitions include Improvised Projectiles; test every listed restriction, combinations, additional restricting definitions, and an eligible ordinary foot defender.
-- Then start P01.1: extract command dispatch and introduce deterministic reduction/event-store contracts while retaining sandbox behavior.
-- Continue P01 with stable seats, dedupe/version checks, pause/resume, and an enforced-mode boundary before adding rules-dependent commands.
+- Continue P01 with stable seats and pause/resume (P01.2, ADR 0001), transactions/dedupe/version checks (P01.3, ADR 0002), and the enforced-mode command boundary (P01.4, ADR 0003) before adding rules-dependent commands.
 - Use P02-P03 for source-backed base profiles, inherited rules and derived equipment characteristics, actual ownership, recruitment versus surviving-unit validation, individual figures, and exact geometry. Follow corrected Q06 and the generic-warband tables; passive metadata does not count as completed rules enforcement.
 - **Complete remaining Phase 1 adoption and begin Phase 2 cleanup** (remove remaining duplicate inline protocol types/parsers in `apps/web/src/ui/App.tsx` and `services/api/app/main.py`).
-- Extract command routing/dispatch out of the websocket loop now that transport/presence state is isolated.
 - Add WS reconnect/backoff client wrapper with resync behavior.
 - Implement the planned disconnect pause/resume policy in P01/P14; today's runtime still auto-passes the disconnected active player's turn.
 - Expand dice UX (custom notation input + richer readable log details/filters for `DICE_ROLLED`).
 - Add deployment workflow with explicit manual approval gate for production (CI step 4).
-- Start ADRs for major protocol/state decisions in `docs/adrs/`.
+- Record further ADRs as P01-P03 introduce protocol/state decisions not covered by 0001-0005; P03.3 must amend ADR 0004 with the geometry tolerance bound.
 - Decide whether to adopt ruff's wider default rules (UP/SIM/B/RUF/I families; about 138 findings, mostly auto-fixable) in a dedicated cleanup PR.
 - Add a minimal web smoke test so web dependency updates are checked for runtime breakage, not only lint and build.
 

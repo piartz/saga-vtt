@@ -306,6 +306,42 @@ def test_verified_records_point_at_existing_paths() -> None:
             assert (REPO_ROOT / path).exists(), f"{record_id}: {path} is missing"
 
 
+ADR_DIR = REPO_ROOT / "docs" / "adrs"
+ADR_SECTIONS = ["## Status", "## Context", "## Decision", "## Consequences"]
+
+
+def _adr_files() -> list[Path]:
+    return sorted(p for p in ADR_DIR.glob("[0-9][0-9][0-9][0-9]-*.md") if p.name[:4] != "0000")
+
+
+def test_adrs_follow_the_template() -> None:
+    adrs = _adr_files()
+    assert adrs, "expected recorded ADRs"
+
+    for number, path in enumerate(adrs, 1):
+        text = path.read_text(encoding="utf-8")
+        assert path.name.startswith(f"{number:04d}-"), f"ADR numbering gap at {path.name}"
+        assert text.startswith(f"# ADR {number:04d}: "), path.name
+        headings = [line for line in text.splitlines() if line.startswith("## ")]
+        assert headings == ADR_SECTIONS, path.name
+
+
+def test_adrs_and_decision_links_agree() -> None:
+    decisions = load_registry().decisions
+    linked: dict[str, set[str]] = {}
+    for decision in decisions:
+        if decision.adr is not None:
+            assert (REPO_ROOT / decision.adr).exists(), f"{decision.id}: {decision.adr} missing"
+            linked.setdefault(decision.adr, set()).add(decision.id)
+
+    for path in _adr_files():
+        status = path.read_text(encoding="utf-8").split("## Context", 1)[0]
+        recorded = re.search(r"Records decisions? (.+?)(?: and owner rulings .+?)?\.", status)
+        assert recorded is not None, f"{path.name} names no decisions in its Status"
+        relative = str(path.relative_to(REPO_ROOT))
+        assert set(re.findall(r"\bD\d{2}\b", recorded.group(1))) == linked.get(relative), path.name
+
+
 def test_open_question_can_gate_requirements() -> None:
     data: dict[str, Any] = read_registry_data()
     data["decisions"].append(
@@ -388,6 +424,7 @@ INVALID_MUTATIONS: dict[str, Callable[[dict[str, Any]], None]] = {
     "verified case without tests": lambda d: _record(d, "regression_cases", "RC09").update(
         status="verified"
     ),
+    "adr outside docs/adrs": lambda d: _record(d, "decisions", "D01").update(adr="notes/seats.md"),
     "ruling without a case": lambda d: _drop_case(d, "RC12"),
     "interpretation without a case": lambda d: _drop_case(d, "RC02"),
 }

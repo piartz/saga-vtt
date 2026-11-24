@@ -4,7 +4,7 @@ This register separates engineering choices from source-backed mechanics. It is 
 
 ## Selected engineering defaults
 
-These defaults make the work executable. Change one only with a recorded rationale, affected requirement/test updates, and an ADR when implementation starts.
+These defaults make the work executable. Change one only with a recorded rationale, affected requirement/test updates, and an ADR when implementation starts. ADRs 0001-0005 in `docs/adrs/` record D01-D03, D06-D10, and D12-D14; each decision's `adr` field in the provenance registry links its ADR. D04, D05, D11, and D15 are scenario and interaction defaults recorded only here.
 
 | ID | Decision | Rationale / implementation consequence |
 | --- | --- | --- |
