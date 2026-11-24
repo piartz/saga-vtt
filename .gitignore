@@ -1,5 +1,6 @@
 # Node
 node_modules/
+.pnpm-store/
 dist/
 .vite/
 *.tsbuildinfo
@@ -25,3 +26,6 @@ __pycache__/
 
 # OS
 Thumbs.db
+
+# Rules
+rules/SAGA_-_Rulebook_2022_261124_161828.pdf
