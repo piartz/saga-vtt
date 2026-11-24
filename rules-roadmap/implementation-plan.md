@@ -74,7 +74,9 @@ This is a safe default execution order, not a request for concurrent work. Speci
 2. `P00.2`: Apply recorded owner rulings Q01-Q11 without reopening them, including corrected Q06 for source profiles and Q11 for Clash's declared unit count. Record the explicit source interpretations in coverage, including the p.26 pre-pool cap taking precedence over p.29's example. Start with the seven generic loadouts; record the still-needed generic board/activation specification. Collect named faction sources only for later packs; do not gate generic profile work on them.
 3. `P00.3`: Add capability/source support status to module metadata design, confirm pack storage/validation format, and record the geometry/protocol/state decisions as ADRs when implementation begins.
 
-**Touch:** `rules-roadmap/`, new source registry under rules data, `docs/adrs/`; metadata schema only if needed in that slice.
+**Touch:** `rules-roadmap/`, the source/requirement registry at `services/api/app/rules/provenance/data/`, `docs/adrs/`; metadata schema only if needed in that slice.
+
+**Status:** `P00.1` complete: the registry indexes sources (CORE-2022 pinned by SHA-256), R01-R34, D01-D15/Q01-Q11, P00-P15 slices, and the selected measurement/tie-break conventions, validated by `services/api/tests/test_rules_provenance.py`. `P00.2` and `P00.3` remain.
 
 **Exit:** every planned rule has a source and owner package; unresolved questions explicitly gate affected conformance. Do not defer a basic-engine design decision to “decide later” when this plan already selects a default.
 
@@ -262,4 +264,4 @@ This is a safe default execution order, not a request for concurrent work. Speci
 
 ## Status tracking
 
-At planning time P00-P15 are not complete. Existing passive modules/units only reduce some scaffolding work. For each slice record status, prerequisite versions, changed paths, requirement/test links, manual demonstration, unresolved decisions, and exact next slice. Mark a package complete only when all its exit criteria pass. Use `source_blocked` for the affected behavior without blocking independent engine tasks.
+At planning time P00-P15 are not complete. Existing passive modules/units only reduce some scaffolding work. Record slice status in `services/api/app/rules/provenance/data/work_packages.json` and requirement status/evidence in `requirements.json`. For each slice also record prerequisite versions, changed paths, requirement/test links, manual demonstration, unresolved decisions, and exact next slice. Mark a package complete only when all its exit criteria pass. Use `source_blocked` for the affected behavior without blocking independent engine tasks.

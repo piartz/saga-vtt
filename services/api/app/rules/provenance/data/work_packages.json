@@ -1,0 +1,429 @@
+[
+  {
+    "id": "P00",
+    "title": "Source baseline and decisions",
+    "milestone": "M0",
+    "depends_on": [],
+    "slices": [
+      {
+        "id": "P00.1",
+        "title": "Source and requirement registry",
+        "status": "complete"
+      },
+      {
+        "id": "P00.2",
+        "title": "Owner rulings, interpretations, and content gates",
+        "status": "planned"
+      },
+      {
+        "id": "P00.3",
+        "title": "Capability metadata design and ADRs",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P01",
+    "title": "Command runtime, identity, event ledger",
+    "milestone": "M0",
+    "depends_on": [
+      "P00.1"
+    ],
+    "slices": [
+      {
+        "id": "P01.1",
+        "title": "Command dispatch and deterministic reducer",
+        "status": "planned"
+      },
+      {
+        "id": "P01.2",
+        "title": "Stable seats and pause on disconnect",
+        "status": "planned"
+      },
+      {
+        "id": "P01.3",
+        "title": "Serialized transactions, dedupe, and versions",
+        "status": "planned"
+      },
+      {
+        "id": "P01.4",
+        "title": "Enforced-mode command boundary",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P02",
+    "title": "Profiles, warbands, figures, and roster UI",
+    "milestone": "M0",
+    "depends_on": [
+      "P01"
+    ],
+    "slices": [
+      {
+        "id": "P02.1",
+        "title": "Base profiles and generic loadouts",
+        "status": "planned"
+      },
+      {
+        "id": "P02.2",
+        "title": "Recruitment ledger and figure ownership",
+        "status": "planned"
+      },
+      {
+        "id": "P02.3",
+        "title": "Roster editor and unit inspection",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P03",
+    "title": "Exact geometry and formation",
+    "milestone": "M0",
+    "depends_on": [
+      "P02"
+    ],
+    "slices": [
+      {
+        "id": "P03.1",
+        "title": "Fixed-point measurement and bands",
+        "status": "planned"
+      },
+      {
+        "id": "P03.2",
+        "title": "Formation graph and movement corridors",
+        "status": "planned"
+      },
+      {
+        "id": "P03.3",
+        "title": "Sight, deployment regions, and contact feasibility",
+        "status": "planned"
+      },
+      {
+        "id": "P03.4",
+        "title": "Board base rendering and diagnostics",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P04",
+    "title": "Terrain engine and catalog",
+    "milestone": "M1",
+    "depends_on": [
+      "P03"
+    ],
+    "slices": [
+      {
+        "id": "P04.1",
+        "title": "Terrain traits, footprints, and presets",
+        "status": "planned"
+      },
+      {
+        "id": "P04.2",
+        "title": "Containment, sight, and terrain fatigue",
+        "status": "planned"
+      },
+      {
+        "id": "P04.3",
+        "title": "Terrain placement UI",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P05",
+    "title": "Resolutions, choices, and ability primitives",
+    "milestone": "M1",
+    "depends_on": [
+      "P01",
+      "P02"
+    ],
+    "slices": [
+      {
+        "id": "P05.1",
+        "title": "Resolution stack and choice lifecycle",
+        "status": "planned"
+      },
+      {
+        "id": "P05.2",
+        "title": "Typed ability costs, triggers, and effects",
+        "status": "planned"
+      },
+      {
+        "id": "P05.3",
+        "title": "Pending-choice UI",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P06",
+    "title": "Turn and Orders/SAGA dice",
+    "milestone": "M1",
+    "depends_on": [
+      "P02",
+      "P05"
+    ],
+    "slices": [
+      {
+        "id": "P06.1",
+        "title": "Turn state and dice inventory",
+        "status": "planned"
+      },
+      {
+        "id": "P06.2",
+        "title": "Allocations and Orders reactions",
+        "status": "planned"
+      },
+      {
+        "id": "P06.3",
+        "title": "Orders cleanup and dice tray UI",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P07",
+    "title": "Complete setup flow",
+    "milestone": "M1",
+    "depends_on": [
+      "P04",
+      "P06"
+    ],
+    "slices": [
+      {
+        "id": "P07.1",
+        "title": "Game configuration and first player",
+        "status": "planned"
+      },
+      {
+        "id": "P07.2",
+        "title": "Terrain placement sequence",
+        "status": "planned"
+      },
+      {
+        "id": "P07.3",
+        "title": "Deployment zones and quotas",
+        "status": "planned"
+      },
+      {
+        "id": "P07.4",
+        "title": "Pregame dice and start barrier",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P08",
+    "title": "Movement, rest, manoeuvre, fatigue",
+    "milestone": "M2",
+    "depends_on": [
+      "P03",
+      "P04",
+      "P05",
+      "P06"
+    ],
+    "slices": [
+      {
+        "id": "P08.1",
+        "title": "Activation grants and cancellation",
+        "status": "planned"
+      },
+      {
+        "id": "P08.2",
+        "title": "Movement proposals and commit",
+        "status": "planned"
+      },
+      {
+        "id": "P08.3",
+        "title": "Rest, exhaustion, and fatigue status",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P09",
+    "title": "Shooting vertical slice",
+    "milestone": "M2",
+    "depends_on": [
+      "P08"
+    ],
+    "slices": [
+      {
+        "id": "P09.1",
+        "title": "Shooting eligibility and sight",
+        "status": "planned"
+      },
+      {
+        "id": "P09.2",
+        "title": "Shooting pools, saves, and cover",
+        "status": "planned"
+      },
+      {
+        "id": "P09.3",
+        "title": "Casualties and combat summary",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P10",
+    "title": "Charge, melee, withdrawal vertical slice",
+    "milestone": "M2",
+    "depends_on": [
+      "P09"
+    ],
+    "slices": [
+      {
+        "id": "P10.1",
+        "title": "Charge placement and contact",
+        "status": "planned"
+      },
+      {
+        "id": "P10.2",
+        "title": "Close ranks and melee pools",
+        "status": "planned"
+      },
+      {
+        "id": "P10.3",
+        "title": "Melee outcome and withdrawal",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P11",
+    "title": "All core special rules and equipment composition",
+    "milestone": "M2",
+    "depends_on": [
+      "P10"
+    ],
+    "slices": [
+      {
+        "id": "P11.1",
+        "title": "Warlord grant and targeting rules",
+        "status": "planned"
+      },
+      {
+        "id": "P11.2",
+        "title": "Casualty prevention rules",
+        "status": "planned"
+      },
+      {
+        "id": "P11.3",
+        "title": "Equipment behaviors and close-ranks restrictions",
+        "status": "planned"
+      },
+      {
+        "id": "P11.4",
+        "title": "Mercenary and Legendary framework",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P12",
+    "title": "Generic gameplay content, then faction extensions",
+    "milestone": "M3",
+    "depends_on": [
+      "P07",
+      "P11"
+    ],
+    "slices": [
+      {
+        "id": "P12.1",
+        "title": "Generic pack completion",
+        "status": "planned"
+      },
+      {
+        "id": "P12.2",
+        "title": "Ability definitions and interaction tests",
+        "status": "planned"
+      },
+      {
+        "id": "P12.3",
+        "title": "Recruitment options, ability panel, and pack lint",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P13",
+    "title": "Scenario completion, scoring, chaos",
+    "milestone": "M3",
+    "depends_on": [
+      "P07",
+      "P11",
+      "P12"
+    ],
+    "slices": [
+      {
+        "id": "P13.1",
+        "title": "Game end, scoring, and concession",
+        "status": "planned"
+      },
+      {
+        "id": "P13.2",
+        "title": "Battlefield chaos",
+        "status": "planned"
+      },
+      {
+        "id": "P13.3",
+        "title": "Final result and history",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P14",
+    "title": "Durable save/resume, replay, safe undo",
+    "milestone": "M4",
+    "depends_on": [
+      "P13"
+    ],
+    "slices": [
+      {
+        "id": "P14.1",
+        "title": "Durable event and snapshot store",
+        "status": "planned"
+      },
+      {
+        "id": "P14.2",
+        "title": "Reconnect, resync, and restart recovery",
+        "status": "planned"
+      },
+      {
+        "id": "P14.3",
+        "title": "Replay, spectators, and safe undo",
+        "status": "planned"
+      }
+    ]
+  },
+  {
+    "id": "P15",
+    "title": "Complete-game release verification",
+    "milestone": "M4",
+    "depends_on": [
+      "P14"
+    ],
+    "slices": [
+      {
+        "id": "P15.1",
+        "title": "Browser acceptance coverage",
+        "status": "planned"
+      },
+      {
+        "id": "P15.2",
+        "title": "Release scripts",
+        "status": "planned"
+      },
+      {
+        "id": "P15.3",
+        "title": "Registry and documentation reconciliation",
+        "status": "planned"
+      }
+    ]
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "CORE-2022",
+    "kind": "rulebook",
+    "title": "SAGA rulebook, English 2022 printing",
+    "status": "pinned",
+    "edition": "2022",
+    "isbn": "979-10-95599-25-8",
+    "sha256": "67c8de47a3a0171cecd0fd655d2721bfeb6b7dcc1e4ee5f4e4bdb015cd562a3f",
+    "page_count": 52,
+    "local_filename": "SAGA_-_Rulebook_2022_261124_161828.pdf"
+  },
+  {
+    "id": "OWNER-2026-11-24",
+    "kind": "owner_rulings",
+    "title": "Project owner rulings of 2026-11-24",
+    "status": "recorded"
+  },
+  {
+    "id": "ERRATA",
+    "kind": "errata",
+    "title": "Official corrections and FAQ applicable to CORE-2022",
+    "status": "unverified"
+  },
+  {
+    "id": "FACTION-A",
+    "kind": "faction_pack",
+    "title": "First complete faction list, battle board, and dice mapping",
+    "status": "missing"
+  },
+  {
+    "id": "FACTION-B",
+    "kind": "faction_pack",
+    "title": "Second compatible faction list, battle board, and dice mapping",
+    "status": "missing"
+  },
+  {
+    "id": "EXPANSIONS",
+    "kind": "expansion",
+    "title": "Further Universe and Book of Battles material",
+    "status": "missing"
+  }
+]

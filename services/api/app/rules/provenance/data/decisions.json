@@ -1,0 +1,169 @@
+[
+  {
+    "id": "D01",
+    "kind": "engineering_default",
+    "title": "Two fixed player seats; spectators cannot command",
+    "status": "selected"
+  },
+  {
+    "id": "D02",
+    "kind": "engineering_default",
+    "title": "Individual figures are authoritative",
+    "status": "selected"
+  },
+  {
+    "id": "D03",
+    "kind": "engineering_default",
+    "title": "Fixed-point internal coordinates; bands and inches for players",
+    "status": "selected"
+  },
+  {
+    "id": "D04",
+    "kind": "engineering_default",
+    "title": "Clash first player by d6; coin toss on ties",
+    "status": "selected"
+  },
+  {
+    "id": "D05",
+    "kind": "engineering_default",
+    "title": "Organize units and equipment during deployment",
+    "status": "selected"
+  },
+  {
+    "id": "D06",
+    "kind": "engineering_default",
+    "title": "Pause on disconnect; no implicit auto-pass or forfeit",
+    "status": "selected"
+  },
+  {
+    "id": "D07",
+    "kind": "engineering_default",
+    "title": "Sandbox retained; enforced rooms reject legacy bypasses",
+    "status": "selected"
+  },
+  {
+    "id": "D08",
+    "kind": "engineering_default",
+    "title": "Deterministic reducer, serialized transactions, recorded RNG",
+    "status": "selected"
+  },
+  {
+    "id": "D09",
+    "kind": "engineering_default",
+    "title": "In-memory store first; Postgres durability before release",
+    "status": "selected"
+  },
+  {
+    "id": "D10",
+    "kind": "engineering_default",
+    "title": "Declarative versioned content packs with reviewed handlers",
+    "status": "selected"
+  },
+  {
+    "id": "D11",
+    "kind": "engineering_default",
+    "title": "Players make casualty and withdrawal decisions",
+    "status": "selected"
+  },
+  {
+    "id": "D12",
+    "kind": "engineering_default",
+    "title": "Committed undo disabled in enforced games",
+    "status": "selected"
+  },
+  {
+    "id": "D13",
+    "kind": "engineering_default",
+    "title": "Generic warband is the first implementation target",
+    "status": "selected"
+  },
+  {
+    "id": "D14",
+    "kind": "engineering_default",
+    "title": "Curated terrain and base shapes; original ability UI",
+    "status": "selected"
+  },
+  {
+    "id": "D15",
+    "kind": "engineering_default",
+    "title": "Concession is an explicit terminal intent",
+    "status": "selected"
+  },
+  {
+    "id": "Q01",
+    "kind": "owner_ruling",
+    "title": "Distance label C means S",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q02",
+    "kind": "owner_ruling",
+    "title": "Resilience exchanges up to exhaustion",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q03",
+    "kind": "owner_ruling",
+    "title": "Distance bands, inches, and imperial table",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q04",
+    "kind": "owner_ruling",
+    "title": "Presence applies only to SAGA abilities",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q05",
+    "kind": "owner_ruling",
+    "title": "Close ranks is charge-only with equipment prohibitions (corrected)",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q06",
+    "kind": "owner_ruling",
+    "title": "Generic warband profiles from CORE-2022 (corrected)",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q07",
+    "kind": "owner_ruling",
+    "title": "Fatigue cancellation precedes Activation/Reaction",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q08",
+    "kind": "owner_ruling",
+    "title": "Cancelled Old Grudge attempt consumes the free activation",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q09",
+    "kind": "owner_ruling",
+    "title": "Units are organized during deployment",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q10",
+    "kind": "owner_ruling",
+    "title": "Coin toss settles tied initiative",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  },
+  {
+    "id": "Q11",
+    "kind": "owner_ruling",
+    "title": "Clash first player declares total unit count",
+    "status": "resolved",
+    "source_id": "OWNER-2026-11-24"
+  }
+]
