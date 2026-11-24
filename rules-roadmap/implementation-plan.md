@@ -207,7 +207,7 @@ This is a safe default execution order, not a request for concurrent work. Speci
 
 1. `P11.1`: Determination, We Obey, Presence, Pride; individual counters and explicit count query policies.
 2. `P11.2`: Resilience, Bodyguards, Heroic Unit with prevention/redirection/swap choices; apply resolved Q02/Q04, including exchanges reaching exhaustion and Presence limited to SAGA abilities.
-3. `P11.3`: Every R22/R23 equipment behavior; consecutive-shot history, horse penalties/overrides, javelin grant. Apply resolved Q05: charge-only timing; Improvised Projectiles permits close ranks unless another restriction forbids it.
+3. `P11.3`: Every R22/R23 equipment behavior; consecutive-shot history, horse penalties/overrides, javelin grant. Apply corrected Q05: charge-only timing and no close ranks for Improvised Projectiles, bows/slings, javelins, crossbows, horse mounts, heavy weapons, or Unarmed. Preserve composite bows and other sourced restrictions; eligibility combines definition-level prohibitions rather than a closed equipment list.
 4. `P11.4`: Core mercenary/Legendary restrictions and support flags, composition tests against terrain, fatigue, scoring, and abilities; source-less profiles remain test-only.
 
 **Touch:** rule primitives/definitions, roster validation, choice UI, cross-rule regression tests.

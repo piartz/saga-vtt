@@ -64,7 +64,7 @@ All examples below are original test arrangements. The Warrior-archer example us
 | Range/cover | One quantum below/equal/above each threshold using exact imperial bands and inch distances; a base sliver outside cover denies whole-unit cover; a high-terrain tangent is governed by the documented crossing policy. |
 | Charge | First mover contacts, but final figure forces whole-unit S reduction making contact impossible: restore all charging positions while retaining spent grant and reactions. |
 | Exhaustion timing | Unit enters melee exhausted, enemy spends fatigue, -1 remains. Unit becomes exhausted only later in melee, no retroactive -1. |
-| Improvised Projectiles and close ranks | An otherwise eligible defender equipped with Improvised Projectiles can close ranks against a charge. An independent mounted/unarmed restriction still prevents it. Shooting never offers this choice. |
+| Equipment and close ranks | An otherwise eligible foot defender with Improvised Projectiles cannot close ranks when charged. Independently reject bows, slings, composite bows, javelins, crossbows, horse mounts, heavy weapons, and Unarmed. Test combined restrictions and an additional test-only definition carrying the prohibition to prove the list is extensible. An eligible ordinary foot defender without restricting equipment remains allowed when charged; shooting never offers the choice. Stale client intents must also be rejected. |
 | Resilience threshold | With cap 3, Resilience(1) at fatigue 2 cancels one casualty and reaches fatigue 3; at fatigue 3 it cancels none. Repeated exchanges stop immediately upon reaching the cap. |
 | Resilience capacity | Resilience(2) cancels either one or two casualties for one fatigue. Three casualties need two exchanges if capacity remains; at fatigue 2/cap 3 only one exchange is available, leaving at least one casualty. No fractional fatigue or exchange with zero casualties. |
 | Presence scope | Identical figures count as four for an applicable SAGA ability but as one for a special rule, physical geometry, ordinary combat-pool cap, and scoring. |
@@ -104,7 +104,7 @@ Use the approved generic pack for initial complete-game runs, including its spec
 
 ### E02 - Setup and source options
 
-Run deployment B with both diagonals/edge assignments and C from both seats. Include odd first-player unit count, maximum terrain catalog counts, one-large restrictions, nonround bases, and exact imperial distances and C-to-S distance-label normalization (without changing Method C). Exercise every sourced equipment/Hero rule via the core suite and all selectable faction options via pack tests. Verify all owner rulings Q01-Q11, including an Improvised Projectiles defender closing ranks when charged and an independent restriction still preventing that choice.
+Run deployment B with both diagonals/edge assignments and C from both seats. Include odd first-player unit count, maximum terrain catalog counts, one-large restrictions, nonround bases, and exact imperial distances and C-to-S distance-label normalization (without changing Method C). Exercise every sourced equipment/Hero rule via the core suite and all selectable faction options via pack tests. Verify all owner rulings Q01-Q11, including corrected Q05: an Improvised Projectiles defender cannot close ranks when charged. Exercise each equipment/status prohibition independently and in combination, plus a legal ordinary foot defender as a positive control.
 
 ### E03 - Scenario endings and chaos
 

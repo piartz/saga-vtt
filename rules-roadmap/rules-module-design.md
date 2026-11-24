@@ -118,7 +118,7 @@ Pre-action order is attempt/cost commitment -> applicable fatigue-cancellation c
 
 A choice identifies its resolution, trigger occurrence, owning seat, response type, legal options/constraints, and state version. Replies contain only selected IDs/values, not a claimed outcome. Distinguish:
 
-- Defender-only close-ranks decision in melee after a charge (never in shooting), allowing Improvised Projectiles unless another restriction applies.
+- Defender-only close-ranks decision in melee after a charge (never in shooting), subject to all equipment/status restrictions. Corrected Q05 makes Improvised Projectiles a prohibition in its own right.
 - Affected-owner decisions: casualty selections and prevention for either side; deployment choices for the current deploying player. These are not all defender-only decisions.
 - Alternating windows: combat ability/fatigue/pass with priority and consecutive-pass count.
 - Opponent windows: two Orders reactions and ability-specific Activation reactions.
@@ -163,6 +163,8 @@ Build small typed primitives driven by sourced requirements: grant activation, r
 Store evaluation timing and dependency links. Example: a captured current Armour-derived bonus does not change if Armour changes later. An effect conditional on paying fatigue differs from an independent fatigue removal followed by a bonus. Free activation, fatigue-exempt activation, and movement without activation are different primitives.
 
 Use explicit exception identifiers for rules overridden by an ability. Do not let arbitrary data bypass every validator. The prohibition/override ordering must be tested against combinations such as mounted cover, mercenary advanced abilities versus fatigue, dangerous versus uneven immunity, and cancelled once-per-turn grants.
+
+Represent close-ranks prohibitions on equipment/special-rule definitions and evaluate all applicable restrictions. Include bows/slings, composite bows, javelins, crossbows, horse mounts, heavy weapons, Improvised Projectiles, and Unarmed. Additional sourced restricting definitions use the same mechanism; do not infer permission merely because an equipment ID is absent from a hardcoded list. Return the applicable reason to the UI and reject prohibited intents server-side, even if a stale client offers the choice.
 
 ## Proposed command/event families
 

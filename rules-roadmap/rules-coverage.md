@@ -236,6 +236,8 @@ Sequence: close ranks -> both pools -> abilities/fatigue -> both attacks -> both
 
 All figures fight, not only those touching. Natural pool = ceil(sum melee aggression); pre-pool bonus attack dice are limited to min(natural pool, actual unit size). After adding permitted bonuses, discard ceil(half) if closing ranks, then cap the starting pool at sixteen. Keep pre-existing bonus defence dice separately. Later attack dice cap at twice that saved starting pool, normally thirty-two; today's generic twenty-die limit is unsuitable. Close ranks is a defender choice at the melee step after a charge, subject to equipment; it is never available against shooting (owner ruling Q05). It grants solid cover for this melee, including the withdrawal rule, and does not stack a second save bonus on existing solid cover. Attacker never benefits from melee cover. Save 5+, defender solid cover/closed ranks 4+.
 
+Close-ranks eligibility must evaluate all applicable equipment/status restrictions. Corrected Q05 confirms prohibitions for bows/slings, javelins, crossbows, horse mounts, heavy weapons, Improvised Projectiles, and Unarmed. Composite bows are also prohibited by their source rule. This is not an exhaustive catalog: carry the restriction on each definition and combine it with timing/role checks, so newly supported restricting equipment cannot accidentally qualify.
+
 Both pools survive simultaneous damage resolution. Defender removes first; preserve cohesion/contact, including earlier ability losses. Determine outcome using actual Step 6 losses, excluding prevented losses and Bodyguards transfers; annihilation overrides casualty comparison, mutual annihilation draws. Early destruction still permits remaining steps; contact broken before Step 4 is a distinct early ending. Combat roles are independent of active seat.
 
 **Acceptance:** all figures participate; odd closed-ranks pool; 32 dice; simultaneous kills; early losses excluded from outcome; contact break differs from destruction.
@@ -283,11 +285,11 @@ Apply these policies to the shared base troop characteristics. Generic bow Levie
 | Composite bows | M, mounted only, -1 melee Armour, no close ranks; owner's-phase free shooting, all shooting activations exempt from repetition fatigue, no consecutive resolved shooting activations. |
 | Crossbows | L, foot only, -1 both Armours, +1 shooting attack results, no close ranks, no consecutive resolved shooting activations. |
 | Javelins | M, -1 melee Armour, no close ranks; charging melee +1 attack results unless defender has solid cover; once per owner's Activation phase free repetition-fatigue-exempt shoot. Do not import another edition's move-triggered rule. |
-| Improvised projectiles | S, target +1 shooting defence results; may close ranks when charged unless another restriction forbids it; never close ranks against shooting (owner ruling Q05). |
+| Improvised projectiles | S, target +1 shooting defence results; no close ranks, including when charged (corrected owner ruling Q05). |
 
 Another unit acting or a cancelled intervening activation does not reset consecutive-shot restrictions.
 
-**Acceptance:** last resolved action per unit; javelin once per phase; javelin versus closed ranks; Improvised Projectiles defender can close ranks when charged; independent mounted/unarmed restriction still forbids it; no closing ranks against shooting; faction permission checks.
+**Acceptance:** last resolved action per unit; javelin once per phase; javelin versus closed ranks; otherwise eligible foot Improvised Projectiles defender cannot close ranks when charged; every listed restricting equipment/status rejects close ranks; combinations and additional restricting definitions also reject; eligible ordinary foot defender remains allowed when charged; no closing ranks against shooting; faction permission checks.
 
 ### R23 - Melee equipment and horses
 

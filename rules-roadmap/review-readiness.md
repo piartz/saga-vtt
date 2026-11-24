@@ -2,6 +2,8 @@
 
 Reviewed: 2026-11-24. Scope: all roadmap documents, the supplied CORE-2022 mechanics and relevant diagrams/tables, owner rulings Q01-Q11, and current implementation evidence. This review changes documentation only.
 
+Post-review correction on the same date: the owner relayed confirmation that Improvised Projectiles forbids close ranks. Corrected Q05 supersedes the earlier permission. Coverage, design, implementation instructions, and acceptance cases now reject it, alongside the other non-exhaustive equipment/status prohibitions.
+
 ## Readiness
 
 The plan is ready to start P00.1 and then P01.1. No further owner rule decision blocks those slices. The generic battle board remains an explicit content gate before P12 can claim complete generic play. Geometry feasibility and numerical policy must be demonstrated in P03, with final charge/withdrawal conformance in P10. These are implementation obligations, not capabilities established by this review.
@@ -27,6 +29,7 @@ The source baseline is the supplied 2022 PDF and recorded owner rulings. Officia
 - **Intermediate formation:** ordinary movement can use an unmoved unit member for its VS neighbor check; charges and deployment require an already moved/placed neighbor. First-mover radius, final formation, and the lone-figure case have separate tests.
 - **Sight gaps:** third-party unit gaps block sight without movement's S/M cutoff; firing/target-unit gaps are exempt, but intervening target figures still obstruct sight. Movement's threshold is based on the blocking unit's mount status.
 - **Combat permissions and counts:** an ability prohibition also blocks combat fatigue use unless explicitly excepted; lack of allocated dice does not. Pre-pool attack bonuses are limited by natural dice and actual figure count. Bonus defence dice remain separate. Close ranks grants solid cover for withdrawal as well as saves.
+- **Close-ranks equipment correction:** reject bows/slings, javelins, crossbows, horse mounts, heavy weapons, Improvised Projectiles, and Unarmed under corrected Q05; preserve composite bows and any additional sourced restrictions. Tests cover each prohibition, combinations, extensibility, and an eligible ordinary foot defender.
 - **Source conflict recorded:** the p.29 melee example conflicts with the pre-pool figure-count cap stated on p.26. The plan follows the explicit p.26 rule and uses original regression arrangements. This is a recorded interpretation, not an official erratum.
 - **Implementation safety:** roster previews no longer imply an enforced game is playable. All selected rules/abilities/scenario capabilities must exist before enforced start. Dedupe lookup is checked within the mutation transaction; pause/resume advances gameplay state version. Recruitment-pool figures are no longer incorrectly required to belong to a committed unit.
 - **Handoff consistency:** usage limits belong to abilities rather than timing keywords; scenario count declarations occur in deployment rather than preforming the roster. The older onboarding task list now points to current slices instead of completed bootstrap work.
