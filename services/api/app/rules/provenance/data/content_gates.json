@@ -1,0 +1,50 @@
+[
+  {
+    "id": "G01",
+    "title": "Generic battle board / activation economy",
+    "status": "open",
+    "source_ids": ["GENERIC-BOARD"],
+    "requirements": ["R10", "R33"],
+    "blocks": ["P12.1", "P12.2", "P12.3"]
+  },
+  {
+    "id": "G02",
+    "title": "Named faction lists and complete boards",
+    "status": "open",
+    "source_ids": ["FACTION-A", "FACTION-B"],
+    "requirements": ["R03", "R33"],
+    "blocks": []
+  },
+  {
+    "id": "G03",
+    "title": "Applicable official FAQ/errata",
+    "status": "open",
+    "source_ids": ["ERRATA"],
+    "requirements": [],
+    "blocks": []
+  },
+  {
+    "id": "G04",
+    "title": "Named Hero/mercenary/Legendary profiles desired for release",
+    "status": "open",
+    "source_ids": ["EXPANSIONS"],
+    "requirements": ["R24"],
+    "blocks": []
+  },
+  {
+    "id": "G05",
+    "title": "Extra scenarios, building rules, multiplayer/campaigns",
+    "status": "open",
+    "source_ids": ["EXPANSIONS"],
+    "requirements": ["R05", "R06"],
+    "blocks": []
+  },
+  {
+    "id": "G06",
+    "title": "Creatures, elephants, other mounts, magic, Universe-specific subsystems",
+    "status": "open",
+    "source_ids": ["EXPANSIONS"],
+    "requirements": ["R23", "R24"],
+    "blocks": []
+  }
+]

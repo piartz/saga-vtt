@@ -1,0 +1,131 @@
+[
+  {
+    "id": "RC01",
+    "area": "Melee pre-pool limits",
+    "status": "planned",
+    "requirements": ["R18"],
+    "decisions": ["Q04"],
+    "interpretations": ["I01"],
+    "slices": ["P10.2"]
+  },
+  {
+    "id": "RC02",
+    "area": "Unitless shooting",
+    "status": "planned",
+    "requirements": ["R17"],
+    "interpretations": ["I02"],
+    "slices": ["P09.2"]
+  },
+  {
+    "id": "RC03",
+    "area": "Base profiles and derived Armour",
+    "status": "planned",
+    "requirements": ["R02", "R22", "R23"],
+    "decisions": ["Q06"],
+    "slices": ["P02.1"]
+  },
+  {
+    "id": "RC04",
+    "area": "Levy Aggression exception",
+    "status": "planned",
+    "requirements": ["R02"],
+    "decisions": ["Q06"],
+    "slices": ["P02.1"]
+  },
+  {
+    "id": "RC05",
+    "area": "Inherited rules",
+    "status": "planned",
+    "requirements": ["R02", "R21", "R23"],
+    "decisions": ["Q06"],
+    "slices": ["P02.1", "P11.1", "P11.2", "P11.3"]
+  },
+  {
+    "id": "RC06",
+    "area": "Deployment choices",
+    "status": "planned",
+    "requirements": ["R03", "R07"],
+    "decisions": ["Q09", "Q11"],
+    "slices": ["P07.3"]
+  },
+  {
+    "id": "RC07",
+    "area": "Cancel before reaction",
+    "status": "planned",
+    "requirements": ["R12"],
+    "decisions": ["Q07"],
+    "slices": ["P08.1"]
+  },
+  {
+    "id": "RC08",
+    "area": "Old Grudge cancellation",
+    "status": "planned",
+    "requirements": ["R12", "R26"],
+    "decisions": ["Q08"],
+    "slices": ["P08.1", "P13.2"]
+  },
+  {
+    "id": "RC09",
+    "area": "Coin tie-break",
+    "status": "planned",
+    "requirements": ["R06"],
+    "decisions": ["D04", "Q10"],
+    "slices": ["P07.1"]
+  },
+  {
+    "id": "RC10",
+    "area": "Close ranks",
+    "status": "planned",
+    "requirements": ["R18"],
+    "decisions": ["Q05"],
+    "slices": ["P10.2"]
+  },
+  {
+    "id": "RC11",
+    "area": "Range/cover",
+    "status": "planned",
+    "requirements": ["R01", "R05", "R16", "R17"],
+    "decisions": ["Q03"],
+    "slices": ["P03.1", "P04.2", "P09.2"]
+  },
+  {
+    "id": "RC12",
+    "area": "Distance label C",
+    "status": "planned",
+    "requirements": ["R01", "R05"],
+    "decisions": ["Q01"],
+    "slices": ["P03.1", "P04.1"]
+  },
+  {
+    "id": "RC13",
+    "area": "Equipment and close ranks",
+    "status": "planned",
+    "requirements": ["R18", "R22", "R23"],
+    "decisions": ["Q05"],
+    "slices": ["P11.3"]
+  },
+  {
+    "id": "RC14",
+    "area": "Resilience threshold",
+    "status": "planned",
+    "requirements": ["R21"],
+    "decisions": ["Q02"],
+    "slices": ["P11.2"]
+  },
+  {
+    "id": "RC15",
+    "area": "Resilience capacity",
+    "status": "planned",
+    "requirements": ["R21"],
+    "decisions": ["Q02"],
+    "slices": ["P11.2"]
+  },
+  {
+    "id": "RC16",
+    "area": "Presence scope",
+    "status": "planned",
+    "requirements": ["R21"],
+    "decisions": ["Q04"],
+    "slices": ["P11.1"]
+  }
+]

@@ -17,6 +17,12 @@
     "status": "recorded"
   },
   {
+    "id": "GENERIC-BOARD",
+    "kind": "owner_content",
+    "title": "Generic battle board and activation economy specification",
+    "status": "missing"
+  },
+  {
     "id": "ERRATA",
     "kind": "errata",
     "title": "Official corrections and FAQ applicable to CORE-2022",

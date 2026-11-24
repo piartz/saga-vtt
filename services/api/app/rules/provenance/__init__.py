@@ -12,9 +12,12 @@ from functools import lru_cache
 from pathlib import Path
 
 from app.rules.provenance.models import (
+    ContentGate,
     Conventions,
     Decision,
+    Interpretation,
     Registry,
+    RegressionCase,
     Requirement,
     Source,
     SourceRef,
@@ -26,6 +29,9 @@ DATA_FILES = {
     "sources": "sources.json",
     "requirements": "requirements.json",
     "decisions": "decisions.json",
+    "interpretations": "interpretations.json",
+    "content_gates": "content_gates.json",
+    "regression_cases": "regression_cases.json",
     "work_packages": "work_packages.json",
     "conventions": "conventions.json",
 }
@@ -52,9 +58,12 @@ def load_registry() -> Registry:
 __all__ = [
     "DATA_DIR",
     "DATA_FILES",
+    "ContentGate",
     "Conventions",
     "Decision",
+    "Interpretation",
     "Registry",
+    "RegressionCase",
     "Requirement",
     "Source",
     "SourceRef",

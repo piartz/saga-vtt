@@ -51,6 +51,7 @@ class CoverageEntry:
     title: str | None
     packages: list[str]
     decisions: set[str]
+    interpretations: set[str] = field(default_factory=set)
     pages: list[int] = field(default_factory=list)
     cross_check_pages: list[int] = field(default_factory=list)
 
@@ -69,6 +70,7 @@ def _coverage() -> tuple[dict[str, CoverageEntry], dict[str, CoverageEntry]]:
             title=title.strip(),
             packages=_expand_ids(line.group(2), "P", LAST_PACKAGE),
             decisions=_cited_decisions(body),
+            interpretations=set(re.findall(r"\bI\d{2}\b", body)),
             pages=_expand_pages(primary),
             cross_check_pages=_expand_pages(cross_check),
         )
@@ -234,12 +236,74 @@ def test_measurement_conventions_match_owner_rulings_in_coverage() -> None:
     assert load_registry().conventions.initiative.clash_tie_break == "coin_toss"
 
 
-def test_verified_requirements_point_at_existing_paths() -> None:
-    for requirement in load_registry().requirements:
-        if requirement.status != "verified":
-            continue
-        for path in (*requirement.implementation_paths, *requirement.test_paths):
-            assert (REPO_ROOT / path).exists(), f"{requirement.id}: {path} is missing"
+def _table_first_column(text: str, heading: str) -> list[str]:
+    section = text.split(f"\n{heading}\n", 1)[1].split("\n## ", 1)[0]
+    rows = re.findall(r"^\| (.+?) \|", section, re.M)
+    return [row for row in rows[1:] if not set(row) <= set("-: ")]
+
+
+def test_interpretations_are_cited_where_they_apply() -> None:
+    interpretations = load_registry().interpretations
+    core, _ = _coverage()
+
+    for requirement_id, entry in core.items():
+        linked = {i.id for i in interpretations if requirement_id in i.requirements}
+        assert entry.interpretations == linked, requirement_id
+
+
+def test_content_gates_match_missing_content_table() -> None:
+    register = _roadmap("decisions-and-source-gaps.md")
+    rows = _table_first_column(register, "## Missing content and scope boundaries")
+
+    assert [g.title for g in load_registry().content_gates] == rows
+
+
+def test_generic_board_gate_blocks_generic_pack_completion() -> None:
+    registry = load_registry()
+    gate = next(g for g in registry.content_gates if g.id == "G01")
+    board = next(s for s in registry.sources if s.id in gate.source_ids)
+
+    assert gate.status == "open"
+    assert board.status == "missing"
+    assert set(gate.blocks) == {"P12.1", "P12.2", "P12.3"}
+
+
+def test_regression_cases_match_validation_table() -> None:
+    validation = _roadmap("validation-and-release.md")
+    areas = _table_first_column(validation, "## High-value regression examples")
+    cases = load_registry().regression_cases
+
+    assert len(areas) == len(set(areas))
+    assert [c.area for c in cases] == [a for a in areas if a in {c.area for c in cases}]
+
+
+def test_every_resolved_ruling_has_a_regression_case() -> None:
+    registry = load_registry()
+    covered = {
+        link
+        for case in registry.regression_cases
+        for link in (*case.decisions, *case.interpretations)
+    }
+
+    for decision in registry.decisions:
+        if decision.kind == "owner_ruling" and decision.status == "resolved":
+            assert decision.id in covered, decision.id
+    for interpretation in registry.interpretations:
+        assert interpretation.id in covered, interpretation.id
+
+
+def test_verified_records_point_at_existing_paths() -> None:
+    registry = load_registry()
+    evidence = [
+        (r.id, (*r.implementation_paths, *r.test_paths))
+        for r in registry.requirements
+        if r.status == "verified"
+    ]
+    evidence += [(c.id, c.test_paths) for c in registry.regression_cases if c.status == "verified"]
+
+    for record_id, paths in evidence:
+        for path in paths:
+            assert (REPO_ROOT / path).exists(), f"{record_id}: {path} is missing"
 
 
 def test_open_question_can_gate_requirements() -> None:
@@ -262,6 +326,18 @@ def _package(data: dict[str, Any], package_id: str) -> dict[str, Any]:
     return next(p for p in data["work_packages"] if p["id"] == package_id)
 
 
+def _record(data: dict[str, Any], collection: str, record_id: str) -> dict[str, Any]:
+    return next(r for r in data[collection] if r["id"] == record_id)
+
+
+def _complete_blocked_slice(data: dict[str, Any]) -> None:
+    _package(data, "P12")["slices"][0]["status"] = "complete"
+
+
+def _drop_case(data: dict[str, Any], case_id: str) -> None:
+    data["regression_cases"].remove(_record(data, "regression_cases", case_id))
+
+
 def _unreferenced_decision(data: dict[str, Any]) -> None:
     data["decisions"].append(
         {"id": "Q12", "kind": "owner_ruling", "title": "Unlinked", "status": "open"}
@@ -278,7 +354,9 @@ INVALID_MUTATIONS: dict[str, Callable[[dict[str, Any]], None]] = {
     "core rule without source": lambda d: _requirement(d, "R09").update(sources=[]),
     "verified without evidence": lambda d: _requirement(d, "R09").update(status="verified"),
     "pinned source without hash": lambda d: d["sources"][0].pop("sha256"),
-    "missing source with hash": lambda d: d["sources"][3].update(sha256="0" * 64),
+    "missing source with hash": lambda d: _record(d, "sources", "FACTION-A").update(
+        sha256="0" * 64
+    ),
     "forward dependency": lambda d: _package(d, "P01")["depends_on"].append("P02"),
     "unknown dependency": lambda d: _package(d, "P02")["depends_on"].append("P01.9"),
     "misnumbered slice": lambda d: _package(d, "P00")["slices"][1].update(id="P00.5"),
@@ -288,6 +366,30 @@ INVALID_MUTATIONS: dict[str, Callable[[dict[str, Any]], None]] = {
     "unknown convention decision": lambda d: d["conventions"]["initiative"]["decisions"].append(
         "D99"
     ),
+    "interpretation page beyond source": lambda d: _record(d, "interpretations", "I01")[
+        "sources"
+    ][0]["pages"].append(60),
+    "interpretation of unknown requirement": lambda d: _record(d, "interpretations", "I02")[
+        "requirements"
+    ].append("R99"),
+    "open gate with complete slice": _complete_blocked_slice,
+    "satisfied gate with missing source": lambda d: _record(d, "content_gates", "G01").update(
+        status="satisfied"
+    ),
+    "gate blocking unknown slice": lambda d: _record(d, "content_gates", "G02")["blocks"].append(
+        "P16.1"
+    ),
+    "case slice outside requirements": lambda d: _record(d, "regression_cases", "RC07")[
+        "slices"
+    ].append("P02.1"),
+    "case with unknown interpretation": lambda d: _record(d, "regression_cases", "RC02")[
+        "interpretations"
+    ].append("I09"),
+    "verified case without tests": lambda d: _record(d, "regression_cases", "RC09").update(
+        status="verified"
+    ),
+    "ruling without a case": lambda d: _drop_case(d, "RC12"),
+    "interpretation without a case": lambda d: _drop_case(d, "RC02"),
 }
 
 

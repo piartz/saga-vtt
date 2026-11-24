@@ -36,7 +36,7 @@ Use property/stateful tests where these invariants explore meaningful command se
 
 ## High-value regression examples
 
-All examples below are original test arrangements. The Warrior-archer example uses a CORE-2022 equipment fixture outside the selectable generic pack (which has no Warrior bow option); its base Warrior profile is shared with that pack. Script RNG through a server test adapter; never add a production command that accepts desired rolls.
+All examples below are original test arrangements. `services/api/app/rules/provenance/data/regression_cases.json` gives stable IDs (RC01-RC16) to the cases that pin down owner rulings and source interpretations; every owner ruling and recorded interpretation must have at least one, with test paths once verified. The Warrior-archer example uses a CORE-2022 equipment fixture outside the selectable generic pack (which has no Warrior bow option); its base Warrior profile is shared with that pack. Script RNG through a server test adapter; never add a production command that accepts desired rolls.
 
 | Area | Test fixture and expected assertion |
 | --- | --- |
@@ -62,6 +62,7 @@ All examples below are original test arrangements. The Warrior-archer example us
 | Path legality | Clear endpoint beyond an intervening terrain/unit barrier is rejected; own-unit figures may be crossed; other-unit gaps have their specific blocking policy. |
 | Sight versus movement gaps | A third-party unit's gap can block sight even above movement's S/M threshold; firing/target-unit gaps are exempt from sight blocking. A target figure can still obscure a farther target figure. Movement's threshold follows the blocking unit's mount status. |
 | Range/cover | One quantum below/equal/above each threshold using exact imperial bands and inch distances; a base sliver outside cover denies whole-unit cover; a high-terrain tangent is governed by the documented crossing policy. |
+| Distance label C | Wherever C denotes a distance it resolves to S (4 inches), including the small-terrain minimum width, with the same one-quantum threshold behavior as S. Deployment Method C keeps its meaning. |
 | Charge | First mover contacts, but final figure forces whole-unit S reduction making contact impossible: restore all charging positions while retaining spent grant and reactions. |
 | Exhaustion timing | Unit enters melee exhausted, enemy spends fatigue, -1 remains. Unit becomes exhausted only later in melee, no retroactive -1. |
 | Equipment and close ranks | An otherwise eligible foot defender with Improvised Projectiles cannot close ranks when charged. Independently reject bows, slings, composite bows, javelins, crossbows, horse mounts, heavy weapons, and Unarmed. Test combined restrictions and an additional test-only definition carrying the prohibition to prove the list is extensible. An eligible ordinary foot defender without restricting equipment remains allowed when charged; shooting never offers the choice. Stale client intents must also be rejected. |
