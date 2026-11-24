@@ -21,24 +21,13 @@ Use this file as context when you ask an LLM to help implement features.
   - `server_time`
 - Each command includes `client_msg_id` for dedupe/ack later.
 
-## Near-term tasks you can ask an LLM to implement
-1. **WebSocket client wrapper**
-   - Create a `WsClient` class with `connect()`, `sendCommand()`, `onEvent(cb)`
-   - Automatic reconnect with backoff
-2. **Server connection manager**
-   - Track connections per room
-   - Broadcast events
-   - Add basic JOIN/LEAVE and player list
-3. **Move token command**
-   - Add command validation
-   - Use mm integer coordinates
-   - Broadcast TOKEN_MOVED event
-4. **Board improvements**
-   - Pan/zoom
-   - Drag preview + “confirm” button (don’t commit movement until server confirms)
-5. **Dice roller**
-   - Server-side RNG using `secrets`
-   - Broadcast DICE_ROLLED with results + audit fields
+## Current work order
+
+Read [project context](agent-context.md) first. The connection manager, token moves, basic dice roller, and board pan/zoom are already implemented; do not restart those bootstrap tasks.
+
+For the game engine, follow the [implementation plan](../rules-roadmap/implementation-plan.md) and [iteration playbook](../rules-roadmap/iteration-playbook.md). Start with P00.1 for the source/requirement registry, then P01.1 for command dispatch and deterministic reduction. The [planning review](../rules-roadmap/review-readiness.md) records remaining content and engineering gates. Reconnect/recovery belongs to the P01/P14 contracts, not a separate identity system.
+
+Current token coordinates use integer mm. Enforced-game geometry is a planned, versioned change to exact fixed-point coordinates with band/inch display; follow P03 rather than copying the bootstrap coordinate contract into new rules.
 
 ## Prompt template
 When asking an LLM for code, paste:
@@ -47,4 +36,4 @@ When asking an LLM for code, paste:
 - the constraints above
 
 Example:
-“Implement MOVE_TOKEN command server-side with tests. Constraints: server-authoritative, mm ints, no rules text.”
+“Implement P01.1 with its listed acceptance criteria. Preserve sandbox behavior, keep rules separate from transport, and update actual code/test evidence in the requirement registry.”

@@ -1,32 +1,38 @@
-# Rules Module Roadmap
+# SAGA Game Engine Plan
 
-This directory plans the rules-module work for the skirmish VTT. It is intentionally documentation-only: no rules implementation, copied rule prose, published examples, battle-board layout, or artwork should be committed here.
+Planning baseline: **2026-11-24**, repository commit `f1cd5c6`. This directory specifies the work to take the existing shared tabletop through a complete, server-enforced, two-player SAGA game. This change is documentation only; none of the proposed behavior is implemented by this plan.
 
-The near-term goal is to grow from the current generic tabletop loop into a rules-aware game engine through small, test-backed increments. The VTT core should remain reusable, while rules-specific behavior lives behind explicit module boundaries.
+The project owner has stated that Studio Tomahawk has authorized the work. Use the supplied local rulebook to implement mechanics in original code and data. Keep rules-specific content outside the VTT core and keep copied prose, published examples, battle-board layouts, and artwork out of documents, tests, and code. The local PDF remains untracked.
 
-## Source Handling
-- Treat local commercial rulebooks as reference material for behavior and terminology.
-- Use canonical names/labels for units, terrain, special rules, battle-board abilities, scenarios, and other game terms.
-- Encode mechanics as original code, state transitions, tests, and data structures.
-- Do not copy explanatory rule prose, published examples, authored ability descriptions, battle-board layout, scenario prose, or artwork.
+## Read in this order
 
-## Roadmap Files
-- [rules-module-design.md](rules-module-design.md): target boundaries and domain model categories.
-- [implementation-plan.md](implementation-plan.md): phased implementation rounds.
-- [iteration-playbook.md](iteration-playbook.md): how to keep each round small, reviewable, and verifiable.
+1. [Project context](../docs/agent-context.md): what actually exists today.
+2. [Implementation plan](implementation-plan.md): scope, dependencies, work packages, and exit criteria.
+3. [Initial generic warband](generic-warband.md): source-backed profiles, inherited rules, chosen loadouts, deployment, cancellation, and tie-break.
+4. [Rules coverage](rules-coverage.md): source locations, required mechanics, and acceptance cases by stable requirement ID.
+5. [Module design](rules-module-design.md): proposed state, transactions, timing, geometry, protocol evolution, and UI responsibilities.
+6. [Validation and release](validation-and-release.md): test strategy and complete-game acceptance scripts.
+7. [Decisions and source gaps](decisions-and-source-gaps.md): engineering defaults, rule questions, and missing content.
+8. [Iteration playbook](iteration-playbook.md): instructions for executing one implementation slice.
 
-## High-Level Rules Categories
-The rulebook structure maps cleanly into these implementation categories:
+These files replace the earlier Phase 0-10 outline. Use work-package IDs `P00`-`P15` and requirement IDs `R01`-`R34`; new package numbers do not correspond to old phases. The passive module and unit metadata are scaffolding, not completed rules enforcement.
 
-- **Game setup**: board dimensions, player sides, terrain placement, deployment, scenario metadata.
-- **Warband model**: factions, units, unit types, equipment tags, figure counts, and SAGA dice generation thresholds.
-- **Measurement and geometry**: SAGA range bands (`VS`, `S`, `M`, `L`, and numeric multiples such as `2L`), base sizes, formation constraints, line of sight, contact, collision, and impassable areas.
-- **Turn engine**: alternating player turns, Orders phase, Activation phase, end-of-turn cleanup.
-- **SAGA dice engine**: generated SAGA dice, result symbols, reusable and single-use abilities, ability timing windows.
-- **Activations**: move, charge, shoot, rest, free/cancelled activations, repeat activation costs.
-- **Fatigue and exhaustion**: fatigue gain/removal, opponent fatigue spend windows, penalties to movement and combat.
-- **Combat resolution**: shooting and melee pipelines, attack pools, defense rolls, modifiers, casualty removal, post-combat movement.
-- **Terrain**: terrain size/type traits and their effects on movement, cover, visibility, fatigue, and scenario setup.
-- **Special rules and equipment**: unit keywords, mounts, ranged weapons, armor modifiers, Bodyguards, and keyword-driven exceptions.
-- **Scenario and scoring**: terrain setup rules, deployment, turn count, victory conditions, and score calculation.
-- **Audit and replay**: server-side validation, deterministic event stream, dice audit trail, undo/rewind boundaries.
+The [final planning review](review-readiness.md) records the source/code checks, corrections, remaining gates, and recommended starting slice.
+
+## Confirmed rule clarifications
+
+The owner rulings of 2026-11-24 are recorded in the decision register and take precedence over ambiguous source wording: distance C means S; Resilience(X) can exchange up to X casualties for one fatigue while below exhaustion, including the exchange that reaches exhaustion; distances use bands/inches; Presence affects only SAGA abilities; close ranks is available only against a charge, never shooting. Apply these rulings throughout future implementation and tests. Corrected Q05 forbids close ranks for Improvised Projectiles, superseding the earlier permission. The non-exhaustive prohibited list also includes bows/slings, javelins, crossbows, horse mounts, heavy weapons, and Unarmed; retain other sourced restrictions such as composite bows. Q01-Q11 are recorded. Begin with the generic warband; form units during scenario-directed deployment; cancellation consumes paid/free grants before reaction eligibility; use a coin toss for initiative ties. Clash's first player declares the final unit count before deployment, while choosing sizes/equipment during each step (Q11).
+
+The owner's latest correction to Q06 replaces the earlier numerical profiles with CORE-2022 pp.44-47 and the referenced special rules. Keep base Armour separate from derived equipment effects; include every troop rule, including the Levy melee exception without ranged weapons. The chosen seven starter loadouts remain the same.
+
+## What playable means
+
+Two players can select the generic pack and legal warbands (later, supported faction packs), set up Clash of Warlords, deploy individual figures, roll and allocate SAGA dice, use the complete selected battle boards, move, manoeuvre, charge, shoot, rest, spend fatigue, resolve reactions and casualties, finish the scenario, and see an explainable result. Either player can reconnect during a pending choice without changing the game. A saved game can resume after a server restart. No console commands or manual state edits are required.
+
+The first release covers all core mechanics and options in the supplied 2022 book, including all three deployment methods, seven terrain presets, six optional battlefield-chaos results, equipment, and core special rules. Start with the generic pack's owner-selected loadouts and source-backed profiles. A complete generic game still requires an explicitly specified shared battle board/activation economy; profiles alone do not fill that gap. Named faction packs and their complete sources are a later extension, not a prerequisite for starting implementation. Test-only abilities do not count as approved generic gameplay content.
+
+Additional Universes, named Heroes, mercenary/Legendary profiles, creatures, magic, buildings beyond the core ruins treatment, other scenarios, campaigns, and multiplayer require their own sources and follow-on packs. Their extension points and core restrictions are included here. They are not implicitly included in the first release.
+
+## Immediate next slice
+
+Start with `P00.1`: establish the versioned source baseline and decision register. Then take `P01.1`: extract command dispatch and deterministic state reduction while retaining the bootstrap behavior. Neither task requires guessing faction content.

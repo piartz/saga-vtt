@@ -1,5 +1,7 @@
 # Roadmap
 
+For the source-based SAGA engine implementation sequence, use [the game engine plan](../rules-roadmap/README.md). Its P00-P15 packages cover the complete setup-to-result game and supersede the older rules-module phase outline. The plan is documentation only; milestone notes below describe the existing bootstrap.
+
 ## Milestone 0 — Bootstrap (this repo)
 - [x] Monorepo scaffold
 - [x] FastAPI health endpoint
@@ -23,7 +25,7 @@
 ## Milestone 3 — “Rules module interface”
 - Define a `RulesModule` interface (validate commands, compute derived state)
 - Make “core” run with the SAGA Core rules module
-- Add a *SAGA module* **only if you have rights/permission**
+- Implement the SAGA rules runtime using the local reference material; the project owner stated Studio Tomahawk authorization on 2026-11-24. Follow the content boundaries and source gates in `rules-roadmap/`.
 
 ## Milestone 4 — “Accounts & persistence”
 - Accounts (OAuth or email link)
