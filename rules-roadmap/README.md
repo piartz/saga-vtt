@@ -35,4 +35,4 @@ Additional Universes, named Heroes, mercenary/Legendary profiles, creatures, mag
 
 ## Immediate next slice
 
-Start with `P00.1`: establish the versioned source baseline and decision register. Then take `P01.1`: extract command dispatch and deterministic state reduction while retaining the bootstrap behavior. Neither task requires guessing faction content.
+`P00.1` is complete: the versioned source baseline, requirement map, decision register, and work-package status live in `services/api/app/rules/provenance/data/`. Next take `P00.2` (owner rulings, source interpretations, and content gates) and `P00.3` (capability metadata design and ADRs), then `P01.1`: extract command dispatch and deterministic state reduction while retaining the bootstrap behavior. None of these tasks requires guessing faction content.

@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-11-24 (confirmed close-ranks equipment correction; documentation only)
+Last updated: 2026-11-24 (P00.1 source/requirement registry; no gameplay, protocol, or data-model change)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -59,6 +59,11 @@ Primary references:
   - `review-readiness.md` records the final source/code review. Corrections make intermediate movement/deployment cohesion, sight versus movement gaps, combat fatigue prohibitions, pre-pool limits, preview versus enforced-play capability gates, and transactional dedupe explicit. The legacy onboarding task list now points to the P00-P15 plan.
   - Q11 resolves Clash's quota: first player declares final unit count N including Warlord before deployment; first batch is ceil(N/2) including Warlord, then opponent-all, then floor(N/2). Sizes/equipment remain deployment-time choices; every commitment must leave a feasible remaining partition matching N.
   - The plan was checked against `rules/SAGA_-_Rulebook_2022_261124_161828.pdf`; the PDF is a local untracked reference, not a committed asset. No engine, schema, protocol, or data-model implementation changed with this plan.
+- P00.1 machine-readable registry (`services/api/app/rules/provenance/`):
+  - `data/*.json` indexes sources (CORE-2022 pinned by SHA-256 and page count; errata unverified; faction/expansion sources missing), R01-R34 with CORE-2022 pages, owning packages and decision links, D01-D15/Q01-Q11, P00-P15 with milestones/dependencies/slice status, and the selected measurement (VS/S/M/L = 2/4/6/12 inches, C->S, 48 x 36 inch table, 1 inch ruler, 10 internal units per mm) and Clash coin-toss tie-break conventions
+  - `load_registry()` validates with strict pydantic models: unique sorted IDs, known cross-references, pages within the source, every decision linked to a requirement, rulebook-primary sources for core rules, `verified` only with implementation/test paths, earlier-package-only dependencies, and exact inch-to-internal-unit conversion
+  - it records identifiers and status only, never rules text; nothing at runtime consumes it yet
+  - P00.1 is marked complete in `work_packages.json`; every requirement remains `planned`
 - Rules-module scaffolding has started (Phase 0 in the previous roadmap):
   - `services/api/app/rules/` contains a placeholder rules module interface, registry, and passive `saga-core` module metadata
   - `GET /rules/modules` lists registered modules
@@ -187,6 +192,10 @@ Primary references:
   - wheel gestures over the board are isolated from page scroll (page scroll continues normally outside board area)
 
 ### Tests
+- `services/api/tests/test_rules_provenance.py`
+  - verifies registry completeness and rejects invalid registry data (17 mutation cases)
+  - checks the registry against `rules-roadmap/rules-coverage.md` (IDs, titles, pages, packages, cited decisions, fingerprint, measurement values), `implementation-plan.md` (package titles, slice IDs, milestones, dependency-graph closure), and `decisions-and-source-gaps.md` (decision IDs and resolved status)
+  - verifies the local rulebook PDF against the pinned SHA-256 when present; skipped otherwise (CI)
 - `services/api/tests/test_rules_modules.py`
   - verifies module listing/manifests, room selection, passive unit snapshots, and basic unit validation
   - does not verify SAGA gameplay; its recruitment-sized unit validation needs separation from surviving-unit validation in P02
@@ -235,8 +244,9 @@ Primary references:
 
 ## Next Recommended Tasks
 - Follow `rules-roadmap/README.md` and the P00-P15 plan; the old Phase 0-10 numbering is superseded.
-- Start P00.1: establish the source/requirement registry and pin the supplied book revision; apply resolved owner rulings Q01-Q11 and prioritize the generic pack. Specify generic activation/board content for full play; named faction sources are later work.
-- Carry the final review's source interpretations and regression cases into that registry, including p.26's pre-pool bonus limit despite the conflicting p.29 example. No further owner rule decision blocks P00/P01.
+- P00.1 is done. Next, P00.2: add a source-interpretation register to the provenance registry (starting with p.26's pre-pool bonus limit over the conflicting p.29 example), content gates (generic board/activation economy, faction packs, errata, named profiles), and regression-case stubs for Q07/Q08 cancellation priority. Start specifying the generic activation/board content; named faction sources are later work. No further owner rule decision blocks P00/P01.
+- Then P00.3: capability/support status in module metadata design, the content-pack storage location/format, and ADRs for seats, coordinates, transactions, and packs; fill the `adr` field of the matching D-decisions.
+- Every slice from now on updates requirement status/evidence and slice status in `services/api/app/rules/provenance/data/`.
 - Apply corrected Q05 throughout P10/P11: definition-level close-ranks prohibitions include Improvised Projectiles; test every listed restriction, combinations, additional restricting definitions, and an eligible ordinary foot defender.
 - Then start P01.1: extract command dispatch and introduce deterministic reduction/event-store contracts while retaining sandbox behavior.
 - Continue P01 with stable seats, dedupe/version checks, pause/resume, and an enforced-mode boundary before adding rules-dependent commands.
@@ -252,7 +262,8 @@ Primary references:
 - Add a minimal web smoke test so web dependency updates are checked for runtime breakage, not only lint and build.
 
 ## Open Decisions / Risks
-- The new plan is documentation only. Today's d20 initiative, 800x500 mm board, token activations, generic dice, and permissive movement remain bootstrap behavior, not source-verified SAGA enforcement.
+- The provenance registry mirrors the roadmap documents; editing a requirement's pages/packages/title, a package heading or slice list, or the decision table without updating the registry fails `test_rules_provenance.py`. Decision links on R27-R34 and some core D-links (R01, R02, R04, R05, R07, R25) are curated in the registry and not cited inline in `rules-coverage.md`; tests only require the doc's citations to be a subset.
+- The plan itself is still documentation only. Today's d20 initiative, 800x500 mm board, token activations, generic dice, and permissive movement remain bootstrap behavior, not source-verified SAGA enforcement.
 - The generic warband is the initial target; named faction lists/boards are no longer an initial implementation gate. Generic profiles do not yet specify an activation/board model, which is still needed before a complete generic game can be claimed. Troop values and special rules now come from CORE-2022 pp.44-47 and referenced equipment sections; earlier generic numerical overrides are superseded. Base Armour must remain separate from derived modifiers. Shooting characteristics do not grant ordinary ranged actions to loadouts without a weapon.
 - Owner rulings resolve Q01-Q11. Deployment quota/counting is scenario-defined; Clash fixes only the first player's declared total unit count before deployment, not future groupings/equipment. Do not impose that procedure globally. Close ranks is only against charges, never shooting; corrected Q05 forbids it for Improvised Projectiles and the other listed equipment/status categories. Restrictions are extensible; the earlier Improvised Projectiles permission is superseded. Do not reopen these rulings; future source gaps must be tracked separately.
 - The final review supports starting P00/P01 against the supplied book and owner rulings. Generic board costs/effects remain a P12 content gate; official FAQ currency is unverified. P03 must prove geometry feasibility/tolerance behavior, and enforced play must remain unavailable while any selected pack/scenario capability is missing. A roster preview is not evidence of playable rules enforcement.

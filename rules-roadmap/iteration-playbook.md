@@ -34,7 +34,7 @@ If source material is missing, implement only independently justified infrastruc
 5. Add the minimal UI to exercise the behavior, including opponent prompts, illegal-action feedback, and snapshot/resync handling.
 6. Run focused tests and then appropriate repository checks; see validation guide. Check version compatibility and replay where state changes.
 7. Demonstrate with two clients when the slice affects player interaction. Verify the nonactive player can answer its own choices but cannot act outside them.
-8. Update requirement status with actual code/test paths, package progress, and the next slice. Update `docs/agent-context.md` snapshot, next tasks, and risks. Update `docs/protocol.md` and `docs/data-model.md` for actual contract/model changes.
+8. Update requirement status with actual code/test paths in `services/api/app/rules/provenance/data/requirements.json`, slice status in `work_packages.json`, and the next slice; a `verified` requirement must list existing implementation and test paths. Update `docs/agent-context.md` snapshot, next tasks, and risks. Update `docs/protocol.md` and `docs/data-model.md` for actual contract/model changes.
 
 ## Completion checks for every slice
 

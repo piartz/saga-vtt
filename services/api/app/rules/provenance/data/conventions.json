@@ -1,0 +1,16 @@
+{
+  "measurement": {
+    "player_facing_unit": "inch",
+    "distance_bands_inches": {"VS": 2, "S": 4, "M": 6, "L": 12},
+    "distance_label_aliases": {"C": "S"},
+    "table_width_inches": 48,
+    "table_depth_inches": 36,
+    "ruler_width_inches": 1,
+    "internal_units_per_mm": 10,
+    "decisions": ["D03", "Q01", "Q03"]
+  },
+  "initiative": {
+    "clash_tie_break": "coin_toss",
+    "decisions": ["D04", "Q10"]
+  }
+}

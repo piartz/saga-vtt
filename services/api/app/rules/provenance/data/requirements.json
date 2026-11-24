@@ -1,0 +1,448 @@
+[
+  {
+    "id": "R01",
+    "title": "Measurement, arithmetic, and precedence",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P00", "P03", "P05"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [5, 8, 9, 42]
+      }
+    ],
+    "decisions": ["D03", "Q01", "Q03"]
+  },
+  {
+    "id": "R02",
+    "title": "Troop profiles and individual figures",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P02", "P11"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [7, 8, 23, 26, 44, 45]
+      },
+      {
+        "source_id": "CORE-2022",
+        "pages": [51],
+        "role": "cross_check"
+      }
+    ],
+    "decisions": ["D02", "Q06"]
+  },
+  {
+    "id": "R03",
+    "title": "Recruitment and faction legality",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P02", "P07", "P12"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [7, 44, 45, 46, 47]
+      }
+    ],
+    "decisions": ["D05", "Q09"]
+  },
+  {
+    "id": "R04",
+    "title": "Bases, formation, and contact",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P03", "P08", "P10"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [8, 9, 16, 17, 18, 20, 21, 28, 39]
+      }
+    ],
+    "decisions": ["D02"]
+  },
+  {
+    "id": "R05",
+    "title": "Terrain definitions",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P03", "P04"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [18, 22, 25, 29, 34, 35, 39, 48]
+      }
+    ],
+    "decisions": ["D14", "Q01"]
+  },
+  {
+    "id": "R06",
+    "title": "Scenario setup and terrain placement",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P04", "P07"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [48, 49]
+      }
+    ],
+    "decisions": ["D04", "Q10"]
+  },
+  {
+    "id": "R07",
+    "title": "Deployment and pregame",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P07", "P13"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [8, 18, 47, 48, 49]
+      }
+    ],
+    "decisions": ["D05", "Q09", "Q11"]
+  },
+  {
+    "id": "R08",
+    "title": "Turn lifecycle",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P05", "P06", "P13"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [8, 10, 11, 12, 13, 14, 15, 30, 40, 41, 42, 49]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R09",
+    "title": "SAGA dice inventory",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P06"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [10, 11, 12, 13, 40, 49]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R10",
+    "title": "Allocations and ability triggering",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P05", "P06", "P12"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [12, 13, 14, 15, 40, 41, 42]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R11",
+    "title": "Timing and reactions",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P05", "P09", "P10"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [23, 27, 40, 41, 42]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R12",
+    "title": "Activation grants and cancellation",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P05", "P08"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [14, 15, 21, 22, 23, 30, 31, 32, 41]
+      }
+    ],
+    "decisions": ["Q07", "Q08"]
+  },
+  {
+    "id": "R13",
+    "title": "Fatigue, exhaustion, and rest",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P08", "P09", "P10", "P11"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [28, 30, 31, 32, 35, 36, 37, 38, 39]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R14",
+    "title": "Movement and manoeuvres",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P03", "P04", "P08"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [16, 17, 18, 19, 32, 39]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R15",
+    "title": "Charges",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P08", "P10", "P11"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [20, 21, 32, 36, 39]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R16",
+    "title": "Shooting eligibility and sight",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P03", "P04", "P09"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [22, 23, 24, 25, 34, 37, 38, 39]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R17",
+    "title": "Shooting pipeline",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P09"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [23, 24, 25, 32]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R18",
+    "title": "Melee pipeline",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P10"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [26, 27, 28, 29, 32]
+      }
+    ],
+    "decisions": ["Q05"]
+  },
+  {
+    "id": "R19",
+    "title": "Withdrawal",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P10"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [28, 29, 35]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R20",
+    "title": "Casualty and destruction ledger",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P02", "P09", "P10", "P11", "P13"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [8, 25, 28, 29, 30, 36, 37, 49]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R21",
+    "title": "Core Hero rules",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P11"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [36, 37, 44]
+      }
+    ],
+    "decisions": ["Q02", "Q04"]
+  },
+  {
+    "id": "R22",
+    "title": "Ranged equipment",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P02", "P09", "P11"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [37, 39]
+      }
+    ],
+    "decisions": ["Q05"]
+  },
+  {
+    "id": "R23",
+    "title": "Melee equipment and horses",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P02", "P08", "P10", "P11"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [37, 38, 39]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R24",
+    "title": "Mercenaries, Legends, and expansion contracts",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P02", "P11", "P12", "P13"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [7, 44, 47]
+      }
+    ],
+    "decisions": []
+  },
+  {
+    "id": "R25",
+    "title": "End game and scoring",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P13"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [9, 49]
+      }
+    ],
+    "decisions": ["D15"]
+  },
+  {
+    "id": "R26",
+    "title": "Optional battlefield chaos",
+    "kind": "core_rule",
+    "status": "planned",
+    "packages": ["P07", "P13"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [49]
+      }
+    ],
+    "decisions": ["Q08"]
+  },
+  {
+    "id": "R27",
+    "title": "Stable seats, identity, and spectators",
+    "kind": "online_product",
+    "status": "planned",
+    "packages": ["P01", "P14"],
+    "sources": [],
+    "decisions": ["D01"]
+  },
+  {
+    "id": "R28",
+    "title": "Serialized command transactions",
+    "kind": "online_product",
+    "status": "planned",
+    "packages": ["P01", "P05"],
+    "sources": [],
+    "decisions": ["D07", "D08"]
+  },
+  {
+    "id": "R29",
+    "title": "Audited randomness and deterministic replay",
+    "kind": "online_product",
+    "status": "planned",
+    "packages": ["P01", "P06", "P14"],
+    "sources": [],
+    "decisions": ["D08", "D10"]
+  },
+  {
+    "id": "R30",
+    "title": "Disconnect pause and durable recovery",
+    "kind": "online_product",
+    "status": "planned",
+    "packages": ["P01", "P14"],
+    "sources": [],
+    "decisions": ["D06", "D09"]
+  },
+  {
+    "id": "R31",
+    "title": "Structured choices and complete UI",
+    "kind": "online_product",
+    "status": "planned",
+    "packages": ["P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12", "P13", "P14", "P15"],
+    "sources": [],
+    "decisions": ["D11", "D14"]
+  },
+  {
+    "id": "R32",
+    "title": "Preview, cancel, and safe undo",
+    "kind": "online_product",
+    "status": "planned",
+    "packages": ["P01", "P08", "P14"],
+    "sources": [],
+    "decisions": ["D07", "D12"]
+  },
+  {
+    "id": "R33",
+    "title": "Generic pack first, sourced factions later",
+    "kind": "online_product",
+    "status": "planned",
+    "packages": ["P00", "P02", "P12", "P15"],
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [36, 37, 38, 39, 44, 45, 46, 47]
+      }
+    ],
+    "decisions": ["D10", "D13", "Q06"]
+  },
+  {
+    "id": "R34",
+    "title": "Results, history, and replay export",
+    "kind": "online_product",
+    "status": "planned",
+    "packages": ["P13", "P14", "P15"],
+    "sources": [],
+    "decisions": ["D08", "D15"]
+  }
+]
