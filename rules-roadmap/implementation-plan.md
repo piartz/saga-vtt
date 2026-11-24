@@ -76,7 +76,7 @@ This is a safe default execution order, not a request for concurrent work. Speci
 
 **Touch:** `rules-roadmap/`, the source/requirement registry at `services/api/app/rules/provenance/data/`, `docs/adrs/`; metadata schema only if needed in that slice.
 
-**Status:** `P00.1` complete: the registry indexes sources (CORE-2022 pinned by SHA-256), R01-R34, D01-D15/Q01-Q11, P00-P15 slices, and the selected measurement/tie-break conventions, validated by `services/api/tests/test_rules_provenance.py`. `P00.2` and `P00.3` remain.
+**Status:** `P00.1` complete: the registry indexes sources (CORE-2022 pinned by SHA-256), R01-R34, D01-D15/Q01-Q11, P00-P15 slices, and the selected measurement/tie-break conventions, validated by `services/api/tests/test_rules_provenance.py`. `P00.2` complete: interpretations I01-I02 (p.26 pre-pool cap over the p.29 example; unitless shooting pools), content gates G01-G06 (G01, the generic board/activation economy, blocks P12.1-P12.3), and regression cases RC01-RC16 covering every owner ruling and interpretation. `P00.3` remains.
 
 **Exit:** every planned rule has a source and owner package; unresolved questions explicitly gate affected conformance. Do not defer a basic-engine design decision to “decide later” when this plan already selects a default.
 

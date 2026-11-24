@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-11-24 (P00.1 source/requirement registry; no gameplay, protocol, or data-model change)
+Last updated: 2026-11-24 (P00.2 interpretations, content gates, and regression cases; no gameplay, protocol, or data-model change)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -63,7 +63,9 @@ Primary references:
   - `data/*.json` indexes sources (CORE-2022 pinned by SHA-256 and page count; errata unverified; faction/expansion sources missing), R01-R34 with CORE-2022 pages, owning packages and decision links, D01-D15/Q01-Q11, P00-P15 with milestones/dependencies/slice status, and the selected measurement (VS/S/M/L = 2/4/6/12 inches, C->S, 48 x 36 inch table, 1 inch ruler, 10 internal units per mm) and Clash coin-toss tie-break conventions
   - `load_registry()` validates with strict pydantic models: unique sorted IDs, known cross-references, pages within the source, every decision linked to a requirement, rulebook-primary sources for core rules, `verified` only with implementation/test paths, earlier-package-only dependencies, and exact inch-to-internal-unit conversion
   - it records identifiers and status only, never rules text; nothing at runtime consumes it yet
-  - P00.1 is marked complete in `work_packages.json`; every requirement remains `planned`
+  - P00.2 added `interpretations.json` (I01: p.26 melee pre-pool cap over the p.29 example; I02: unitless shooting rolls source-granted dice without a figure cap), `content_gates.json` (G01-G06 mirroring the missing-content table; the `GENERIC-BOARD` source is missing and open G01 blocks P12.1-P12.3), and `regression_cases.json` (RC01-RC16 indexing the validation table's rows for owner rulings/interpretations, each with requirements and owning slices)
+  - additional checks: an open gate's blocked slices cannot be `complete`; a satisfied gate needs available sources; every resolved owner ruling and recorded interpretation has a regression case; a case's slices belong to its requirements' packages; `verified` cases need test paths
+  - P00.1 and P00.2 are marked complete in `work_packages.json`; every requirement and regression case remains `planned`
 - Rules-module scaffolding has started (Phase 0 in the previous roadmap):
   - `services/api/app/rules/` contains a placeholder rules module interface, registry, and passive `saga-core` module metadata
   - `GET /rules/modules` lists registered modules
@@ -193,8 +195,8 @@ Primary references:
 
 ### Tests
 - `services/api/tests/test_rules_provenance.py`
-  - verifies registry completeness and rejects invalid registry data (17 mutation cases)
-  - checks the registry against `rules-roadmap/rules-coverage.md` (IDs, titles, pages, packages, cited decisions, fingerprint, measurement values), `implementation-plan.md` (package titles, slice IDs, milestones, dependency-graph closure), and `decisions-and-source-gaps.md` (decision IDs and resolved status)
+  - verifies registry completeness and rejects invalid registry data (28 mutation cases)
+  - checks the registry against `rules-roadmap/rules-coverage.md` (IDs, titles, pages, packages, cited decisions, fingerprint, measurement values), `implementation-plan.md` (package titles, slice IDs, milestones, dependency-graph closure), `decisions-and-source-gaps.md` (decision IDs, resolved status, content-gate rows), and `validation-and-release.md` (regression case areas and order); interpretation citations in coverage sections must match their requirement links
   - verifies the local rulebook PDF against the pinned SHA-256 when present; skipped otherwise (CI)
 - `services/api/tests/test_rules_modules.py`
   - verifies module listing/manifests, room selection, passive unit snapshots, and basic unit validation
@@ -244,9 +246,9 @@ Primary references:
 
 ## Next Recommended Tasks
 - Follow `rules-roadmap/README.md` and the P00-P15 plan; the old Phase 0-10 numbering is superseded.
-- P00.1 is done. Next, P00.2: add a source-interpretation register to the provenance registry (starting with p.26's pre-pool bonus limit over the conflicting p.29 example), content gates (generic board/activation economy, faction packs, errata, named profiles), and regression-case stubs for Q07/Q08 cancellation priority. Start specifying the generic activation/board content; named faction sources are later work. No further owner rule decision blocks P00/P01.
-- Then P00.3: capability/support status in module metadata design, the content-pack storage location/format, and ADRs for seats, coordinates, transactions, and packs; fill the `adr` field of the matching D-decisions.
-- Every slice from now on updates requirement status/evidence and slice status in `services/api/app/rules/provenance/data/`.
+- P00.1 and P00.2 are done. The generic activation/board specification (G01, source `GENERIC-BOARD`) is the open owner-content input; it blocks only P12.1-P12.3. Named faction sources are later work. No further owner rule decision blocks P00/P01.
+- Next, P00.3: capability/support status in module metadata design, the content-pack storage location/format, and ADRs for seats, coordinates, transactions, and packs; fill the `adr` field of the matching D-decisions.
+- Every slice from now on updates requirement status/evidence, regression case status/test paths, and slice status in `services/api/app/rules/provenance/data/`. When a new source ambiguity appears, add an open Q-question or an I-interpretation there rather than hiding it in code.
 - Apply corrected Q05 throughout P10/P11: definition-level close-ranks prohibitions include Improvised Projectiles; test every listed restriction, combinations, additional restricting definitions, and an eligible ordinary foot defender.
 - Then start P01.1: extract command dispatch and introduce deterministic reduction/event-store contracts while retaining sandbox behavior.
 - Continue P01 with stable seats, dedupe/version checks, pause/resume, and an enforced-mode boundary before adding rules-dependent commands.
@@ -262,7 +264,7 @@ Primary references:
 - Add a minimal web smoke test so web dependency updates are checked for runtime breakage, not only lint and build.
 
 ## Open Decisions / Risks
-- The provenance registry mirrors the roadmap documents; editing a requirement's pages/packages/title, a package heading or slice list, or the decision table without updating the registry fails `test_rules_provenance.py`. Decision links on R27-R34 and some core D-links (R01, R02, R04, R05, R07, R25) are curated in the registry and not cited inline in `rules-coverage.md`; tests only require the doc's citations to be a subset.
+- The provenance registry mirrors the roadmap documents; editing a requirement's pages/packages/title, a package heading or slice list, or the decision table without updating the registry fails `test_rules_provenance.py`. Decision links on R27-R34 and some core D-links (R01, R02, R04, R05, R07, R25) are curated in the registry and not cited inline in `rules-coverage.md`; tests only require the doc's citations to be a subset. Regression case requirement/slice links are likewise curated; the "Distance label C" row was added to the validation table so Q01 has a recorded case.
 - The plan itself is still documentation only. Today's d20 initiative, 800x500 mm board, token activations, generic dice, and permissive movement remain bootstrap behavior, not source-verified SAGA enforcement.
 - The generic warband is the initial target; named faction lists/boards are no longer an initial implementation gate. Generic profiles do not yet specify an activation/board model, which is still needed before a complete generic game can be claimed. Troop values and special rules now come from CORE-2022 pp.44-47 and referenced equipment sections; earlier generic numerical overrides are superseded. Base Armour must remain separate from derived modifiers. Shooting characteristics do not grant ordinary ranged actions to loadouts without a weapon.
 - Owner rulings resolve Q01-Q11. Deployment quota/counting is scenario-defined; Clash fixes only the first player's declared total unit count before deployment, not future groupings/equipment. Do not impose that procedure globally. Close ranks is only against charges, never shooting; corrected Q05 forbids it for Improvised Projectiles and the other listed equipment/status categories. Restrictions are extensible; the earlier Improvised Projectiles permission is superseded. Do not reopen these rulings; future source gaps must be tracked separately.

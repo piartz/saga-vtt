@@ -1,0 +1,26 @@
+[
+  {
+    "id": "I01",
+    "title": "Melee pre-pool bonus attack dice are capped by figure count despite the worked example",
+    "status": "recorded",
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [26, 29]
+      }
+    ],
+    "requirements": ["R18"]
+  },
+  {
+    "id": "I02",
+    "title": "Unitless shooting rolls its source-granted dice without a figure-derived cap",
+    "status": "recorded",
+    "sources": [
+      {
+        "source_id": "CORE-2022",
+        "pages": [23, 25]
+      }
+    ],
+    "requirements": ["R17"]
+  }
+]
