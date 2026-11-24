@@ -22,7 +22,7 @@ Core must not branch on names such as Warlord, Woods, or Javelins. It supplies p
 The current `RulesModuleProvider` only supplies metadata. Evolve it without pretending it already validates rules:
 
 - `manifest()` exposes version, profiles, capabilities, and UI labels.
-- `validate_configuration(config, packs)` checks compatible sources, supported capabilities, scenario, roster options, and measurement mode.
+- `validate_configuration(config, packs)` checks compatible sources, supported capabilities, scenario, roster options, and imperial measurement configuration.
 - `initial_state(config, seats)` produces a setup state, not two ownerless demo tokens.
 - `decide(state, command, actor)` returns typed rejection or a bounded resolution plan: facts, RNG requests, and/or choices.
 - `reduce(state, event)` applies facts deterministically. It does not consult wall clock, sockets, random sources, or a changed pack.
@@ -37,7 +37,7 @@ Names below are proposed domain concepts. Keep protocol DTOs separate from inter
 
 | Entity | Minimum information and invariants |
 | --- | --- |
-| GameConfig | Rules/pack/scenario IDs, versions and hashes, schema version, measurement mode, budget, allowed options, digital adaptations, agreed base profiles, immutable after setup lock |
+| GameConfig | Rules/pack/scenario IDs, versions and hashes, schema version, imperial measurement configuration, budget, allowed options, digital adaptations, agreed base profiles, immutable after setup lock |
 | Seat | Stable seat/player ID, role, warband ID, connection status; credentials stored privately, multiple connections cannot create extra turns |
 | GameState | Status (`setup`, `playing`, `paused`, `finished`), resumable prior status, state version, persistent event cursor, board, seats, phase state, terrain, warbands, resolutions, result |
 | TurnState | Fixed seat order, round, global player-turn ID, active seat, turns completed per seat, Orders/Activation substate, expiry checkpoints |
@@ -59,7 +59,7 @@ Names below are proposed domain concepts. Keep protocol DTOs separate from inter
 | ScenarioState | Setup substep/actor, terrain sequence, deployment method/zones/quota, chaos, objectives, score breakdowns, terminal reason |
 | GameResult | Winner/draw, reason, final turns, scoring facts, rules/content hashes, final event cursor/state hash; immutable |
 
-Use physical count, ability-effective count (Presence), aggression sum, initial count, and scoring count as distinct queries. Avoid a universal `unit.size` helper. Recruitment validation cannot be reused to reject reduced surviving units.
+Use physical count, SAGA-ability-effective count (Presence), aggression sum, initial count, and scoring count as distinct queries. Presence is never used for special rules or non-ability counts. Avoid a universal `unit.size` helper. Recruitment validation cannot be reused to reject reduced surviving units.
 
 ## State machines
 
@@ -112,7 +112,7 @@ Replay folds recorded events through a version-pinned reducer. It never calls `d
 
 A choice identifies its resolution, trigger occurrence, owning seat, response type, legal options/constraints, and state version. Replies contain only selected IDs/values, not a claimed outcome. Distinguish:
 
-- One-shot defender decisions: close ranks, casualty selections, prevention, deployment adjustment.
+- One-shot defender decisions: close ranks only in melee after a charge (never in shooting), allowing Improvised Projectiles unless another restriction applies; casualty selections, prevention, deployment adjustment.
 - Alternating windows: combat ability/fatigue/pass with priority and consecutive-pass count.
 - Opponent windows: two Orders reactions and ability-specific Activation reactions.
 - Ordered effects: player chooses ordering for their simultaneous effects, then next player acts.
@@ -123,7 +123,7 @@ Automatically skip only a provably empty window, with the transition recorded. O
 
 ## Geometry and measurement
 
-Use integer fixed-point tenths of a millimeter internally and in the proposed enforced protocol (`x_q`, `y_q`, lengths in `q`; 10 q = 1 mm). Imperial VS/S/M/L = 508/1016/1524/3048 q; metric = 500/1000/1500/3000 q. Whole-mm legacy tokens map by multiplication by ten. Keep range expressions and source mode in rule data; never store rounded ruler lengths.
+Use integer fixed-point tenths of a millimeter internally and in the proposed enforced protocol (`x_q`, `y_q`, lengths in `q`; 10 q = 1 mm). VS/S/M/L = 508/1016/1524/3048 q, exactly 2/4/6/12 inches. Player-facing distances use bands first and inches otherwise; table is 48 x 36 inches and ruler width is 1 inch. No metric rules mode is planned. Normalize distance label C to S without changing other uses of C. Whole-mm legacy tokens map by multiplication by ten. Keep range expressions and exact conversions in rule data; never store rounded ruler lengths.
 
 Generic queries must include:
 
@@ -144,6 +144,8 @@ Charge/withdrawal are constrained placements, not arbitrary endpoints. Given the
 Start with curated valid terrain shapes and supported base shapes, then expand the editor after the geometry tests pass. Do not simplify enforced play to one unit token; allow group-drag UI that produces individual figure routes and supports corrections.
 
 ## Abilities and equipment
+
+Resilience is an atomic casualty-prevention exchange: validate receiving fatigue below cap, choose 1..X pending casualties, cancel them and add exactly one fatigue, then recheck before offering another exchange. Reaching the cap is allowed; exceeding it or trading while already exhausted is not. Keep this precondition distinct from ordinary fatigue gains that are ignored at the cap.
 
 Build small typed primitives driven by sourced requirements: grant activation, roll/reclaim/allocate/spend symbols, add attack/defence dice, modify Armour or results, request rerolls, add/remove fatigue, produce hits/casualties, prevent/redirect casualties, move figures, cancel activation, set duration/condition, open choice, and score/objective update.
 

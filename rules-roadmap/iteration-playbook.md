@@ -4,7 +4,7 @@
 
 1. Read `docs/agent-context.md`, then this directory's README and the selected Pxx package.
 2. Check working tree/branch and preserve unrelated changes. Confirm which prerequisite slices actually landed; a plan entry is not implementation evidence.
-3. Select one small slice and its Rxx requirements. Reopen the source pages, diagrams, sidebars, and applicable corrections. Check the decision register; do not invent faction data or resolve a blocked rule from memory.
+3. Select one small slice and its Rxx requirements. Reopen the source pages, diagrams, sidebars, and applicable corrections. Check the decision register and apply recorded owner rulings before source wording; do not reopen resolved questions, invent faction data, or resolve a blocked rule from memory.
 4. Write a short implementation brief using the template below. Keep current protocol documentation distinct from planned contracts.
 
 ```text

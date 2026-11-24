@@ -16,6 +16,10 @@ The project owner has stated that Studio Tomahawk has authorized the work. Use t
 
 These files replace the earlier Phase 0-10 outline. Use work-package IDs `P00`-`P15` and requirement IDs `R01`-`R34`; new package numbers do not correspond to old phases. The passive module and unit metadata are scaffolding, not completed rules enforcement.
 
+## Confirmed rule clarifications
+
+The owner rulings of 2026-11-24 are recorded in the decision register and take precedence over ambiguous source wording: distance C means S; Resilience(X) can exchange up to X casualties for one fatigue while below exhaustion, including the exchange that reaches exhaustion; distances use bands/inches; Presence affects only SAGA abilities; close ranks is available only against a charge, never shooting. Apply these rulings throughout future implementation and tests. Improvised Projectiles permits closing ranks when charged unless another restriction applies (Q05). All five initial questions are resolved.
+
 ## What playable means
 
 Two players can select supported factions and legal warbands, set up Clash of Warlords, deploy individual figures, roll and allocate SAGA dice, use the complete selected battle boards, move, manoeuvre, charge, shoot, rest, spend fatigue, resolve reactions and casualties, finish the scenario, and see an explainable result. Either player can reconnect during a pending choice without changing the game. A saved game can resume after a server restart. No console commands or manual state edits are required.

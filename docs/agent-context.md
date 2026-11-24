@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-11-24 (source-based game engine implementation plan; documentation only)
+Last updated: 2026-11-24 (owner rule clarifications integrated into the plan; documentation only)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -53,7 +53,7 @@ Primary references:
   - `rules-coverage.md` maps R01-R34 to the supplied 2022 rulebook, including all core actions, unit/equipment/special rules, setup, terrain, dice, scenarios, and online play requirements.
   - `rules-module-design.md` specifies proposed runtime/state, per-figure geometry, reaction choices, event transactions, protocol evolution, content packs, UI, and recovery.
   - `validation-and-release.md` defines focused tests and full-game/restart/replay acceptance scripts.
-  - `decisions-and-source-gaps.md` records engineering defaults, explicit digital adaptations, source ambiguities, and missing complete faction material.
+  - `decisions-and-source-gaps.md` records engineering defaults, explicit digital adaptations, owner rulings, remaining source questions, and missing complete faction material. Q01-Q04 are resolved: C means S; Resilience exchanges may reach exhaustion but cannot start exhausted and cancel up to X casualties per fatigue; use bands/inches; Presence only affects SAGA abilities. Q05 is also resolved: close ranks is charge-only, never against shooting; Improvised Projectiles does not forbid it when charged, unless another restriction applies.
   - `iteration-playbook.md` gives per-slice implementation and handoff instructions.
   - The plan was checked against `rules/SAGA_-_Rulebook_2022_261124_161828.pdf`; the PDF is a local untracked reference, not a committed asset. No engine, schema, protocol, or data-model implementation changed with this plan.
 - Rules-module scaffolding has started (Phase 0 in the previous roadmap):
@@ -68,7 +68,7 @@ Primary references:
 - SAGA distance bands for future measurement work:
   - `VS` = 2 inches, `S` = 4 inches, `M` = 6 inches, `L` = 12 inches
   - numeric prefixes multiply the band, e.g. `2L` = 24 inches
-  - current documents/runtime use integer mm; the new plan proposes a versioned fixed-point 0.1 mm migration to preserve exact imperial distances, plus a distinct metric mode (50/100/150/300 mm). This proposal is not implemented. Never mix metric rulers with an imperial table.
+  - current documents/runtime use integer mm; the plan proposes versioned fixed-point 0.1 mm internal coordinates preserving exact inch conversions. Per owner instruction, player-facing distances use bands or inches, C normalizes to S in distance contexts, table is 48 x 36 inches, ruler width is 1 inch, and no metric rules mode is planned. This remains unimplemented.
 - **Typed Protocol Schema System**:
   - Single source of truth for WebSocket protocol in `schemas/protocol.json`
   - Auto-generates TypeScript types (`apps/web/src/protocol.generated.ts`)
@@ -232,7 +232,7 @@ Primary references:
 
 ## Next Recommended Tasks
 - Follow `rules-roadmap/README.md` and the P00-P15 plan; the old Phase 0-10 numbering is superseded.
-- Start P00.1: establish the source/requirement registry and pin the supplied book revision; track source questions Q01-Q05 and acquire two complete compatible faction lists/battle boards for P12.
+- Start P00.1: establish the source/requirement registry and pin the supplied book revision; apply resolved owner rulings Q01-Q05 and acquire two complete compatible faction lists/battle boards for P12.
 - Then start P01.1: extract command dispatch and introduce deterministic reduction/event-store contracts while retaining sandbox behavior.
 - Continue P01 with stable seats, dedupe/version checks, pause/resume, and an enforced-mode boundary before adding rules-dependent commands.
 - Use P02-P03 for actual ownership, recruitment versus surviving-unit validation, individual figures, and exact geometry. Passive metadata does not count as completed rules enforcement.
@@ -249,7 +249,7 @@ Primary references:
 ## Open Decisions / Risks
 - The new plan is documentation only. Today's d20 initiative, 800x500 mm board, token activations, generic dice, and permissive movement remain bootstrap behavior, not source-verified SAGA enforcement.
 - The supplied core PDF lacks complete faction lists/battle boards. Two complete compatible packs and applicable corrections are release gates, although independent engine work can proceed.
-- Source questions Q01-Q05 cover the small-terrain width label, Resilience exhaustion boundary, metric ruler width, Presence scope, and Improvised Projectiles/close-ranks interaction. Record a source-backed resolution or explicit variant before claiming affected conformance.
+- Owner rulings resolve all initial questions Q01-Q05. Close ranks is only against charges, never shooting; Improvised Projectiles does not disqualify a defender, but independent equipment/status restrictions still apply. Do not reopen these rulings; future source gaps must be tracked separately.
 - The plan selects per-figure geometry, fixed-point coordinates, fixed player seats, serialized event transactions, disconnect pause, and durable storage before release. These are proposed defaults, not implemented capabilities; see `rules-roadmap/decisions-and-source-gaps.md`.
 - Planned event ordering/replay/reconnect contracts are documented, but runtime support is not implemented.
 - No stable seat authentication or unit ownership enforcement: current active-player restrictions alone do not provide the planned authorization model.
@@ -260,7 +260,7 @@ Primary references:
 - Unit ownership is currently nullable and default units are temporarily anchored to single visual tokens; setup/deployment needs to assign owners before unit state can drive SAGA dice or activation legality.
 - Rules-module work may use canonical game names/labels for units, terrain, special rules, battle-board abilities, scenarios, and similar terms. The remaining content boundary is copied prose, published examples, battle-board layout, artwork, and other expressive source material.
 - Full rules enforcement will require richer unit geometry than the current single-token movement model, including formation, base footprint, contact, line-of-sight, terrain overlap, and casualty-removal validation.
-- Measurement work should use SAGA range labels (`VS`, `S`, `M`, `L`, multiples and ordered sums) and the game's pinned mode; do not perpetuate whole-mm rounding when implementing the planned precision migration.
+- Measurement work should use SAGA range labels (`VS`, `S`, `M`, `L`, multiples and ordered sums) and exact imperial conversions; do not perpetuate whole-mm rounding when implementing the planned precision migration.
 - Dependabot auto-merge relies on CI as its only safety gate. The web app has no runtime/UI tests, so a web dependency regression that still lints and builds would merge unnoticed.
 - Auto-merges are performed with `GITHUB_TOKEN`, which does not trigger the `push` CI run on `main`; the PR's CI run is the only check for those commits.
 - The `security` CI job is advisory: audit and bandit findings emit warnings and never fail the job.

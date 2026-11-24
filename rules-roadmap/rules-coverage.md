@@ -8,11 +8,12 @@ This maps mechanics to implementation responsibilities and original acceptance c
 | --- | --- | --- |
 | CORE-2022 | Local `rules/SAGA_-_Rulebook_2022_261124_161828.pdf`, English 2022 printing, ISBN 979-10-95599-25-8 | Read for this plan; 52 PDF pages. Printed numbers match one-based PDF pages for the mechanics below. |
 | CORE-2022 fingerprint | SHA-256 `67c8de47a3a0171cecd0fd655d2721bfeb6b7dcc1e4ee5f4e4bdb015cd562a3f` | Pin this revision; filename alone is insufficient. |
+| OWNER-2026-11-24 | Project owner clarifications recorded in the decision register | Resolves Q01-Q05, including close-ranks timing and Improvised Projectiles eligibility; takes precedence over conflicting source wording for this project. |
 | ERRATA | Official corrections/FAQ applicable to this printing | Not supplied or verified; see the decision register. Do not assume the PDF is the latest rules. |
 | FACTION-A / FACTION-B | Two compatible, complete faction lists, battle boards, dice mappings, and applicable corrections | Missing; release dependency for P12. |
 | EXPANSIONS | Further Universe and Book of Battles material | Missing; separate follow-on scope. |
 
-The PDF is image-only. OCR was used for navigation; terrain, scenario, profile, and Resilience pages were also checked visually. OCR drops table cells and confuses S with other letters. The scan itself uses an unexplained small-terrain width label `C` on p.35. Prefer detailed chapters over the abbreviated reference sheet on PDF p.51; record conflicts rather than resolving them from memory.
+The PDF is image-only. OCR was used for navigation; terrain, scenario, profile, and Resilience pages were also checked visually. OCR drops table cells and confuses S with other letters. The scan uses `C` on p.35; the owner has confirmed it means S wherever used as a distance (Q01). Prefer detailed chapters over the abbreviated reference sheet on PDF p.51; record conflicts rather than resolving them from memory.
 
 For each implemented requirement, maintain its ID, source/page/section, correction/interpretation ID, implementation paths, test paths, supported content IDs, and status (`planned`, `in_progress`, `verified`, `source_blocked`). Acceptance names below describe proposed tests, not existing tests.
 
@@ -22,14 +23,14 @@ For each implemented requirement, maintain its ID, source/page/section, correcti
 
 **Source:** pp.5, 8-9, 42. **Packages:** P00, P03, P05.
 
-- Pin one measurement mode for the whole game: metric VS/S/M/L = 50/100/150/300 mm; imperial = 50.8/101.6/152.4/304.8 mm. Corresponding tables are 1200 x 900 mm or 1219.2 x 914.4 mm. Never mix modes or round individual rulers to whole mm.
-- Support multiples and ordered sums such as `2L` and `M+S`. Equal total lengths do not imply equivalent movement paths. Ruler width is a separate mode-specific parameter; see Q03.
+- Use VS/S/M/L = 2/4/6/12 inches, with a 48 x 36 inch table. Use bands where applicable and inches for other player-facing distances. Normalize translated distance C to S, but preserve deployment Method C. Exact internal band lengths are 50.8/101.6/152.4/304.8 mm; do not round to whole mm or expose a metric rules mode (owner rulings Q01/Q03). Source-defined base dimensions remain exact, with conversion for display.
+- Support multiples and ordered sums such as `2L` and `M+S`. Equal total lengths do not imply equivalent movement paths. Ruler width is 1 inch (25.4 mm internally); see resolved Q03.
 - Measure base edges. Distinguish any-part `within`, whole-footprint `entirely within`, and strictly `further than`, including terrain footprints. Measurements may be made at any time without state mutation.
 - Sum rational aggression before rounding upward; round at the specified operation, including the half discarded by closing ranks. Clamp ordinary modified d6 results to 1..6 and Armour to 2..6.
 - Each player may reroll a particular ordinary die once; final results stand. Track entitlement per player, not a single global rerolled flag. SAGA dice have different reroll rules and no numeric modifiers.
 - Implement explicit ability overrides, prohibition over obligation, current-state evaluation, and player ordering of their simultaneous effects. Numerical maximums may be reduced; all-target effects may not be selectively reduced.
 
-**Acceptance:** exact/below/above range; mixed mode rejection; aggregate fractions; per-player rerolls; explicit override and prohibition precedence.
+**Acceptance:** exact/below/above range; C-to-S normalization without changing Method C; band/inch display; aggregate fractions; per-player rerolls; explicit override and prohibition precedence.
 
 ### R02 - Troop profiles and individual figures
 
@@ -78,7 +79,7 @@ Height, difficulty, cover, and size are independent. Uneven does not imply light
 
 Any figure starting, finishing, or crossing uneven/dangerous terrain restricts the whole unit's move/charge to S. Dangerous fatigue occurs on finishing the applicable move/charge, not merely entering/crossing; withdrawal is exempt. Horse terrain fatigue is a separate contribution. Generic immunity to uneven does not confer immunity to dangerous; the horse rule specifically stacks both penalties in dangerous terrain.
 
-High terrain blocks a sight line when it crosses boundaries at two distinct points; distinguish seeing into/out of/through it. Low terrain does not block because of difficulty. Small terrain fits `(M+VS)` square; large fits `L` square with minimum width M. Small minimum width is Q01. Define a minimum-width algorithm for supported shapes, not merely bounding-box dimensions.
+High terrain blocks a sight line when it crosses boundaries at two distinct points; distinguish seeing into/out of/through it. Low terrain does not block because of difficulty. Small terrain fits `(M+VS)` square; large fits `L` square with minimum width M. Small minimum width is S (4 inches), confirmed by Q01. Define a minimum-width algorithm for supported shapes, not merely bounding-box dimensions.
 
 Clash presets, visually verified on p.48:
 
@@ -100,7 +101,7 @@ Impassable terrain is supported as geometry even though this scenario has no imp
 
 **Source:** pp.48-49. **Packages:** P04, P07.
 
-Configure compatible packs, budget, measurement mode, options, and opposing long edges. Roll ordinary d6; highest player starts throughout the scenario. Use the explicit digital tie adaptation D04, not today's d20/winner-chooses flow.
+Configure compatible packs, budget, imperial measurement configuration, options, and opposing long edges. Roll ordinary d6; highest player starts throughout the scenario. Use the explicit digital tie adaptation D04, not today's d20/winner-chooses flow.
 
 First player places the first piece; then alternate with at least S separation and catalog limits. After at least three pieces, acting player may move an existing piece up to M while preserving separation; opponent may place one final piece or decline, ending terrain setup. Do not invent a six-piece cap. After setup locks, terrain can change only through a rule effect or recorded correction.
 
@@ -224,7 +225,7 @@ Compare final results with shooting Armour, add automatic hits, grant defender h
 
 Sequence: close ranks -> both pools -> abilities/fatigue -> both attacks -> both defences -> prevention/casualties -> outcome/fatigue/withdrawal.
 
-All figures fight, not only those touching. Apply limited pre-pool bonuses, discard ceil(half) if closing ranks, then cap starting pool at sixteen. Later dice cap twice that pool, normally thirty-two; today's generic twenty-die limit is unsuitable. Close ranks is a defender choice subject to equipment. Attacker never benefits from melee cover. Save 5+, defender solid cover/closed ranks 4+.
+All figures fight, not only those touching. Apply limited pre-pool bonuses, discard ceil(half) if closing ranks, then cap starting pool at sixteen. Later dice cap twice that pool, normally thirty-two; today's generic twenty-die limit is unsuitable. Close ranks is a defender choice at the melee step after a charge, subject to equipment; it is never available against shooting (owner ruling Q05). Attacker never benefits from melee cover. Save 5+, defender solid cover/closed ranks 4+.
 
 Both pools survive simultaneous damage resolution. Defender removes first; preserve cohesion/contact, including earlier ability losses. Determine outcome using actual Step 6 losses, excluding prevented losses and Bodyguards transfers; annihilation overrides casualty comparison, mutual annihilation draws. Early destruction still permits remaining steps; contact broken before Step 4 is a distinct early ending. Combat roles are independent of active seat.
 
@@ -254,12 +255,12 @@ Separate hits, uncancelled hits, prevented/redirected casualties, actual losses,
 
 - Determination: one free activation in owner's Activation phase; cancellation consumes use.
 - We Obey: once in owner's Activation phase, grant friendly unit within S a free activation; exhausted provider cannot use it.
-- Presence: effective count four for specified ability purposes, not geometry, pool figure caps, or scoring; scope wording tracked in Q04.
-- Resilience(X): fatigue for casualty prevention, repeatable within threshold rules, composable with Bodyguards. Resolve Q02 before conformance.
+- Presence: effective count four only for applicable SAGA ability effects/targets. It has no effect on special rules or other counts, including geometry, ordinary pool caps, recruitment, and scoring (owner ruling Q04).
+- Resilience(X): while fatigue is below the receiving unit's exhaustion threshold, exchange one fatigue for cancellation of 1..X pending casualties. The exchange may bring fatigue exactly to the threshold. Recheck exhaustion before each further exchange; no exchanges at/above the threshold and no zero-casualty exchanges. Cancelling only one casualty with Resilience(2) still costs one full fatigue. Compose with Bodyguards without recursive redirection (owner ruling Q02).
 - Bodyguards: remove eligible friendly Hearthguard within S, no recursive transfers or cancelling transferred casualty while keeping benefit; excluded from melee outcome and specified advanced-ability casualty conditions.
 - Pride: reachable enemy Hero constrains charge targets. Heroic Unit uses Hero rules/dice, keeps Hero last through legal swapping, forbids leaving, and only enables Bodyguards after escorts are gone.
 
-**Acceptance:** cancelled Determination; exhausted We Obey; scoped Presence; Resilience/Bodyguards composition; heroic last-figure swap; reachable Hero priority.
+**Acceptance:** cancelled Determination; exhausted We Obey; Presence affects SAGA abilities but not special rules; Resilience(1) at fatigue 2 reaches cap 3; no exchange at cap; Resilience(2) cancels one or two for one fatigue; sequential exchange rechecks; Resilience/Bodyguards composition; heroic last-figure swap; reachable Hero priority.
 
 ### R22 - Ranged equipment
 
@@ -271,11 +272,11 @@ Separate hits, uncancelled hits, prevented/redirected casualties, actual losses,
 | Composite bows | M, mounted only, -1 melee Armour, no close ranks; owner's-phase free shooting, all shooting activations exempt from repetition fatigue, no consecutive resolved shooting activations. |
 | Crossbows | L, foot only, -1 both Armours, +1 shooting attack results, no close ranks, no consecutive resolved shooting activations. |
 | Javelins | M, -1 melee Armour, no close ranks; charging melee +1 attack results unless defender has solid cover; once per owner's Activation phase free repetition-fatigue-exempt shoot. Do not import another edition's move-triggered rule. |
-| Improvised projectiles | S, target +1 shooting defence results; resolve close-ranks/reference-sheet discrepancy Q05. |
+| Improvised projectiles | S, target +1 shooting defence results; may close ranks when charged unless another restriction forbids it; never close ranks against shooting (owner ruling Q05). |
 
 Another unit acting or a cancelled intervening activation does not reset consecutive-shot restrictions.
 
-**Acceptance:** last resolved action per unit; javelin once per phase; javelin versus closed ranks; faction permission checks.
+**Acceptance:** last resolved action per unit; javelin once per phase; javelin versus closed ranks; Improvised Projectiles defender can close ranks when charged; independent mounted/unarmed restriction still forbids it; no closing ranks against shooting; faction permission checks.
 
 ### R23 - Melee equipment and horses
 

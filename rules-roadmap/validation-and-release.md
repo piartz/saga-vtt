@@ -41,7 +41,7 @@ All examples below are original test arrangements. Script RNG through a server t
 | Area | Test fixture and expected assertion |
 | --- | --- |
 | Fractional shooting | Five eligible Warrior shooters contribute ceil(5/2)=3 dice. Pre-pool +2 gives starting pool 5; a later +9 is limited to 10 total attack dice. |
-| Close ranks | A defender's initial five-die pool discards ceil(5/2)=3, leaving two before the sixteen-die cap; later total cannot exceed four absent explicit override. |
+| Close ranks | Offer only to the eligible defender after a charge; reject in all shooting windows, even when the unit would otherwise be eligible. A defender's initial five-die pool discards ceil(5/2)=3, leaving two before the sixteen-die cap; later total cannot exceed four absent explicit override. |
 | Ordinary rerolls | One die is rerolled once by attacker and then once by defender; a second reroll by either same player is rejected; ordered modifiers/results are auditable. |
 | Carry-over allocations | An advanced Orders ability retains its allocation into a new turn, triggers, is allocated again, and cannot trigger twice that turn. |
 | Generation | Surviving Hearthguard unit of one generates; Warriors three do not/four do; Levies five do not/six do. All eight dice already allocated is not zero generation. |
@@ -49,9 +49,13 @@ All examples below are original test arrangements. Script RNG through a server t
 | Fatigue composition | A horse unit with previous MCS activation ends a new move in dangerous terrain: repetition, horse terrain, dangerous terrain are distinct causes, final count capped at exhaustion. |
 | Formation | Two clusters each having a close neighbor but no connected VS chain fail. Removing the only bridging figure as a casualty fails when another valid loss choice exists. |
 | Path legality | Clear endpoint beyond an intervening terrain/unit barrier is rejected; own-unit figures may be crossed; other-unit gaps have their specific blocking policy. |
-| Range/cover | One quantum below/equal/above each threshold in both modes; a base sliver outside cover denies whole-unit cover; a high-terrain tangent is governed by the documented crossing policy. |
+| Range/cover | One quantum below/equal/above each threshold using exact imperial bands and inch distances; a base sliver outside cover denies whole-unit cover; a high-terrain tangent is governed by the documented crossing policy. |
 | Charge | First mover contacts, but final figure forces whole-unit S reduction making contact impossible: restore all charging positions while retaining spent grant and reactions. |
 | Exhaustion timing | Unit enters melee exhausted, enemy spends fatigue, -1 remains. Unit becomes exhausted only later in melee, no retroactive -1. |
+| Improvised Projectiles and close ranks | An otherwise eligible defender equipped with Improvised Projectiles can close ranks against a charge. An independent mounted/unarmed restriction still prevents it. Shooting never offers this choice. |
+| Resilience threshold | With cap 3, Resilience(1) at fatigue 2 cancels one casualty and reaches fatigue 3; at fatigue 3 it cancels none. Repeated exchanges stop immediately upon reaching the cap. |
+| Resilience capacity | Resilience(2) cancels either one or two casualties for one fatigue. Three casualties need two exchanges if capacity remains; at fatigue 2/cap 3 only one exchange is available, leaving at least one casualty. No fractional fatigue or exchange with zero casualties. |
+| Presence scope | Identical figures count as four for an applicable SAGA ability but as one for a special rule, physical geometry, ordinary combat-pool cap, and scoring. |
 | Loss accounting | A Hero facing several uncancelled casualties cannot survive by preventing only one simply because it has one physical figure. Bodyguards transfer cannot recursively bounce. |
 | Melee outcome | Earlier ability losses differ from Step 6 casualties. Mutual destruction draws; solid-cover defender not outnumbered forces attacker withdrawal; no retreat when a unit is destroyed. |
 | Withdrawal | Full-S route available rejects a shorter route. Blocked required retreat triggers the opposing minimum-separation fallback, without terrain/repeat fatigue. |
@@ -78,7 +82,7 @@ Use supported real faction packs for release runs. Synthetic packs may exercise 
 ### E01 - Full ordinary game
 
 1. Create an enforced six-point Clash room; join two stable seats and a read-only observer.
-2. Choose the two supported factions, legal purchases/equipment/bases, same measurement mode, chaos off; accept named digital setup conventions.
+2. Choose the two supported factions, legal purchases/equipment/bases, the imperial band/inch measurement configuration, chaos off; accept named digital setup conventions.
 3. Complete d6 first-player setup, terrain alternation/reposition/final offer, deployment A and second-player pregame dice. Verify invalid actor/zone/cost attempts are rejected.
 4. Play Orders with carry-over allocations, both reaction windows, basic and advanced abilities. Exercise free and paid activations, manoeuvre, rest, repeat fatigue, and optional fatigue spending.
 5. Resolve at least one covered shot, reaction changing eligibility, charge, closed-ranks melee, casualty-prevention choice, unit destruction fatigue, and withdrawal. Both clients show the same rolls and outcomes.
@@ -87,7 +91,7 @@ Use supported real faction packs for release runs. Synthetic packs may exercise 
 
 ### E02 - Setup and source options
 
-Run deployment B with both diagonals/edge assignments and C from both seats. Include odd first-player unit count, maximum terrain catalog counts, one-large restrictions, nonround bases, and legal metric versus imperial configurations. Exercise every sourced equipment/Hero rule via the core suite and all selectable faction options via pack tests. Explicitly resolve Q01-Q05 before declaring the affected cases conformant.
+Run deployment B with both diagonals/edge assignments and C from both seats. Include odd first-player unit count, maximum terrain catalog counts, one-large restrictions, nonround bases, and exact imperial distances and C-to-S distance-label normalization (without changing Method C). Exercise every sourced equipment/Hero rule via the core suite and all selectable faction options via pack tests. Verify all owner rulings Q01-Q05, including an Improvised Projectiles defender closing ranks when charged and an independent restriction still preventing that choice.
 
 ### E03 - Scenario endings and chaos
 

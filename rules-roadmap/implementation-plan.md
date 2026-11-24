@@ -16,7 +16,7 @@ A demo using invented abilities is a development milestone, not completion. Comp
 | `app/rules/types.py`, `registry.py`, `saga_core.py` | Module discovery and passive manifest | Executable runtime, capability/version contracts; classify metadata as provisional |
 | `validate_unit_state` and `Unit` | Basic ID/type/owner shape | Separate recruitment from in-game validity; current minimum rejects surviving sub-four units; per-figure geometry |
 | Default A/B tokens and ownerless Warlords | Sandbox fixtures | Real roster/deployment and ownership; no seeded demo figures in enforced games |
-| 800 x 500 mm board, whole-mm tokens | SVG viewport and drag previews | Scenario-sized table and exact measurement mode; versioned fixed-point migration |
+| 800 x 500 mm board, whole-mm tokens | SVG viewport and drag previews | Scenario-sized table and exact imperial measurement configuration; versioned fixed-point migration |
 | d20 initiative, winner chooses order | Sandbox flow only | Clash d6 first player and explicit tie adaptation; no choice of first/second in that scenario |
 | Connection-list turn rotation and disconnect auto-pass | Presence notifications | Fixed seat order; pause/rejoin without changing turn; keep games when sockets close |
 | `ACTIVATE_TOKEN` counters | Sandbox markers | Activation grant/cost/resolution; separate counters for rest, repetition, consecutive shooting, cancelled actions |
@@ -70,7 +70,7 @@ This is a safe default execution order, not a request for concurrent work. Sourc
 **Depends on:** none. **Covers:** provenance for all requirements, especially R01/R33.
 
 1. `P00.1`: Create the machine-readable source/requirement registry from [coverage](rules-coverage.md), pin source hash, and record selected digital conventions. Preserve open questions as unresolved; do not claim official FAQ verification.
-2. `P00.2`: Resolve source questions Q01-Q05 from an applicable official correction or documented maintainer ruling. Identify two mutually compatible factions and obtain complete lists/boards/corrections. Engine scaffolding may proceed while these source-specific items remain open.
+2. `P00.2`: Apply recorded owner rulings Q01-Q05 without reopening them; investigate only new source gaps. Identify two mutually compatible factions and obtain complete lists/boards/corrections. Engine scaffolding may proceed while these source-specific items remain open.
 3. `P00.3`: Add capability/source support status to module metadata design, confirm pack storage/validation format, and record the geometry/protocol/state decisions as ADRs when implementation begins.
 
 **Touch:** `rules-roadmap/`, new source registry under rules data, `docs/adrs/`; metadata schema only if needed in that slice.
@@ -106,20 +106,20 @@ This is a safe default execution order, not a request for concurrent work. Sourc
 
 **Depends on:** P02. **Covers:** R01/R04 and queries for R05/R14-R19.
 
-1. `P03.1`: Fixed-point conversion/measurement modes, circular/nonround bases, within/entirely-within predicates, board bounds. Version coordinates once; render all measurements from the same config.
+1. `P03.1`: Fixed-point conversion, C-to-S distance normalization, and band/inch measurements, circular/nonround bases, within/entirely-within predicates, board bounds. Version coordinates once; render all measurements from the same config.
 2. `P03.2`: Connected formation graph, reference validation, ordered placements, obstacles/inter-figure barriers, swept corridors and end rotation.
 3. `P03.3`: LOS segment/terrain queries, deployment-region helpers, bounded deterministic contact/withdrawal feasibility approach with documented numerical tolerance and adversarial tests.
 4. `P03.4`: Board renders individual bases and selection/group previews; add read-only ruler/range/formation diagnostics and non-drag placement inputs.
 
 **Touch:** new `app/geometry/`, policy adapters in rules, `Board.tsx`, geometry fixtures/tests.
 
-**Exit/tests:** threshold equality/one quantum either side in both modes; rotations cannot create movement; no path tunneling; disjoint clusters fail; source/target edge sight; deterministic placements. P03.3 must demonstrate feasibility checking, not label a heuristic failure “impossible.” No aggregate-unit-footprint shortcut for enforced play.
+**Exit/tests:** threshold equality/one quantum either side for exact imperial bands and inch distances; rotations cannot create movement; no path tunneling; disjoint clusters fail; source/target edge sight; deterministic placements. P03.3 must demonstrate feasibility checking, not label a heuristic failure “impossible.” No aggregate-unit-footprint shortcut for enforced play.
 
 ## P04 - Terrain engine and catalog
 
 **Depends on:** P03. **Covers:** R05, terrain portion R06.
 
-1. `P04.1`: Independent traits and curated footprints; all seven Clash presets; impassable primitives; size/count restrictions with Q01 resolved before small-terrain conformance.
+1. `P04.1`: Independent traits and curated footprints; all seven Clash presets; impassable primitives; size/count restrictions using the owner-confirmed S minimum small-terrain width (Q01).
 2. `P04.2`: Path-wide unit restrictions, partial/full containment, high-terrain sight queries, terrain fatigue hooks and horse-specific contribution.
 3. `P04.3`: Terrain placement preview, authoritative rejection reasons, trait/cover overlay, setup locks.
 
@@ -205,8 +205,8 @@ This is a safe default execution order, not a request for concurrent work. Sourc
 **Depends on:** P10. **Covers:** R21-R24; completes prevention and profile exceptions.
 
 1. `P11.1`: Determination, We Obey, Presence, Pride; individual counters and explicit count query policies.
-2. `P11.2`: Resilience, Bodyguards, Heroic Unit with prevention/redirection/swap choices; resolve Q02/Q04 before conformance.
-3. `P11.3`: Every R22/R23 equipment behavior; consecutive-shot history, horse penalties/overrides, javelin grant. Resolve Q05.
+2. `P11.2`: Resilience, Bodyguards, Heroic Unit with prevention/redirection/swap choices; apply resolved Q02/Q04, including exchanges reaching exhaustion and Presence limited to SAGA abilities.
+3. `P11.3`: Every R22/R23 equipment behavior; consecutive-shot history, horse penalties/overrides, javelin grant. Apply resolved Q05: charge-only timing; Improvised Projectiles permits close ranks unless another restriction forbids it.
 4. `P11.4`: Core mercenary/Legendary restrictions and support flags, composition tests against terrain, fatigue, scoring, and abilities; source-less profiles remain test-only.
 
 **Touch:** rule primitives/definitions, roster validation, choice UI, cross-rule regression tests.
