@@ -149,7 +149,9 @@ Start with curated valid terrain shapes and supported base shapes, then expand t
 
 ## Abilities and equipment
 
-Implement [the generic pack](generic-warband.md) first. Store explicit final profile overrides separately from computed equipment modifiers: mounted Armour 5(4) already includes horse adjustment and both Levy options have final Armour 3(3). Preserve the generic Levy melee/shooting fractions 1/2 and 1/3. A shooting stat without a weapon/enabling effect confers no shooting action.
+Implement [the generic pack](generic-warband.md) first using the CORE-2022 base profiles. A profile definition stores one base Armour, exact melee/shooting Aggression fractions, SAGA-die generation policy, and inherited special-rule IDs/parameters. A loadout references its troop profile plus equipment; derive current characteristics without mutating the base. The unit inspection UI exposes base, applied rule/equipment, and resolved value. Armour shorthand such as 5(4) is a later display of derived values, never an additional base stat or modifier.
+
+Compose Mounted / Mounts: Horses (-1 shooting Armour) and Bows and Slings (-1 both Armours) exactly once. Warlord/Hearthguard base Armour 5 therefore yields 5 melee / 4 shooting on horses; Levy base Armour 4 yields 4 / 4 without bows and 3 / 3 with bows. Levy base Aggression is 1/3 melee and 1/2 shooting; its troop rule replaces melee Aggression with 1/2 when it has no ranged weapon. Preserve the Warrior shooting characteristic 1/2 and all six Warlord special rules. A shooting stat without a weapon/enabling effect confers no shooting action. Definition validation and derived-value tests must catch missing inherited rules, repeated modifiers, and a deployment draft retaining a modifier from its previous loadout.
 
 Resilience is an atomic casualty-prevention exchange: validate receiving fatigue below cap, choose 1..X pending casualties, cancel them and add exactly one fatigue, then recheck before offering another exchange. Reaching the cap is allowed; exceeding it or trading while already exhausted is not. Keep this precondition distinct from ordinary fatigue gains that are ignored at the cap.
 

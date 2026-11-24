@@ -36,12 +36,14 @@ Use property/stateful tests where these invariants explore meaningful command se
 
 ## High-value regression examples
 
-All examples below are original test arrangements. The Warrior-archer example uses the separately identified CORE-2022 reference fixture, not the generic pack (which has no Warrior bow option). Script RNG through a server test adapter; never add a production command that accepts desired rolls.
+All examples below are original test arrangements. The Warrior-archer example uses a CORE-2022 equipment fixture outside the selectable generic pack (which has no Warrior bow option); its base Warrior profile is shared with that pack. Script RNG through a server test adapter; never add a production command that accepts desired rolls.
 
 | Area | Test fixture and expected assertion |
 | --- | --- |
 | Fractional shooting | Five eligible Warrior shooters contribute ceil(5/2)=3 dice. Pre-pool +2 gives starting pool 5; a later +9 is limited to 10 total attack dice. |
-| Generic profiles | Assert all seven owner-defined loadouts. Both Levy options have Armour 3(3); five Levy archers contribute two ranged dice and five Levies contribute three melee dice before bonuses. Horse Armour 5(4) receives no second horse penalty. |
+| Base profiles and derived Armour | Assert the four source profiles and all seven chosen loadouts. Base Armour is 5 for Warlord/Hearthguards, 4 for Warriors/Levies. Horses derive 5 melee / 4 shooting; foot Levies without ranged weapons derive 4 / 4 and bow Levies 3 / 3. Repeated queries and deployment draft equipment changes preserve base values and apply each modifier once. |
+| Levy Aggression exception | Five bow Levies contribute ceil(5/2)=3 ranged dice and ceil(5/3)=2 melee dice; five Levies without ranged weapons contribute ceil(5/2)=3 melee dice. All Levies retain base shooting Aggression 1/2; that characteristic alone grants no shooting action. |
+| Inherited rules | Both Warlord loadouts carry Determination, We Obey, Presence, Bodyguards, Pride, and Resilience(1), with R21 behavior checks. Hero classification alone does not confer Heroic Unit. Bows/horses forbid close ranks; horses deny cover and apply formation, movement, and terrain-fatigue rules. |
 | Deployment choices | Group the first player's current deployment from its troop pool, let the opponent choose in response, then group the first player's remainder. Assert the scenario quota policy, troop conservation, and immutable committed placements without requiring a frozen full organization. |
 | Cancel before reaction | A charge cancelled using fatigue spends its paid/free grant and creates no Activation/Reaction window; resolved history stays unchanged. Duplicate cancellation cannot spend fatigue twice. |
 | Old Grudge cancellation | Cancel a free first attempt; its free entitlement is consumed. A later attempt needs another valid grant, while its resolved-action counter still starts at zero. |
@@ -141,7 +143,7 @@ For this documentation-only plan, appropriate validation is local link/ID/depend
 ## Release checklist
 
 - [ ] R01-R34 map to implemented paths and meaningful passing tests; core source questions resolved or explicitly named agreed variants, with no concealed approximations.
-- [ ] The seven generic profiles and approved generic activation/board model are versioned and verified for both seats. Later selectable faction packs require complete sourced lists/boards; they are not prerequisites for the initial generic implementation.
+- [ ] The four generic base profiles, inherited rules, seven derived loadouts, and approved generic activation/board model are versioned and verified for both seats. Later selectable faction packs require complete sourced lists/boards; they are not prerequisites for the initial generic implementation.
 - [ ] All three deployment methods, seven terrain presets, six optional chaos effects, equipment/Hero rules, scoring paths, and digital conventions are covered.
 - [ ] Two people can complete the game through UI only; no manual dice, score edits, hidden debug command, or unimplemented choice remains.
 - [ ] Reconnect, both-player disconnect, process restart, dedupe, and storage restoration pass; no committed state lost.

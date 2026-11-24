@@ -4,7 +4,7 @@
 
 ## Scope and completion
 
-Deliver a server-authoritative, two-player game from room creation to an immutable result, implementing core mechanics with the owner-defined generic warband first, followed by sourced faction packs. Include recruitment, base/figure geometry, all core terrain and deployment options, Orders/SAGA dice, complete supported battle boards, four activations, manoeuvres, fatigue, shooting/melee/withdrawal, equipment/Hero rules, optional battlefield chaos, scoring, reconnect, save/resume, and usable UI. [R01-R34](rules-coverage.md) are the coverage checklist.
+Deliver a server-authoritative, two-player game from room creation to an immutable result, implementing core mechanics with the generic warband's owner-selected loadouts and source-backed profiles first, followed by sourced faction packs. Include recruitment, base/figure geometry, all core terrain and deployment options, Orders/SAGA dice, complete supported battle boards, four activations, manoeuvres, fatigue, shooting/melee/withdrawal, equipment/Hero rules, optional battlefield chaos, scoring, reconnect, save/resume, and usable UI. [R01-R34](rules-coverage.md) are the coverage checklist.
 
 Begin with [the generic warband](generic-warband.md); no named faction sources are required to implement its profiles or core engine. Complete generic play additionally needs an explicitly specified shared board/activation economy; do not silently invent costs or unlimited free actions. Faction sources are required only for later selectable faction content. Additional books/content are separate packs with their own acceptance lists. No undocumented rules shortcuts, manual state edits, or client-authoritative calculations are permitted in the completed game.
 
@@ -63,14 +63,14 @@ flowchart LR
     P13 --> P14 --> P15
 ```
 
-This is a safe default execution order, not a request for concurrent work. Specify the generic activation/board model in P00 alongside the owner-defined profiles; later faction source collection is independent of starting the engine. P01 establishes a storage interface early; P14 supplies production durability. Every package includes narrow UI and snapshot support, so P15 is integration work rather than the first frontend implementation.
+This is a safe default execution order, not a request for concurrent work. Specify the generic activation/board model in P00 alongside the source-backed profiles and chosen loadouts; later faction source collection is independent of starting the engine. P01 establishes a storage interface early; P14 supplies production durability. Every package includes narrow UI and snapshot support, so P15 is integration work rather than the first frontend implementation.
 
 ## P00 - Source baseline and decisions
 
 **Depends on:** none. **Covers:** provenance for all requirements, especially R01/R33.
 
 1. `P00.1`: Create the machine-readable source/requirement registry from [coverage](rules-coverage.md), pin source hash, and record selected digital conventions. Preserve open questions as unresolved; do not claim official FAQ verification.
-2. `P00.2`: Apply recorded owner rulings Q01-Q10 without reopening them. Start with the seven generic profiles; record the still-needed generic board/activation specification. Collect named faction sources only for later packs; do not gate generic profile work on them.
+2. `P00.2`: Apply recorded owner rulings Q01-Q10 without reopening them, including corrected Q06: CORE-2022 pp.44-47 and referenced special rules determine base profiles and derived equipment effects. Start with the seven generic loadouts; record the still-needed generic board/activation specification. Collect named faction sources only for later packs; do not gate generic profile work on them.
 3. `P00.3`: Add capability/source support status to module metadata design, confirm pack storage/validation format, and record the geometry/protocol/state decisions as ADRs when implementation begins.
 
 **Touch:** `rules-roadmap/`, new source registry under rules data, `docs/adrs/`; metadata schema only if needed in that slice.
@@ -94,13 +94,13 @@ This is a safe default execution order, not a request for concurrent work. Speci
 
 **Depends on:** P01. **Covers:** R02-R03, R20/R24 model.
 
-1. `P02.1`: Implement the seven owner-defined generic loadouts and explicit final-stat overrides first; immutable profiles/equipment definitions; Hero class/Warlord role; separate physical/effective counts and melee/shooting stats. Preserve legacy manifest compatibility through versioning.
+1. `P02.1`: Implement the four CORE-2022 base profiles and seven chosen generic loadouts first. Store immutable base Armour and rational melee/shooting Aggression, inherited special-rule IDs, and generation thresholds; derive equipment modifiers and the Levy no-ranged-weapon melee exception separately. Register all six Warlord rules and horse/bow policies for full enforcement in P08-P11. Keep Hero class/Warlord role and physical/effective counts distinct. Preserve legacy manifest compatibility through versioning.
 2. `P02.2`: Recruitment ledger, point bundles/single exchange, faction validation hooks, unit organization, individual figure/base state, stable owners; original size immutable.
 3. `P02.3`: Roster editor/import validation and unit inspection. Ordinary surviving count permits 1..3; destroyed units retain ledger identity and cannot act.
 
 **Touch:** rules/domain state and schema; new roster tests/components; default room fixture construction.
 
-**Exit/tests:** no ownerless deployed units; valid and invalid budgets/groupings; exact one Warlord; profile versus equipment legality; subminimum survivors; undeployed recruitment pool can form legal units during scenario steps; committed units cannot be retroactively regrouped. Both generic Levy options remain Armour 3(3), mounted Armour is not penalized twice, and shooting stats do not grant ranged actions. The approved generic pack is selectable; unrelated synthetic fixtures remain test-only.
+**Exit/tests:** no ownerless deployed units; valid and invalid budgets/groupings; exact one Warlord; profile versus equipment legality; subminimum survivors; undeployed recruitment pool can form legal units during scenario steps; committed units cannot be retroactively regrouped. Generic Levies without ranged weapons derive Armour 4 / 4 and melee Aggression 1/2; bow Levies derive Armour 3 / 3 and melee Aggression 1/3, with shooting Aggression 1/2. Mounted Warlord/Hearthguard Armour derives 5 / 4 once from base 5. All six Warlord rule IDs and troop generation thresholds are present; shooting stats do not grant ranged actions. The approved generic pack is selectable; unrelated synthetic fixtures remain test-only.
 
 ## P03 - Exact geometry and formation
 

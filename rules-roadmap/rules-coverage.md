@@ -36,22 +36,23 @@ For each implemented requirement, maintain its ID, source/page/section, correcti
 
 **Source:** pp.7-8, 23, 26, 44-45; cross-check p.51. **Packages:** P02, P11.
 
-Hero is a troop class; Warlord is a Hero profile/role. **Initial implementation uses [the owner-defined generic profiles](generic-warband.md)**, which override the values below where they differ. The following table is a separate CORE-2022 reference, not the generic pack. Do not apply equipment penalties twice to the generic final stats.
+Hero is a troop class; Warlord is a Hero profile/role. Initial implementation uses [the seven generic loadouts](generic-warband.md), built from these CORE-2022 profiles and their inherited special rules. The owner's corrected Q06 supersedes the earlier numerical overrides. Armour has a single base value; separate melee/shooting results are derived from equipment and current effects.
 
 CORE-2022 base values before equipment:
 
-| Profile | Melee/shooting Armour | Melee/shooting aggression | SAGA dice contribution |
-| --- | --- | --- | --- |
-| Warlord | 5 / 5 | 8 / 4 | 1 while on table |
-| Other Hero | Profile | Profile | Profile |
-| Hearthguards | 5 / 5 | 2 / 1 | 1 per surviving on-table unit |
-| Warriors | 4 / 4 | 1 / 1/2 | 1 with at least 4 remaining |
-| Levies without ranged weapons | 4 / 4 | 1/2 / unavailable | 1 with at least 6 remaining |
-| Levies with ranged weapons | 4 / 4 | 1/3 / 1/2 | Same threshold |
+| Profile | Base Armour | Base melee aggression | Base shooting aggression | SAGA dice contribution |
+| --- | --- | --- | --- | --- |
+| Warlord | 5 | 8 | 4 | 1 while on table |
+| Other Hero | Profile | Profile | Profile | Profile |
+| Hearthguards | 5 | 2 | 1 | 1 per surviving on-table unit |
+| Warriors | 4 | 1 | 1/2 | 1 with at least 4 remaining |
+| Levies | 4 | 1/3 | 1/2 | 1 with at least 6 remaining |
+
+Warlords inherit Determination, We Obey, Presence, Bodyguards, Pride, and Resilience(1), implemented under R21. Hearthguards have no additional profile special rules. Warrior and Levy generation thresholds are troop rules, independent of equipment. Levies without ranged weapons replace melee Aggression with 1/2; bow-equipped Levies retain 1/3. Horses and bows derive Armour through R22/R23, not alternate base values. Retain the base shooting characteristic even when a loadout lacks a ranged weapon.
 
 A shooting aggression value alone does not enable shooting. Track figure ID, base, position, life state, original unit, and profile; derive surviving count from figures. Units have stable ownership, equipment, fatigue, and activation histories. Initial ordinary units contain 4..12 identically typed/equipped figures; Heroes normally stand alone. Surviving units may fall below recruitment minimums. Zero survivors means destroyed. Units cannot merge/split during play without a sourced exception.
 
-**Acceptance:** three surviving Warriors are legal; zero figures destroy once; aggression does not grant a weapon; Hero classification is distinct from Hearthguards.
+**Acceptance:** four base profiles and seven derived generic loadouts agree with the source; all six Warlord rules inherited; Levy no-ranged-weapon exception; exact fractional shooting/melee pools; three surviving Warriors are legal; zero figures destroy once; aggression does not grant a weapon; Hero classification is distinct from Hearthguards and the separate Heroic Unit rule.
 
 ### R03 - Recruitment and faction legality
 
@@ -268,7 +269,7 @@ Separate hits, uncancelled hits, prevented/redirected casualties, actual losses,
 
 **Source:** pp.37, 39. **Packages:** P02, P09, P11.
 
-These are core equipment policies. Explicit final-stat overrides in the generic pack take precedence: its bow Levies remain Armour 3(3) and Aggression 1/2(1/3). Do not apply another bow penalty to the specified final values.
+Apply these policies to the shared base troop characteristics. Generic bow Levies derive Armour 3 against both attack types from base 4 and the bow penalty; their Aggression is 1/3 melee and 1/2 shooting. Generic Levies without ranged weapons retain Armour 4 and use the troop-rule melee Aggression 1/2. There are no generic numerical overrides to these source rules.
 
 | Equipment | Implementation obligations |
 | --- | --- |
@@ -343,5 +344,5 @@ These are engineering requirements, not published game rules.
 | R30 | Disconnect pause, durable events/state/choices, restart recovery | P01, P14 | Recover mid-allocation/combat/casualties/withdrawal without auto-pass/new rolls. |
 | R31 | Structured choices and legal actions with complete UI for both seats | P05 onward, P15 | Finish without JSON commands; opponent can act in its windows. |
 | R32 | Preview/cancel; negotiated undo cannot cross random disclosure, opponent decisions, or multi-step resolutions | P01, P08, P14 | Token rollback cannot refund dice or erase known rolls. |
-| R33 | Owner-defined generic pack first; approved generic board/activation content for complete play; sourced factions later | P00, P02, P12, P15 | Generic stats and all selectable loadouts match owner rulings; no invented activation costs or unsupported selectable abilities. |
+| R33 | Generic pack with owner-selected loadouts and source-backed profiles first; approved generic board/activation content for complete play; sourced factions later | P00, P02, P12, P15 | Base stats, inherited rules, and derived loadouts match CORE-2022 and corrected Q06; no invented activation costs or unsupported selectable abilities. |
 | R34 | Result, score provenance, history, export/replay, full browser coverage | P13-P15 | Both clients and replay agree on final state/result. |
