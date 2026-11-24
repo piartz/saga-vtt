@@ -4,9 +4,9 @@
 
 ## Scope and completion
 
-Deliver a server-authoritative, two-player game from room creation to an immutable result, implementing the supplied core book and at least two complete compatible factions. Include recruitment, base/figure geometry, all core terrain and deployment options, Orders/SAGA dice, complete supported battle boards, four activations, manoeuvres, fatigue, shooting/melee/withdrawal, equipment/Hero rules, optional battlefield chaos, scoring, reconnect, save/resume, and usable UI. [R01-R34](rules-coverage.md) are the coverage checklist.
+Deliver a server-authoritative, two-player game from room creation to an immutable result, implementing core mechanics with the owner-defined generic warband first, followed by sourced faction packs. Include recruitment, base/figure geometry, all core terrain and deployment options, Orders/SAGA dice, complete supported battle boards, four activations, manoeuvres, fatigue, shooting/melee/withdrawal, equipment/Hero rules, optional battlefield chaos, scoring, reconnect, save/resume, and usable UI. [R01-R34](rules-coverage.md) are the coverage checklist.
 
-A demo using invented abilities is a development milestone, not completion. Complete faction sources and resolution of release-relevant source questions are mandatory. Additional books/content are separate packs with their own acceptance lists. No undocumented rules shortcuts, manual state edits, or client-authoritative calculations are permitted in the completed game.
+Begin with [the generic warband](generic-warband.md); no named faction sources are required to implement its profiles or core engine. Complete generic play additionally needs an explicitly specified shared board/activation economy; do not silently invent costs or unlimited free actions. Faction sources are required only for later selectable faction content. Additional books/content are separate packs with their own acceptance lists. No undocumented rules shortcuts, manual state edits, or client-authoritative calculations are permitted in the completed game.
 
 ## Baseline audit and migration obligations
 
@@ -37,7 +37,7 @@ No source, schema, or runtime behavior changes in this planning branch. Update `
 | M0: Reliable substrate | P00-P03 | Versioned source/config, deterministic commands, stable seats, legal roster and exact figure geometry |
 | M1: Setup and orders | P04-P07 | Legal terrain/deployment, pregame dice, both Orders reaction windows, persisted choices |
 | M2: Full core actions | P08-P11 | Movement/rest, shooting, charges/melee/withdrawal, fatigue and all core equipment/special rules |
-| M3: Complete supported game | P12-P13 | Real complete battle boards and all core scenario end/chaos/scoring paths |
+| M3: Complete supported game | P12-P13 | Approved generic gameplay content and all core scenario end/chaos/scoring paths; faction packs follow later |
 | M4: Release-ready online play | P14-P15 | Durable recovery, full browser game, replay agreement, verified source questions/content |
 
 Dependency graph (an arrow means prerequisite):
@@ -63,14 +63,14 @@ flowchart LR
     P13 --> P14 --> P15
 ```
 
-This is a safe default execution order, not a request for concurrent work. Source collection/verification for P12 begins in P00; do not wait until combat is finished to discover that faction sources are missing. P01 establishes a storage interface early; P14 supplies production durability. Every package includes narrow UI and snapshot support, so P15 is integration work rather than the first frontend implementation.
+This is a safe default execution order, not a request for concurrent work. Specify the generic activation/board model in P00 alongside the owner-defined profiles; later faction source collection is independent of starting the engine. P01 establishes a storage interface early; P14 supplies production durability. Every package includes narrow UI and snapshot support, so P15 is integration work rather than the first frontend implementation.
 
 ## P00 - Source baseline and decisions
 
 **Depends on:** none. **Covers:** provenance for all requirements, especially R01/R33.
 
 1. `P00.1`: Create the machine-readable source/requirement registry from [coverage](rules-coverage.md), pin source hash, and record selected digital conventions. Preserve open questions as unresolved; do not claim official FAQ verification.
-2. `P00.2`: Apply recorded owner rulings Q01-Q05 without reopening them; investigate only new source gaps. Identify two mutually compatible factions and obtain complete lists/boards/corrections. Engine scaffolding may proceed while these source-specific items remain open.
+2. `P00.2`: Apply recorded owner rulings Q01-Q10 without reopening them. Start with the seven generic profiles; record the still-needed generic board/activation specification. Collect named faction sources only for later packs; do not gate generic profile work on them.
 3. `P00.3`: Add capability/source support status to module metadata design, confirm pack storage/validation format, and record the geometry/protocol/state decisions as ADRs when implementation begins.
 
 **Touch:** `rules-roadmap/`, new source registry under rules data, `docs/adrs/`; metadata schema only if needed in that slice.
@@ -94,13 +94,13 @@ This is a safe default execution order, not a request for concurrent work. Sourc
 
 **Depends on:** P01. **Covers:** R02-R03, R20/R24 model.
 
-1. `P02.1`: Immutable profiles/equipment definitions; Hero class/Warlord role; separate physical/effective counts and melee/shooting stats. Preserve legacy manifest compatibility through versioning.
+1. `P02.1`: Implement the seven owner-defined generic loadouts and explicit final-stat overrides first; immutable profiles/equipment definitions; Hero class/Warlord role; separate physical/effective counts and melee/shooting stats. Preserve legacy manifest compatibility through versioning.
 2. `P02.2`: Recruitment ledger, point bundles/single exchange, faction validation hooks, unit organization, individual figure/base state, stable owners; original size immutable.
 3. `P02.3`: Roster editor/import validation and unit inspection. Ordinary surviving count permits 1..3; destroyed units retain ledger identity and cannot act.
 
 **Touch:** rules/domain state and schema; new roster tests/components; default room fixture construction.
 
-**Exit/tests:** no ownerless deployed units; valid and invalid budgets/groupings; exact one Warlord; profile versus equipment legality; subminimum survivors; cannot edit a locked roster or silently merge/split units. Synthetic packs remain test-only.
+**Exit/tests:** no ownerless deployed units; valid and invalid budgets/groupings; exact one Warlord; profile versus equipment legality; subminimum survivors; undeployed recruitment pool can form legal units during scenario steps; committed units cannot be retroactively regrouped. Both generic Levy options remain Armour 3(3), mounted Armour is not penalized twice, and shooting stats do not grant ranged actions. The approved generic pack is selectable; unrelated synthetic fixtures remain test-only.
 
 ## P03 - Exact geometry and formation
 
@@ -155,9 +155,9 @@ This is a safe default execution order, not a request for concurrent work. Sourc
 
 **Depends on:** P04 and P06. **Covers:** R03/R06-R07, R26 setup.
 
-1. `P07.1`: Game configuration and both-player option agreement, roster organization freeze, correct table/edges, Clash first-player procedure with named digital tie rule.
+1. `P07.1`: Game configuration and both-player option agreement, recruitment totals with unassigned troops, correct table/edges, Clash first-player procedure with coin-toss tie-break.
 2. `P07.2`: Alternating terrain placement, legal reposition after three, opponent final offer, immutable terrain lock.
-3. `P07.3`: Deployment die/adjustment and A/B/C zones; first half including Warlord, all second player, first remainder; every figure validated.
+3. `P07.3`: Deployment die/adjustment and A/B/C zones; scenario-defined quotas and order, including Clash's first-half/Warlord, opponent, remainder steps. Form units and select equipment at each opportunity; validate every figure and remaining troop pool. Do not impose this sequence on other scenarios or freeze future unit groupings.
 4. `P07.4`: Second-player three-die pregame allocation, chaos setup hooks, readiness/start barrier. Provide full setup wizard and step back only before its committed/revealed boundary.
 
 **Touch:** scenario setup module, state/schema, setup wizard, geometry/integration tests.
@@ -168,7 +168,7 @@ This is a safe default execution order, not a request for concurrent work. Sourc
 
 **Depends on:** P03-P06. **Covers:** R12-R14; charge declaration skeleton R15.
 
-1. `P08.1`: Validated activation grants, separate all-action/MCS/last-kind histories, cancellation, multi-unit queue, opponent pre-action fatigue windows.
+1. `P08.1`: Validated activation grants, separate all-action/MCS/last-kind histories, cancellation, multi-unit queue, opponent fatigue-cancellation gate before Activation/Reaction. Cancelled attempts consume costs/free use but open no reaction window; Old Grudge entitlement is consumed separately from resolved-action history.
 2. `P08.2`: Movement proposals and atomic route/formation commit; terrain/fatigue interactions; manoeuvre; preview/confirm/cancel UI.
 3. `P08.3`: Rest, exhaustion/cap, repetition timing, nearby destruction fatigue handler, no-fatigue versus free semantics; fatigue and activation status UI.
 
@@ -213,17 +213,17 @@ This is a safe default execution order, not a request for concurrent work. Sourc
 
 **Exit/tests:** all listed rules work, not just manifests; prevention does not truncate incoming Hero casualties; Bodyguards cannot bounce; cancellation consumes free uses; mounted/weapon combinations validated; mercenary fatigue exception remains usable. No generic transport branch named after a special rule.
 
-## P12 - Two complete faction packs
+## P12 - Generic gameplay content, then faction extensions
 
-**Depends on:** P07/P11; source collection starts P00. **Covers:** R03/R10/R24/R33.
+**Depends on:** P07/P11; generic profiles start P02 and board specification starts P00. **Covers:** R03/R10/R24/R33.
 
-1. `P12.1`: Import only complete, compatible, source-verified lists/boards; pin revisions/hash and declare needed capabilities. Fail with useful missing-content messages if absent.
+1. `P12.1`: Complete the generic pack using its approved activation/board specification, with version/hash and capability validation. Profiles alone do not define costs/abilities; report missing specification rather than inventing it. Both players may use this shared pack.
 2. `P12.2`: For every ability record source, costs, timing, restrictions, use limits, ordered effects, choices, duration, overrides, and interaction tests. Implement any missing primitive with focused tests before enabling that ability.
-3. `P12.3`: All supported recruitment/equipment choices and dice-symbol mappings; complete original ability-panel UI; pack lint and two-faction conformance fixtures.
+3. `P12.3`: All supported recruitment/equipment choices and dice-symbol mappings; complete original ability-panel UI; pack lint and generic-versus-generic conformance fixtures; add faction-specific suites when complete packs become available.
 
 **Touch:** data packs, narrow rule handlers, manifest/schema as necessary, content tests and ability/roster UI.
 
-**Exit:** two entire boards and army lists playable. Every selectable item maps to implementation/tests; no disabled-but-selectable abilities, placeholder text effects, or inferred costs from the sample illustrations. Named mercenary/Legendary choices ship only with their own complete verified profiles. Resolve every capability declared by either pack.
+**Exit:** the approved generic roster and activation/board content are playable for both seats. Every selectable item maps to implementation/tests; no disabled-but-selectable abilities or invented costs. Later faction packs require complete sourced lists/boards and every declared capability; named mercenary/Legendary choices require verified profiles. Missing faction sources do not block the generic milestone.
 
 ## P13 - Scenario completion, scoring, chaos
 
@@ -254,10 +254,10 @@ This is a safe default execution order, not a request for concurrent work. Sourc
 **Depends on:** P14 and all source/content gates. **Covers:** R01-R34 integration.
 
 1. `P15.1`: Browser acceptance coverage for both seats: roster/setup, dice/abilities, movement/combat/choices, result, refresh/reconnect. Every required action has a usable non-console control.
-2. `P15.2`: Run [release scripts](validation-and-release.md) using real supported factions, all deployment methods, equipment/special-rule cases, each chaos result, score/draw/automatic loss/concession, and interrupted play.
+2. `P15.2`: Run [release scripts](validation-and-release.md) using the generic pack (and later any added faction packs), all deployment methods, equipment/special-rule cases, each chaos result, score/draw/automatic loss/concession, and interrupted play.
 3. `P15.3`: Reconcile coverage registry, source rulings, feature support flags, protocol/model/context docs, and troubleshooting; remove internal-only test data from selectable content. Re-run required CI checks after final fixes.
 
-**Exit:** every release checklist item is satisfied with evidence. Fixture-only, backend-only, manual-score, missing-faction, or unrecoverable games do not meet this milestone. Expansion work starts with a new source/coverage plan rather than expanding this release without updating its criteria.
+**Exit:** every release checklist item is satisfied with evidence. Fixture-only, backend-only, manual-score, unspecified-activation-economy, or unrecoverable games do not meet this milestone. Expansion work starts with a new source/coverage plan rather than expanding this release without updating its criteria.
 
 ## Status tracking
 

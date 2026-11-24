@@ -8,9 +8,9 @@ This maps mechanics to implementation responsibilities and original acceptance c
 | --- | --- | --- |
 | CORE-2022 | Local `rules/SAGA_-_Rulebook_2022_261124_161828.pdf`, English 2022 printing, ISBN 979-10-95599-25-8 | Read for this plan; 52 PDF pages. Printed numbers match one-based PDF pages for the mechanics below. |
 | CORE-2022 fingerprint | SHA-256 `67c8de47a3a0171cecd0fd655d2721bfeb6b7dcc1e4ee5f4e4bdb015cd562a3f` | Pin this revision; filename alone is insufficient. |
-| OWNER-2026-11-24 | Project owner clarifications recorded in the decision register | Resolves Q01-Q05, including close-ranks timing and Improvised Projectiles eligibility; takes precedence over conflicting source wording for this project. |
+| OWNER-2026-11-24 | Project owner clarifications recorded in the decision register | Resolves Q01-Q10, including the generic starter, deployment, cancellation, and coin-toss tie-break; takes precedence over conflicting source wording for this project. |
 | ERRATA | Official corrections/FAQ applicable to this printing | Not supplied or verified; see the decision register. Do not assume the PDF is the latest rules. |
-| FACTION-A / FACTION-B | Two compatible, complete faction lists, battle boards, dice mappings, and applicable corrections | Missing; release dependency for P12. |
+| FACTION-A / FACTION-B | Two compatible, complete faction lists, battle boards, dice mappings, and applicable corrections | Missing; required only when adding these later faction packs, not to begin the generic warband. |
 | EXPANSIONS | Further Universe and Book of Battles material | Missing; separate follow-on scope. |
 
 The PDF is image-only. OCR was used for navigation; terrain, scenario, profile, and Resilience pages were also checked visually. OCR drops table cells and confuses S with other letters. The scan uses `C` on p.35; the owner has confirmed it means S wherever used as a distance (Q01). Prefer detailed chapters over the abbreviated reference sheet on PDF p.51; record conflicts rather than resolving them from memory.
@@ -36,7 +36,9 @@ For each implemented requirement, maintain its ID, source/page/section, correcti
 
 **Source:** pp.7-8, 23, 26, 44-45; cross-check p.51. **Packages:** P02, P11.
 
-Hero is a troop class; Warlord is a Hero profile/role. Base values before equipment:
+Hero is a troop class; Warlord is a Hero profile/role. **Initial implementation uses [the owner-defined generic profiles](generic-warband.md)**, which override the values below where they differ. The following table is a separate CORE-2022 reference, not the generic pack. Do not apply equipment penalties twice to the generic final stats.
+
+CORE-2022 base values before equipment:
 
 | Profile | Melee/shooting Armour | Melee/shooting aggression | SAGA dice contribution |
 | --- | --- | --- | --- |
@@ -55,9 +57,9 @@ A shooting aggression value alone does not enable shooting. Track figure ID, bas
 
 **Source:** pp.7, 44-47. **Packages:** P02, P07, P12.
 
-Support agreed 4..8 points, default 6, exactly one free Warlord, and recruitment bundles of 4 Hearthguards / 8 Warriors / 12 Levies per point. Permit at most one half-point exchange between bundles of 2/4/6 respectively; do not allow arbitrary fractional purchases. Keep recruitment totals separate from unit grouping. Permit legal organization/equipment at deployment, but freeze the first player's complete organization before calculating its half-unit quota (digital setup convention D05). Validate all equipment, costs, upgrades, restrictions, and mandatory options against a pinned faction pack. Preserve original counts and class provenance for scoring. Test rosters are not real factions.
+Support agreed 4..8 points, default 6, exactly one free Warlord, and recruitment bundles of 4 Hearthguards / 8 Warriors / 12 Levies per point. Permit at most one half-point exchange between bundles of 2/4/6 respectively; do not allow arbitrary fractional purchases. Keep recruitment totals separate from unit grouping. Form units and choose permitted equipment during each deployment opportunity from an unassigned recruitment pool; players can react to earlier placements. The scenario defines quota counting, mandatory units, and sequence. Lock each deployed unit, not the entire undeployed organization (Q09/D05). Validate all equipment, costs, upgrades, restrictions, and mandatory options against a pinned faction pack. Preserve original counts and class provenance for scoring. Test rosters are not real factions.
 
-**Acceptance:** budget and single-exchange limits; regrouping preserves totals; invalid faction loadouts; deployment quota cannot change after its calculation.
+**Acceptance:** budget and single-exchange limits; regrouping preserves totals; invalid faction loadouts; scenario-defined quota evaluation; regrouping undeployed troops is allowed while deployed units remain committed.
 
 ### R04 - Bases, formation, and contact
 
@@ -101,7 +103,7 @@ Impassable terrain is supported as geometry even though this scenario has no imp
 
 **Source:** pp.48-49. **Packages:** P04, P07.
 
-Configure compatible packs, budget, imperial measurement configuration, options, and opposing long edges. Roll ordinary d6; highest player starts throughout the scenario. Use the explicit digital tie adaptation D04, not today's d20/winner-chooses flow.
+Configure compatible packs, budget, imperial measurement configuration, options, and opposing long edges. Roll ordinary d6; highest player starts throughout the scenario. A tie is settled by one fair server coin toss with heads/tails bound to seats before drawing (D04/Q10), not d6 rerolls or today's d20/winner-chooses flow.
 
 First player places the first piece; then alternate with at least S separation and catalog limits. After at least three pieces, acting player may move an existing piece up to M while preserving separation; opponent may place one final piece or decline, ending terrain setup. Do not invent a six-piece cap. After setup locks, terrain can change only through a rule effect or recorded correction.
 
@@ -113,7 +115,7 @@ First player places the first piece; then alternate with at least S separation a
 
 - First player rolls d6 and selects -1/0/+1, clamped to 1..6. Preserve raw/modified results; 1-2/3-4/5-6 select A/B/C.
 - A: whole bases between S and L from owner's long edge. B: first player chooses diagonal; each army deploys in its corresponding half, wholly between M and L from that line. C: use each player's right-hand short edge, wholly between M and L+M from it, with no figures within M of any edge. Use player-relative coordinates.
-- First player places ceil(half their units), including Warlord; second places all; first finishes. Validate whole footprints, formation, bounds, terrain, other units, and inter-figure barriers.
+- Clash specifies a first half including Warlord, opponent deployment, then first-player remainder; apply its unit quota/rounding in the scenario adapter. Other scenarios define their own quota basis and order. Players form units during these opportunities, not before all deployment (Q09); do not replace a units quota with points/figures or impose a global organization freeze. Validate whole footprints, formation, bounds, terrain, other units, and inter-figure barriers.
 - Second player rolls and allocates three SAGA dice before turn one without triggering abilities. These are part of the same eight-die inventory.
 - Apply selected chaos effects at explicit pregame checkpoints, then lock setup. Provide ready controls and legal-zone overlays.
 
@@ -161,7 +163,7 @@ Combat opportunities alternate from attacker; passing does not permanently withd
 
 Actions require a validated grant from an ability, special rule, manoeuvre, equipment, or scenario. Implement move/charge/shoot/rest and typed scenario extensions. Free cost is independent from fatigue exemption. Exempt activations still count for later repetition. Track all resolved activations, resolved move/charge/shoot count, last resolved kind, and one-use grants separately.
 
-Multi-unit abilities select distinct targets up front, then fully resolve each activation/combat; choose action/target at that unit's activation where allowed. Cancellation spends dice/grant but does not count as resolved or add repetition fatigue. Failed charges restore positions without refunding resolved reactions/costs.
+Multi-unit abilities select distinct targets up front, then fully resolve each activation/combat; choose action/target at that unit's activation where allowed. Cancellation spends dice/grant but does not count as resolved or add repetition fatigue. Offer applicable fatigue cancellation before opening Activation/Reaction; a cancelled attempt opens no such window (Q07). A consumed free attempt, including Old Grudge, is not available again just because the action never resolved (Q08). Failed charges restore positions without refunding resolved reactions/costs.
 
 **Acceptance:** no grant/no action; free versus exempt; cancellation cost/history; multi-unit queue revalidates next unit.
 
@@ -193,7 +195,7 @@ Nonround bases reorient only at end and no base part may exceed allowed travel. 
 
 **Source:** pp.20-21, 32, 36, 39. **Packages:** P08, P10, P11.
 
-Declare exactly one reachable enemy unit and enforce Pride. Move and charge ranges are distinct. Resolve reaction/fatigue windows, then revalidate. First mover fixes reference and must contact target; all charge rulers are collinear. Subsequent figures must contact if possible, otherwise approach as far as legally possible with ordered cohesion/radius. Never contact another enemy unit.
+Declare exactly one reachable enemy unit and enforce Pride. Move and charge ranges are distinct. Resolve fatigue cancellation first; only if not cancelled open eligible Activation/Reaction windows, then revalidate. First mover fixes reference and must contact target; all charge rulers are collinear. Subsequent figures must contact if possible, otherwise approach as far as legally possible with ordered cohesion/radius. Never contact another enemy unit.
 
 If the full formation cannot be placed legally, cancel and restore positions. On success, apply charge/terrain fatigue and immediately enter melee. Server must validate mandatory contact/maximal approach; client claims of impossibility are insufficient. See design for solver policy.
 
@@ -266,6 +268,8 @@ Separate hits, uncancelled hits, prevented/redirected casualties, actual losses,
 
 **Source:** pp.37, 39. **Packages:** P02, P09, P11.
 
+These are core equipment policies. Explicit final-stat overrides in the generic pack take precedence: its bow Levies remain Armour 3(3) and Aggression 1/2(1/3). Do not apply another bow penalty to the specified final values.
+
 | Equipment | Implementation obligations |
 | --- | --- |
 | Bows/slings | L, foot only, -1 both Armours, no close ranks. |
@@ -321,7 +325,7 @@ Both players opt in before lock; roll/store one d6 result:
 | Dawn | During each player's first turn, shooting/charge distance cannot exceed M. |
 | Exhaustion | Pregame d6 per unit; 5+ adds one fatigue. |
 | Cursed Ground | Convert uneven to dangerous, preserving height/cover. |
-| Old Grudge | Each unit's first activation during each player's first turn is free; preserve source scope and cancellation/grant accounting. |
+| Old Grudge | Each unit's first activation during each player's first turn is free; a cancelled free attempt consumes that entitlement even though resolved activation count stays unchanged (Q08). |
 | Judgement | Each warband generates one extra SAGA die; inventory cap remains; include in zero-generation check. |
 | Slaughter | Add two massacre points per entirely destroyed enemy unit. |
 
@@ -339,5 +343,5 @@ These are engineering requirements, not published game rules.
 | R30 | Disconnect pause, durable events/state/choices, restart recovery | P01, P14 | Recover mid-allocation/combat/casualties/withdrawal without auto-pass/new rolls. |
 | R31 | Structured choices and legal actions with complete UI for both seats | P05 onward, P15 | Finish without JSON commands; opponent can act in its windows. |
 | R32 | Preview/cancel; negotiated undo cannot cross random disclosure, opponent decisions, or multi-step resolutions | P01, P08, P14 | Token rollback cannot refund dice or erase known rolls. |
-| R33 | At least two complete version-compatible faction packs | P00, P12, P15 | Every selectable profile/loadout/ability implemented and verified. |
+| R33 | Owner-defined generic pack first; approved generic board/activation content for complete play; sourced factions later | P00, P02, P12, P15 | Generic stats and all selectable loadouts match owner rulings; no invented activation costs or unsupported selectable abilities. |
 | R34 | Result, score provenance, history, export/replay, full browser coverage | P13-P15 | Both clients and replay agree on final state/result. |

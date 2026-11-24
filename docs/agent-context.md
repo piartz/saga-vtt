@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-11-24 (owner rule clarifications integrated into the plan; documentation only)
+Last updated: 2026-11-24 (generic starter, deployment, cancellation, and tie-break rulings; documentation only)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -54,6 +54,7 @@ Primary references:
   - `rules-module-design.md` specifies proposed runtime/state, per-figure geometry, reaction choices, event transactions, protocol evolution, content packs, UI, and recovery.
   - `validation-and-release.md` defines focused tests and full-game/restart/replay acceptance scripts.
   - `decisions-and-source-gaps.md` records engineering defaults, explicit digital adaptations, owner rulings, remaining source questions, and missing complete faction material. Q01-Q04 are resolved: C means S; Resilience exchanges may reach exhaustion but cannot start exhausted and cancel up to X casualties per fatigue; use bands/inches; Presence only affects SAGA abilities. Q05 is also resolved: close ranks is charge-only, never against shooting; Improvised Projectiles does not forbid it when charged, unless another restriction applies.
+  - `generic-warband.md` defines the first implementation target: seven generic loadouts with owner-provided stats, including final Levy Armour 3(3) for both options and Aggression 1/2(1/3). Follow-up rulings Q06-Q10 set cancellation before Activation/Reaction, consumption of cancelled free attempts including Old Grudge, unit formation during scenario-directed deployment, and coin tosses for tied initiative d6 rolls.
   - `iteration-playbook.md` gives per-slice implementation and handoff instructions.
   - The plan was checked against `rules/SAGA_-_Rulebook_2022_261124_161828.pdf`; the PDF is a local untracked reference, not a committed asset. No engine, schema, protocol, or data-model implementation changed with this plan.
 - Rules-module scaffolding has started (Phase 0 in the previous roadmap):
@@ -232,7 +233,7 @@ Primary references:
 
 ## Next Recommended Tasks
 - Follow `rules-roadmap/README.md` and the P00-P15 plan; the old Phase 0-10 numbering is superseded.
-- Start P00.1: establish the source/requirement registry and pin the supplied book revision; apply resolved owner rulings Q01-Q05 and acquire two complete compatible faction lists/battle boards for P12.
+- Start P00.1: establish the source/requirement registry and pin the supplied book revision; apply resolved owner rulings Q01-Q10 and prioritize the generic pack. Specify generic activation/board content for full play; named faction sources are later work.
 - Then start P01.1: extract command dispatch and introduce deterministic reduction/event-store contracts while retaining sandbox behavior.
 - Continue P01 with stable seats, dedupe/version checks, pause/resume, and an enforced-mode boundary before adding rules-dependent commands.
 - Use P02-P03 for actual ownership, recruitment versus surviving-unit validation, individual figures, and exact geometry. Passive metadata does not count as completed rules enforcement.
@@ -248,8 +249,8 @@ Primary references:
 
 ## Open Decisions / Risks
 - The new plan is documentation only. Today's d20 initiative, 800x500 mm board, token activations, generic dice, and permissive movement remain bootstrap behavior, not source-verified SAGA enforcement.
-- The supplied core PDF lacks complete faction lists/battle boards. Two complete compatible packs and applicable corrections are release gates, although independent engine work can proceed.
-- Owner rulings resolve all initial questions Q01-Q05. Close ranks is only against charges, never shooting; Improvised Projectiles does not disqualify a defender, but independent equipment/status restrictions still apply. Do not reopen these rulings; future source gaps must be tracked separately.
+- The generic warband is the initial target; named faction lists/boards are no longer an initial implementation gate. Generic profiles do not yet specify an activation/board model, which is still needed before a complete generic game can be claimed. Warrior shooting Aggression was not specified; no ordinary ranged action is enabled for that loadout.
+- Owner rulings resolve Q01-Q10. Deployment quota/counting is scenario-defined; do not impose a universal half-army formula or freeze all unit groupings before deployment. Close ranks is only against charges, never shooting; Improvised Projectiles does not disqualify a defender, but independent equipment/status restrictions still apply. Do not reopen these rulings; future source gaps must be tracked separately.
 - The plan selects per-figure geometry, fixed-point coordinates, fixed player seats, serialized event transactions, disconnect pause, and durable storage before release. These are proposed defaults, not implemented capabilities; see `rules-roadmap/decisions-and-source-gaps.md`.
 - Planned event ordering/replay/reconnect contracts are documented, but runtime support is not implemented.
 - No stable seat authentication or unit ownership enforcement: current active-player restrictions alone do not provide the planned authorization model.

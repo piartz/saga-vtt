@@ -41,7 +41,7 @@ Names below are proposed domain concepts. Keep protocol DTOs separate from inter
 | Seat | Stable seat/player ID, role, warband ID, connection status; credentials stored privately, multiple connections cannot create extra turns |
 | GameState | Status (`setup`, `playing`, `paused`, `finished`), resumable prior status, state version, persistent event cursor, board, seats, phase state, terrain, warbands, resolutions, result |
 | TurnState | Fixed seat order, round, global player-turn ID, active seat, turns completed per seat, Orders/Activation substate, expiry checkpoints |
-| Warband | Owner seat, faction, recruitment ledger, original figures, units, dice inventory, battle-board allocations, option approvals |
+| Warband | Owner seat, generic/faction pack, recruitment ledger, original figures, unassigned troop pool, deployed units, dice inventory, battle-board allocations, option approvals |
 | Unit | Stable ID, troop class/profile, owner, figure IDs, equipment/keywords, fatigue, initial count, status, histories scoped by player-turn ID; alive count derived |
 | Figure | ID, original unit/profile/class, base shape/dimensions, position/orientation, alive/deployed state; decorative artwork never affects geometry |
 | Terrain | ID, sourced preset, transformed footprint, height, difficulty, cover, size class, locked/setup status; effects preserve provenance |
@@ -56,7 +56,7 @@ Names below are proposed domain concepts. Keep protocol DTOs separate from inter
 | Combat | Attacker/defender, source activation, stage, start-exhaustion flags, initial pools, bonus pools, dice/effects, casualties by stage, outcome/withdrawal |
 | Roll | ID, purpose, resolution, die IDs, count/sides/symbol mapping, raw values, ordered modifiers/rerolls with player attribution, final values |
 | CasualtyLedger | Original identity, source/cause, step, prevented/redirected/actual losses, pre-removal footprint, destruction IDs |
-| ScenarioState | Setup substep/actor, terrain sequence, deployment method/zones/quota, chaos, objectives, score breakdowns, terminal reason |
+| ScenarioState | Setup substep/actor, terrain sequence, deployment method/zones, scenario-defined quota basis/evaluator and committed placements, chaos, objectives, score breakdowns, terminal reason |
 | GameResult | Winner/draw, reason, final turns, scoring facts, rules/content hashes, final event cursor/state hash; immutable |
 
 Use physical count, SAGA-ability-effective count (Presence), aggression sum, initial count, and scoring count as distinct queries. Presence is never used for special rules or non-ability counts. Avoid a universal `unit.size` helper. Recruitment validation cannot be reused to reject reduced surviving units.
@@ -86,6 +86,8 @@ Pause is an orthogonal status preserving the exact phase, resolution stack, RNG 
 
 At player-turn start, run source-defined scenario checks before allowing a new action. At turn end, finish queued effects before scoring/advance. Expiry must distinguish end of this player turn, end of owner's next turn, end of activation, and end of combat. A simple decrement on active-player change is insufficient.
 
+During deployment, construct units from the remaining recruitment pool at each scenario step and atomically debit the figures when their placement commits. Do not require all unit sizes/equipment in advance. Snapshot remaining pools and committed units so reconnect cannot undo revealed placements. The scenario adapter supplies quota counting and step progression; generic core must not infer a final unit count or substitute points for units.
+
 ## Serialized command transactions
 
 For each game, one logical writer executes:
@@ -104,11 +106,13 @@ Today's `seq` advances on private HELLO/error traffic as well as shared broadcas
 
 ## Randomness and replay
 
-Use injectable randomness: production draws from the server's cryptographic source; tests use scripted rolls. Do not expose future seeds. Every roll has a purpose, source resolution, actor roles, raw outcomes, per-die identity, ordered transformations, and final values. Ordinary rolls and SAGA symbol dice are distinct families. Do not inherit the generic 20-die chat roller cap for melee.
+Use injectable randomness: production draws from the server's cryptographic source; tests use scripted rolls. Do not expose future seeds. Every roll has a purpose, source resolution, actor roles, raw outcomes, per-die identity, ordered transformations, and final values. Ordinary rolls, SAGA symbol dice, and the initiative tie coin toss are distinct families. Fix heads/tails seat mapping before the server samples a fair bit; persist mapping and outcome so retries cannot reroll or reassign the winner. Do not inherit the generic 20-die chat roller cap for melee.
 
 Replay folds recorded events through a version-pinned reducer. It never calls `decide` again, rerolls dice, reruns path search, consults current content, or recomputes past choices from current conditions. Persist resolved geometry and choices as facts. Persisted hashes make a changed pack detectable. Preserve old pack/reducer versions for saved games or provide an explicit migration; never silently upgrade a live game.
 
 ## Choice and reaction protocol
+
+Pre-action order is attempt/cost commitment -> applicable fatigue-cancellation choice -> cancellation outcome OR Activation/Reaction eligibility -> action resolution. A fatigue-cancelled attempt never opens an Activation/Reaction window. Consume its dice/free grant while leaving resolved counters unchanged, including for Old Grudge. Do not conflate later action failure caused by an already-resolved reaction with this earlier cancellation gate.
 
 A choice identifies its resolution, trigger occurrence, owning seat, response type, legal options/constraints, and state version. Replies contain only selected IDs/values, not a claimed outcome. Distinguish:
 
@@ -144,6 +148,8 @@ Charge/withdrawal are constrained placements, not arbitrary endpoints. Given the
 Start with curated valid terrain shapes and supported base shapes, then expand the editor after the geometry tests pass. Do not simplify enforced play to one unit token; allow group-drag UI that produces individual figure routes and supports corrections.
 
 ## Abilities and equipment
+
+Implement [the generic pack](generic-warband.md) first. Store explicit final profile overrides separately from computed equipment modifiers: mounted Armour 5(4) already includes horse adjustment and both Levy options have final Armour 3(3). Preserve the generic Levy melee/shooting fractions 1/2 and 1/3. A shooting stat without a weapon/enabling effect confers no shooting action.
 
 Resilience is an atomic casualty-prevention exchange: validate receiving fatigue below cap, choose 1..X pending casualties, cancel them and add exactly one fatigue, then recheck before offering another exchange. Reaching the cap is allowed; exceeding it or trading while already exhausted is not. Keep this precondition distinct from ordinary fatigue gains that are ignored at the cap.
 

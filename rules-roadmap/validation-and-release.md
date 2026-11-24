@@ -36,11 +36,16 @@ Use property/stateful tests where these invariants explore meaningful command se
 
 ## High-value regression examples
 
-All examples below are original test arrangements. Script RNG through a server test adapter; never add a production command that accepts desired rolls.
+All examples below are original test arrangements. The Warrior-archer example uses the separately identified CORE-2022 reference fixture, not the generic pack (which has no Warrior bow option). Script RNG through a server test adapter; never add a production command that accepts desired rolls.
 
 | Area | Test fixture and expected assertion |
 | --- | --- |
 | Fractional shooting | Five eligible Warrior shooters contribute ceil(5/2)=3 dice. Pre-pool +2 gives starting pool 5; a later +9 is limited to 10 total attack dice. |
+| Generic profiles | Assert all seven owner-defined loadouts. Both Levy options have Armour 3(3); five Levy archers contribute two ranged dice and five Levies contribute three melee dice before bonuses. Horse Armour 5(4) receives no second horse penalty. |
+| Deployment choices | Group the first player's current deployment from its troop pool, let the opponent choose in response, then group the first player's remainder. Assert the scenario quota policy, troop conservation, and immutable committed placements without requiring a frozen full organization. |
+| Cancel before reaction | A charge cancelled using fatigue spends its paid/free grant and creates no Activation/Reaction window; resolved history stays unchanged. Duplicate cancellation cannot spend fatigue twice. |
+| Old Grudge cancellation | Cancel a free first attempt; its free entitlement is consumed. A later attempt needs another valid grant, while its resolved-action counter still starts at zero. |
+| Coin tie-break | Tied d6 results invoke one fair server heads/tails draw with preassigned seats; non-ties do not. Retry/replay preserves the original result. |
 | Close ranks | Offer only to the eligible defender after a charge; reject in all shooting windows, even when the unit would otherwise be eligible. A defender's initial five-die pool discards ceil(5/2)=3, leaving two before the sixteen-die cap; later total cannot exceed four absent explicit override. |
 | Ordinary rerolls | One die is rerolled once by attacker and then once by defender; a second reroll by either same player is rejected; ordered modifiers/results are auditable. |
 | Carry-over allocations | An advanced Orders ability retains its allocation into a new turn, triggers, is allocated again, and cannot trigger twice that turn. |
@@ -77,21 +82,21 @@ All examples below are original test arrangements. Script RNG through a server t
 
 ## End-to-end acceptance scripts
 
-Use supported real faction packs for release runs. Synthetic packs may exercise rare core interactions in the automated conformance suite, but cannot substitute for two complete actual factions. Record versions, configuration, event export, test result, and any defects for each run.
+Use the approved generic pack for initial complete-game runs, including its specified activation/board model. Later faction packs receive their own complete-game runs. Synthetic fixtures may exercise additional core mechanics, but cannot substitute for approved selectable content. Record versions, configuration, event export, test result, and any defects for each run.
 
 ### E01 - Full ordinary game
 
 1. Create an enforced six-point Clash room; join two stable seats and a read-only observer.
-2. Choose the two supported factions, legal purchases/equipment/bases, the imperial band/inch measurement configuration, chaos off; accept named digital setup conventions.
-3. Complete d6 first-player setup, terrain alternation/reposition/final offer, deployment A and second-player pregame dice. Verify invalid actor/zone/cost attempts are rejected.
-4. Play Orders with carry-over allocations, both reaction windows, basic and advanced abilities. Exercise free and paid activations, manoeuvre, rest, repeat fatigue, and optional fatigue spending.
+2. Use the generic pack for both seats, legal troop purchases and base choices, the imperial band/inch measurement configuration, chaos off; accept named digital setup conventions.
+3. Complete d6 first-player setup (coin toss on ties), terrain alternation/reposition/final offer, scenario-directed deployment A with unit grouping/equipment chosen at each step, and second-player pregame dice. Verify invalid actor/zone/cost attempts are rejected.
+4. Play Orders with carry-over allocations, both reaction windows, all applicable approved generic abilities; exercise advanced timing separately with conformance fixtures if absent from the generic board. Exercise free and paid activations, manoeuvre, rest, repeat fatigue, and optional fatigue spending.
 5. Resolve at least one covered shot, reaction changing eligibility, charge, closed-ranks melee, casualty-prevention choice, unit destruction fatigue, and withdrawal. Both clients show the same rolls and outcomes.
 6. Complete six turns each without an earlier defeat; compare score categories, winner/draw, final board, and completed-turn counts with independently calculated expectations.
 7. Export/replay; compare canonical final hash. Attempt a post-game move/ability/end-turn and confirm rejection. Rematch creates a new game.
 
 ### E02 - Setup and source options
 
-Run deployment B with both diagonals/edge assignments and C from both seats. Include odd first-player unit count, maximum terrain catalog counts, one-large restrictions, nonround bases, and exact imperial distances and C-to-S distance-label normalization (without changing Method C). Exercise every sourced equipment/Hero rule via the core suite and all selectable faction options via pack tests. Verify all owner rulings Q01-Q05, including an Improvised Projectiles defender closing ranks when charged and an independent restriction still preventing that choice.
+Run deployment B with both diagonals/edge assignments and C from both seats. Include odd first-player unit count, maximum terrain catalog counts, one-large restrictions, nonround bases, and exact imperial distances and C-to-S distance-label normalization (without changing Method C). Exercise every sourced equipment/Hero rule via the core suite and all selectable faction options via pack tests. Verify all owner rulings Q01-Q10, including an Improvised Projectiles defender closing ranks when charged and an independent restriction still preventing that choice.
 
 ### E03 - Scenario endings and chaos
 
@@ -103,7 +108,7 @@ During a real E01 session, refresh one browser at an opponent choice, disconnect
 
 ### E05 - Pack completeness
 
-For every ability on each supported board, demonstrate a legal trigger and an illegal timing/cost/target case, plus declared interactions/expiry and relevant cancellation cases. Run at least one full game with the factions swapped between seats. Confirm no unsupported list options or synthetic fixtures are selectable and every required effect has a working UI choice.
+For every ability on each supported board, demonstrate a legal trigger and an illegal timing/cost/target case, plus declared interactions/expiry and relevant cancellation cases. Run a full generic-versus-generic game with different legal loadouts and swap the warbands between seats; later faction packs also require swapped-seat runs. Confirm no unsupported list options or synthetic fixtures are selectable and every required effect has a working UI choice.
 
 ## Repository checks during implementation
 
@@ -136,7 +141,7 @@ For this documentation-only plan, appropriate validation is local link/ID/depend
 ## Release checklist
 
 - [ ] R01-R34 map to implemented paths and meaningful passing tests; core source questions resolved or explicitly named agreed variants, with no concealed approximations.
-- [ ] Two complete compatible factions, every selectable ability/profile/loadout, and required official corrections are versioned and verified.
+- [ ] The seven generic profiles and approved generic activation/board model are versioned and verified for both seats. Later selectable faction packs require complete sourced lists/boards; they are not prerequisites for the initial generic implementation.
 - [ ] All three deployment methods, seven terrain presets, six optional chaos effects, equipment/Hero rules, scoring paths, and digital conventions are covered.
 - [ ] Two people can complete the game through UI only; no manual dice, score edits, hidden debug command, or unimplemented choice remains.
 - [ ] Reconnect, both-player disconnect, process restart, dedupe, and storage restoration pass; no committed state lost.
