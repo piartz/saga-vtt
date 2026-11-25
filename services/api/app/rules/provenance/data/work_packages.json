@@ -33,7 +33,7 @@
       {
         "id": "P01.1",
         "title": "Command dispatch and deterministic reducer",
-        "status": "planned"
+        "status": "in_progress"
       },
       {
         "id": "P01.2",

@@ -3,7 +3,7 @@ from typing import Any, Dict
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import ROOMS, app, validate_unit_state
+from app.main import ROOMS, validate_unit_state
 from app.rules import require_rules_module
 
 SAGA_CORE_RULES_MODULE = {"id": "saga-core", "name": "SAGA Core", "version": "0.1.0"}
@@ -32,18 +32,14 @@ def clear_rooms() -> None:
     ROOMS.clear()
 
 
-def test_list_rules_modules_includes_saga_core_module() -> None:
-    client = TestClient(app)
-
+def test_list_rules_modules_includes_saga_core_module(client: TestClient) -> None:
     response = client.get("/rules/modules")
 
     assert response.status_code == 200
     assert response.json() == {"modules": [SAGA_CORE_RULES_MODULE]}
 
 
-def test_get_rules_module_manifest_includes_saga_core_fixtures() -> None:
-    client = TestClient(app)
-
+def test_get_rules_module_manifest_includes_saga_core_fixtures(client: TestClient) -> None:
     response = client.get("/rules/modules/saga-core")
 
     assert response.status_code == 200
@@ -67,18 +63,14 @@ def test_get_rules_module_manifest_includes_saga_core_fixtures() -> None:
     assert manifest["scenarios"][0]["objective_ids"] == ["survival_points", "slaughtering_points"]
 
 
-def test_get_rules_module_manifest_rejects_unknown_module() -> None:
-    client = TestClient(app)
-
+def test_get_rules_module_manifest_rejects_unknown_module(client: TestClient) -> None:
     response = client.get("/rules/modules/missing-module")
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Unknown rules module 'missing-module'."
 
 
-def test_create_game_defaults_to_saga_core_rules_module() -> None:
-    client = TestClient(app)
-
+def test_create_game_defaults_to_saga_core_rules_module(client: TestClient) -> None:
     response = client.post("/games")
 
     assert response.status_code == 200
@@ -94,9 +86,7 @@ def test_create_game_defaults_to_saga_core_rules_module() -> None:
     assert [unit["token_id"] for unit in body["units"]] == ["A", "B"]
 
 
-def test_create_game_accepts_explicit_saga_core_rules_module() -> None:
-    client = TestClient(app)
-
+def test_create_game_accepts_explicit_saga_core_rules_module(client: TestClient) -> None:
     response = client.post("/games", json={"rules_module_id": "saga-core"})
 
     assert response.status_code == 200
@@ -105,9 +95,7 @@ def test_create_game_accepts_explicit_saga_core_rules_module() -> None:
     assert ROOMS[body["game_id"]].rules_module.id == "saga-core"
 
 
-def test_create_game_rejects_unknown_rules_module() -> None:
-    client = TestClient(app)
-
+def test_create_game_rejects_unknown_rules_module(client: TestClient) -> None:
     response = client.post("/games", json={"rules_module_id": "missing-module"})
 
     assert response.status_code == 400
@@ -115,9 +103,7 @@ def test_create_game_rejects_unknown_rules_module() -> None:
     assert ROOMS == {}
 
 
-def test_create_game_rejects_invalid_rules_module_id_shape() -> None:
-    client = TestClient(app)
-
+def test_create_game_rejects_invalid_rules_module_id_shape(client: TestClient) -> None:
     response = client.post("/games", json={"rules_module_id": ""})
 
     assert response.status_code == 400
@@ -125,8 +111,7 @@ def test_create_game_rejects_invalid_rules_module_id_shape() -> None:
     assert ROOMS == {}
 
 
-def test_rules_module_is_included_in_hello_snapshot() -> None:
-    client = TestClient(app)
+def test_rules_module_is_included_in_hello_snapshot(client: TestClient) -> None:
     create_response = client.post("/games", json={"rules_module_id": "saga-core"})
     game_id = create_response.json()["game_id"]
 

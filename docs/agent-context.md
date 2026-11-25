@@ -1,6 +1,6 @@
 # Agent Context
 
-Last updated: 2026-11-24 (P00.3 capability design and ADRs 0001-0005; P00 complete; no gameplay, protocol, or data-model change)
+Last updated: 2026-11-24 (P01.1 part 1: command dispatch extracted from the websocket handler; no protocol or behavior change)
 
 Purpose: persistent, fast-loading context for agentic coding tools so each new session can avoid rescanning the whole repo.
 
@@ -102,7 +102,14 @@ Primary references:
   - prompts before tool install/upgrade
   - uses installer fallbacks (pnpm prefers Homebrew on macOS)
 
-### Backend (`services/api/app/main.py`, `services/api/app/connections.py`)
+### Backend (`services/api/app/main.py`, `rooms.py`, `commands/`, `connections.py`)
+- Module layout (P01.1 part 1):
+  - `app/main.py`: FastAPI app, HTTP endpoints, and the websocket transport only. `game_ws` registers the connection, then delivers the emits returned by `connection_opened`, `dispatch_message` (per message), and `connection_closed`; `deliver` builds each event with `make_event` at send time so `seq` follows send order. Re-exports `ROOMS` and `validate_unit_state` for existing callers
+  - `app/rooms.py`: `GameRoom`, the in-memory `ROOMS` registry, `make_event`, room creation/lookup, default tokens/units, unit validation, and state snapshots
+  - `app/commands/emit.py`: `Emit(event_type, payload, audience, actor_player_id)` with audience `sender`/`room`/`others`, plus the private `error()` helper
+  - `app/commands/dispatch.py`: JSON/envelope parsing and `COMMAND_HANDLERS`, one handler per command returning emits; handlers never touch sockets
+  - `app/commands/lifecycle.py`: join policy (HELLO, lobby initiative reset) and leave policy (undo cancellation, initiative reset, active-turn pass)
+  - `app/commands/sandbox.py`: bootstrap rules moved verbatim from `main.py` (`apply_*`, guards, undo history, dice)
 - `GET /health` returns status + UTC time.
 - `POST /games` creates in-memory room with:
   - random `game_id`
@@ -210,6 +217,8 @@ Primary references:
 - `services/api/tests/test_rules_modules.py`
   - verifies module listing/manifests, room selection, passive unit snapshots, and basic unit validation
   - does not verify SAGA gameplay; its recruitment-sized unit validation needs separation from surviving-unit validation in P02
+- `services/api/tests/conftest.py`
+  - `client` fixture: a `TestClient` entered as a context manager so every HTTP and websocket session shares one event loop, as under a real server
 - `services/api/tests/test_connections.py`
   - verifies `RoomConnectionManager` player assignment and snapshots
   - verifies broadcast exclusion and stale websocket cleanup
@@ -231,6 +240,10 @@ Primary references:
   - comprehensive integration smoke test that validates complete game flow
   - tests room creation, player connection, initiative roll, turn order choice, token movement, token activation, turn progression, and round advancement
   - serves as CI smoke test for end-to-end system validation
+- `services/api/tests/test_sandbox_transcript.py`
+  - golden transcript of one scripted multi-client session (every command branch, envelope errors, initiative reset on join/leave, undo request/accept/reject/cancel, disconnect turn pass, room cleanup) compared event-by-event (type, seq, actor, payload) with `tests/fixtures/sandbox_transcript.json`
+  - deterministic via patched `secrets.token_hex`/`secrets.randbelow`; runs all clients on one event loop, waits for server disconnect handling (the test client otherwise cancels it after the first broadcast), and syncs with a PING from the command's sender
+  - regenerate only for intentional protocol changes: `UPDATE_SANDBOX_TRANSCRIPT=1 poetry run pytest tests/test_sandbox_transcript.py`
 - Web UI currently has no automated test suite; board interaction changes are validated via `pnpm build:web` plus manual verification.
 
 ## Docs vs Code Notes
@@ -256,7 +269,7 @@ Primary references:
 ## Next Recommended Tasks
 - Follow `rules-roadmap/README.md` and the P00-P15 plan; the old Phase 0-10 numbering is superseded.
 - The generic activation/board specification (G01, source `GENERIC-BOARD`) is the open owner-content input; it blocks only P12.1-P12.3. Named faction sources are later work. No further owner rule decision blocks P00/P01.
-- P00 is complete. Next, P01.1: extract command dispatch from the websocket loop into `app/commands/`, add `app/engine/` with a deterministic reducer and in-memory event store, and the explicit sandbox/enforced room mode (ADRs 0002/0003), preserving all sandbox tests. Split into a behavior-preserving extraction PR and a reducer/store PR.
+- P00 is complete. P01.1 part 1 (behavior-preserving dispatch extraction) is done. Next, P01.1 part 2: add `app/engine/` with the decide/reduce contract and an in-memory event-store interface, and an explicit immutable sandbox/enforced room mode with mode-aware routing in `dispatch_message` (ADRs 0002/0003). Sandbox stays the default and the golden transcript must stay unchanged.
 - Every slice from now on updates requirement status/evidence, regression case status/test paths, and slice status in `services/api/app/rules/provenance/data/`. When a new source ambiguity appears, add an open Q-question or an I-interpretation there rather than hiding it in code.
 - Apply corrected Q05 throughout P10/P11: definition-level close-ranks prohibitions include Improvised Projectiles; test every listed restriction, combinations, additional restricting definitions, and an eligible ordinary foot defender.
 - Continue P01 with stable seats and pause/resume (P01.2, ADR 0001), transactions/dedupe/version checks (P01.3, ADR 0002), and the enforced-mode command boundary (P01.4, ADR 0003) before adding rules-dependent commands.
@@ -281,7 +294,9 @@ Primary references:
 - No stable seat authentication or unit ownership enforcement: current active-player restrictions alone do not provide the planned authorization model.
 - Presence identities are ephemeral per websocket and not stable across reconnect.
 - In-memory room state means process restart loses all games.
-- Connection/presence transport state is isolated, but the websocket handler still owns command dispatch and disconnect game-state policy.
+- The websocket handler is now transport-only; command dispatch and join/leave policy live in `app/commands/`. The leave policy still auto-passes the active player's turn (replaced by pause/resume in P01.2), and handlers still run unserialized across a room's connections (P01.3).
+- Test harness: a `TestClient` used without `with` gives every websocket its own event-loop thread, so server handlers for different clients run on different loops and a cross-loop broadcast can lose a wake-up and hang. On CI's Python 3.11 with locked dependencies, `main` hung in about 12% of full-suite runs (7 of 60), always in multi-client tests. All API tests now use the shared `client` fixture in `services/api/tests/conftest.py`, which enters `with TestClient(app)` so every connection shares one loop; new websocket tests must use it.
+- Pre-existing: a websocket message that is valid JSON but not an object (e.g. `[1]`) raises in `dispatch_message` and closes that connection, running the leave policy. Kept unchanged by the behavior-preserving extraction; fix with typed envelope validation in P01.3.
 - Generated protocol types are now partially adopted, but runtime validation still relies on custom parsing/guards; full Phase 2 duplicate-type cleanup is still pending.
 - Unit ownership is currently nullable and default units are temporarily anchored to single visual tokens; setup/deployment needs to assign owners before unit state can drive SAGA dice or activation legality.
 - Rules-module work may use canonical game names/labels for units, terrain, special rules, battle-board abilities, scenarios, and similar terms. The remaining content boundary is copied prose, published examples, battle-board layout, artwork, and other expressive source material.

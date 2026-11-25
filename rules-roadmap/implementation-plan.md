@@ -91,6 +91,8 @@ This is a safe default execution order, not a request for concurrent work. Speci
 
 **Touch:** `app/main.py`, `connections.py`, new `app/engine/`, `app/commands/`, schema/generators, web connection/store, transport tests.
 
+**Status:** `P01.1` in progress. Part 1 done: dispatch and join/leave policy extracted from the websocket handler into `app/commands/` and room state into `app/rooms.py`, with no behavior change, guarded by the golden transcript in `services/api/tests/test_sandbox_transcript.py`. Part 2 (reducer, in-memory event store, sandbox/enforced mode) remains.
+
 **Exit/tests:** duplicate accepted command has one result and one RNG consumption; malformed/unauthorized/stale intents cannot mutate; retry is recognized before stale-version check; concurrent clients cannot spend the same resource; rejoin preserves ownership/turn; private traffic cannot create false replay gaps. Existing sandbox tests pass. Full durability is still explicitly pending P14.
 
 ## P02 - Profiles, warbands, figures, and roster UI
