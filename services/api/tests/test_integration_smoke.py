@@ -9,7 +9,7 @@ from typing import Any, Dict
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import ROOMS, app
+from app.main import ROOMS
 
 
 @pytest.fixture(autouse=True)
@@ -19,7 +19,7 @@ def clear_rooms() -> None:
     ROOMS.clear()
 
 
-def test_complete_game_flow_smoke() -> None:
+def test_complete_game_flow_smoke(client: TestClient) -> None:
     """
     Integration smoke test: complete game session flow.
 
@@ -35,7 +35,6 @@ def test_complete_game_flow_smoke() -> None:
     9. Second player ends turn (round advances)
     10. Verify game state progression
     """
-    client = TestClient(app)
 
     # Step 1: Create room
     create_response = client.post("/games")

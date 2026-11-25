@@ -217,6 +217,8 @@ Primary references:
 - `services/api/tests/test_rules_modules.py`
   - verifies module listing/manifests, room selection, passive unit snapshots, and basic unit validation
   - does not verify SAGA gameplay; its recruitment-sized unit validation needs separation from surviving-unit validation in P02
+- `services/api/tests/conftest.py`
+  - `client` fixture: a `TestClient` entered as a context manager so every HTTP and websocket session shares one event loop, as under a real server
 - `services/api/tests/test_connections.py`
   - verifies `RoomConnectionManager` player assignment and snapshots
   - verifies broadcast exclusion and stale websocket cleanup
@@ -240,7 +242,7 @@ Primary references:
   - serves as CI smoke test for end-to-end system validation
 - `services/api/tests/test_sandbox_transcript.py`
   - golden transcript of one scripted multi-client session (every command branch, envelope errors, initiative reset on join/leave, undo request/accept/reject/cancel, disconnect turn pass, room cleanup) compared event-by-event (type, seq, actor, payload) with `tests/fixtures/sandbox_transcript.json`
-  - deterministic via patched `secrets.token_hex`/`secrets.randbelow`; runs all clients on one event loop (`with TestClient(app)`), waits for server disconnect handling (the test client otherwise cancels it after the first broadcast), and syncs with a PING from the command's sender
+  - deterministic via patched `secrets.token_hex`/`secrets.randbelow`; runs all clients on one event loop, waits for server disconnect handling (the test client otherwise cancels it after the first broadcast), and syncs with a PING from the command's sender
   - regenerate only for intentional protocol changes: `UPDATE_SANDBOX_TRANSCRIPT=1 poetry run pytest tests/test_sandbox_transcript.py`
 - Web UI currently has no automated test suite; board interaction changes are validated via `pnpm build:web` plus manual verification.
 
@@ -293,7 +295,7 @@ Primary references:
 - Presence identities are ephemeral per websocket and not stable across reconnect.
 - In-memory room state means process restart loses all games.
 - The websocket handler is now transport-only; command dispatch and join/leave policy live in `app/commands/`. The leave policy still auto-passes the active player's turn (replaced by pause/resume in P01.2), and handlers still run unserialized across a room's connections (P01.3).
-- Test harness: a `TestClient` used without `with` gives every websocket its own event-loop thread, so server handlers for different clients run on different loops and cross-loop broadcasts can rarely lose a wake-up and hang (seen as about 1% hangs of the transcript test before it switched to one loop). Existing multi-client tests in `test_rooms_and_moves.py` and `test_integration_smoke.py` still use separate loops; move them to `with TestClient(app) as client:` when next touched.
+- Test harness: a `TestClient` used without `with` gives every websocket its own event-loop thread, so server handlers for different clients run on different loops and a cross-loop broadcast can lose a wake-up and hang. On CI's Python 3.11 with locked dependencies, `main` hung in about 12% of full-suite runs (7 of 60), always in multi-client tests. All API tests now use the shared `client` fixture in `services/api/tests/conftest.py`, which enters `with TestClient(app)` so every connection shares one loop; new websocket tests must use it.
 - Pre-existing: a websocket message that is valid JSON but not an object (e.g. `[1]`) raises in `dispatch_message` and closes that connection, running the leave policy. Kept unchanged by the behavior-preserving extraction; fix with typed envelope validation in P01.3.
 - Generated protocol types are now partially adopted, but runtime validation still relies on custom parsing/guards; full Phase 2 duplicate-type cleanup is still pending.
 - Unit ownership is currently nullable and default units are temporarily anchored to single visual tokens; setup/deployment needs to assign owners before unit state can drive SAGA dice or activation legality.

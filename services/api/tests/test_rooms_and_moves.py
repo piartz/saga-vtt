@@ -3,7 +3,7 @@ from typing import Any, Dict
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import ROOMS, app
+from app.main import ROOMS
 
 SAGA_CORE_RULES_MODULE = {"id": "saga-core", "name": "SAGA Core", "version": "0.1.0"}
 
@@ -15,8 +15,7 @@ def clear_rooms() -> None:
     ROOMS.clear()
 
 
-def test_create_game_room() -> None:
-    client = TestClient(app)
+def test_create_game_room(client: TestClient) -> None:
     response = client.post("/games")
 
     assert response.status_code == 200
@@ -35,9 +34,7 @@ def test_create_game_room() -> None:
     assert body["created"] is True
 
 
-def test_create_game_returns_existing_room_for_same_client() -> None:
-    client = TestClient(app)
-
+def test_create_game_returns_existing_room_for_same_client(client: TestClient) -> None:
     first_response = client.post("/games", headers={"X-Client-Id": "user-1"})
     second_response = client.post("/games", headers={"X-Client-Id": "user-1"})
 
@@ -55,9 +52,7 @@ def test_create_game_returns_existing_room_for_same_client() -> None:
     assert len(ROOMS) == 1
 
 
-def test_create_game_creates_new_room_for_different_client() -> None:
-    client = TestClient(app)
-
+def test_create_game_creates_new_room_for_different_client(client: TestClient) -> None:
     first_response = client.post("/games", headers={"X-Client-Id": "user-1"})
     second_response = client.post("/games", headers={"X-Client-Id": "user-2"})
 
@@ -69,8 +64,7 @@ def test_create_game_creates_new_room_for_different_client() -> None:
     assert len(ROOMS) == 2
 
 
-def test_list_rooms_excludes_rooms_without_players() -> None:
-    client = TestClient(app)
+def test_list_rooms_excludes_rooms_without_players(client: TestClient) -> None:
     created = client.post("/games")
     created_game_id = created.json()["game_id"]
 
@@ -81,8 +75,7 @@ def test_list_rooms_excludes_rooms_without_players() -> None:
     assert created_game_id in ROOMS
 
 
-def test_list_rooms_includes_connected_room_and_updates_player_count() -> None:
-    client = TestClient(app)
+def test_list_rooms_includes_connected_room_and_updates_player_count(client: TestClient) -> None:
     created = client.post("/games")
     game_id = created.json()["game_id"]
 
@@ -128,8 +121,7 @@ def test_list_rooms_includes_connected_room_and_updates_player_count() -> None:
     assert client.get("/rooms").json()["rooms"] == []
 
 
-def test_move_token_is_authoritative_and_broadcast_to_all_clients() -> None:
-    client = TestClient(app)
+def test_move_token_is_authoritative_and_broadcast_to_all_clients(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -171,8 +163,7 @@ def test_move_token_is_authoritative_and_broadcast_to_all_clients() -> None:
         assert ROOMS[game_id].tokens["A"]["y_mm"] == 111
 
 
-def test_roll_dice_is_authoritative_and_broadcast_to_all_clients() -> None:
-    client = TestClient(app)
+def test_roll_dice_is_authoritative_and_broadcast_to_all_clients(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -213,8 +204,7 @@ def test_roll_dice_is_authoritative_and_broadcast_to_all_clients() -> None:
         assert event_2["actor_player_id"] == actor_player_id
 
 
-def test_activate_token_is_authoritative_and_broadcast_to_all_clients() -> None:
-    client = TestClient(app)
+def test_activate_token_is_authoritative_and_broadcast_to_all_clients(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -303,8 +293,7 @@ def test_activate_token_is_authoritative_and_broadcast_to_all_clients() -> None:
         assert second_event_2["payload"]["token"]["last_activation_type"] == "shoot"
 
 
-def test_rest_activation_requires_no_prior_activations_this_turn() -> None:
-    client = TestClient(app)
+def test_rest_activation_requires_no_prior_activations_this_turn(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -389,8 +378,7 @@ def test_rest_activation_requires_no_prior_activations_this_turn() -> None:
         assert rest_ok["payload"]["token"]["last_activation_type"] == "rest"
 
 
-def test_player_presence_join_and_leave_events() -> None:
-    client = TestClient(app)
+def test_player_presence_join_and_leave_events(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -419,8 +407,7 @@ def test_player_presence_join_and_leave_events() -> None:
         assert left["actor_player_id"] == joined_player["id"]
 
 
-def test_roll_dice_rejects_invalid_payload() -> None:
-    client = TestClient(app)
+def test_roll_dice_rejects_invalid_payload(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -440,8 +427,7 @@ def test_roll_dice_rejects_invalid_payload() -> None:
         assert event["payload"]["message"] == "ROLL_DICE count must be an integer between 1 and 20."
 
 
-def test_activate_token_rejects_when_game_not_running() -> None:
-    client = TestClient(app)
+def test_activate_token_rejects_when_game_not_running(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -461,8 +447,7 @@ def test_activate_token_rejects_when_game_not_running() -> None:
         assert event["payload"]["message"] == "ACTIVATE_TOKEN is only allowed while game is running."
 
 
-def test_start_game_and_end_turn_broadcasts_turn_state() -> None:
-    client = TestClient(app)
+def test_start_game_and_end_turn_broadcasts_turn_state(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -602,8 +587,7 @@ def test_start_game_and_end_turn_broadcasts_turn_state() -> None:
         }
 
 
-def test_non_active_player_cannot_end_turn_or_take_running_actions() -> None:
-    client = TestClient(app)
+def test_non_active_player_cannot_end_turn_or_take_running_actions(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -703,8 +687,7 @@ def test_non_active_player_cannot_end_turn_or_take_running_actions() -> None:
         assert activate_error["type"] == "ERROR"
         assert "ACTIVATE_TOKEN is only allowed for active player" in activate_error["payload"]["message"]
 
-def test_only_initiative_winner_can_choose_turn_order() -> None:
-    client = TestClient(app)
+def test_only_initiative_winner_can_choose_turn_order(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -744,8 +727,7 @@ def test_only_initiative_winner_can_choose_turn_order() -> None:
         assert "Only initiative winner can choose first or second." == error["payload"]["message"]
 
 
-def test_move_undo_requires_opponent_accept_and_is_limited_to_one_per_turn() -> None:
-    client = TestClient(app)
+def test_move_undo_requires_opponent_accept_and_is_limited_to_one_per_turn(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -867,8 +849,7 @@ def test_move_undo_requires_opponent_accept_and_is_limited_to_one_per_turn() -> 
         assert "already used your undo request this turn" in undo_limit_error["payload"]["message"]
 
 
-def test_activation_undo_can_be_rejected_and_state_stays_unchanged() -> None:
-    client = TestClient(app)
+def test_activation_undo_can_be_rejected_and_state_stays_unchanged(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
@@ -960,8 +941,7 @@ def test_activation_undo_can_be_rejected_and_state_stays_unchanged() -> None:
         assert "already used your undo request this turn" in undo_limit_error["payload"]["message"]
 
 
-def test_non_board_actions_cannot_be_undone() -> None:
-    client = TestClient(app)
+def test_non_board_actions_cannot_be_undone(client: TestClient) -> None:
     create_response = client.post("/games")
     game_id = create_response.json()["game_id"]
 
